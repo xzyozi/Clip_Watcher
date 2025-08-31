@@ -8,7 +8,8 @@ class Application:
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle window close event
 
         self.gui = ClipWatcherGUI(master, self.stop_monitor)
-        self.monitor = ClipboardMonitor(self.gui.update_clipboard_display)
+        # Pass the master (root) object to ClipboardMonitor
+        self.monitor = ClipboardMonitor(master, self.gui.update_clipboard_display)
         self.monitor.start()
 
     def stop_monitor(self):
