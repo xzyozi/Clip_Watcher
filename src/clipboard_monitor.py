@@ -73,3 +73,23 @@ class ClipboardMonitor:
     def clear_history(self):
         self.history.clear()
         self.last_clipboard_data = "" # Reset last data to ensure next copy is registered
+
+    def delete_history_item(self, index):
+        if 0 <= index < len(self.history):
+            del self.history[index]
+            # If the deleted item was the last_clipboard_data, reset it
+            if not self.history:
+                self.last_clipboard_data = ""
+            elif self.last_clipboard_data not in self.history:
+                # If the current clipboard content is no longer in history,
+                # it means it was deleted. We should update the GUI to reflect this.
+                # This is a bit tricky as the monitor doesn't directly control GUI.
+                # The GUI will be updated on the next clipboard change or when
+                # handle_delete_selected_history calls update_clipboard_display.
+                pass
+
+    def delete_all_unpinned_history(self):
+        # Placeholder for future implementation
+        print("Monitor: Deleting all unpinned history (functionality not yet implemented).")
+        # In a real implementation, this would iterate through history and remove unpinned items.
+        # For now, it does nothing.
