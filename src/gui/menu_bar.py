@@ -10,6 +10,15 @@ def create_menu_bar(master, app_instance):
     file_menu.add_command(label="履歴をエクスポート (Export History)...", command=lambda: print("Export History clicked"))
     file_menu.add_command(label="履歴をインポート (Import History)...", command=lambda: print("Import History clicked"))
     file_menu.add_separator()
+
+    # Fixed Phrases Sub-menu
+    fixed_phrases_menu = tk.Menu(file_menu, tearoff=0)
+    fixed_phrases_menu.add_command(label="挨拶 (Greeting)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "いつもお世話になっております。"))
+    fixed_phrases_menu.add_command(label="署名 (Signature)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "よろしくお願いいたします.\n\n[あなたの名前]\n[あなたの会社]"))
+    fixed_phrases_menu.add_command(label="電話番号 (Phone Number)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "090-XXXX-XXXX"))
+    file_menu.add_cascade(label="定型文 (Fixed Phrases)", menu=fixed_phrases_menu)
+    file_menu.add_separator()
+
     file_menu.add_command(label="終了 (Exit)", command=lambda: event_handlers.handle_quit(app_instance.monitor.stop, master))
     menubar.add_cascade(label="ファイル (File)", menu=file_menu)
 
@@ -19,13 +28,17 @@ def create_menu_bar(master, app_instance):
     edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: print("Copy Selected as Merged clicked"))
     edit_menu.add_separator()
     edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=lambda: event_handlers.handle_delete_selected_history(app_instance.gui, app_instance.monitor))
-    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=lambda: event_handlers.handle_delete_all_unpinned_history(app_instance.monitor, app_instance.gui))
+    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=lambda: print("Delete All Unpinned clicked"))
     edit_menu.add_command(label="すべての履歴を削除 (Clear All History)", command=lambda: event_handlers.handle_clear_all_history(app_instance.monitor, app_instance.gui))
     menubar.add_cascade(label="編集 (Edit)", menu=edit_menu)
 
     # View Menu
     view_menu = tk.Menu(menubar, tearoff=0)
-    view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)", command=lambda: print("Always on Top clicked"))
+    # Variable to hold the state of the "Always on Top" checkbutton
+    app_instance.always_on_top_var = tk.BooleanVar(value=False) # Initialize to False
+    view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)",
+                              command=lambda: event_handlers.handle_always_on_top(master, app_instance.always_on_top_var),
+                              variable=app_instance.always_on_top_var)
     
     theme_menu = tk.Menu(view_menu, tearoff=0)
     theme_menu.add_command(label="ライト (Light)", command=lambda: print("Light theme clicked"))

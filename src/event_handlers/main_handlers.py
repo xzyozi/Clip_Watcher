@@ -60,3 +60,16 @@ def handle_delete_all_unpinned_history(monitor_instance, gui_instance):
     print("Delete All Unpinned clicked (functionality not yet implemented).")
     # In a real implementation, this would call a method on monitor_instance
     # to delete unpinned items and then update the GUI.
+
+def handle_copy_fixed_phrase(gui_instance, phrase):
+    try:
+        gui_instance.master.clipboard_clear()
+        gui_instance.master.clipboard_append(phrase)
+        print(f"Copied fixed phrase: {phrase[:50]}...")
+    except Exception as e:
+        print(f"Error copying fixed phrase: {e}")
+
+def handle_always_on_top(master, always_on_top_var):
+    # Toggle the always on top attribute of the master window
+    master.attributes('-topmost', always_on_top_var.get())
+    print(f"Always on Top set to: {always_on_top_var.get()}")
