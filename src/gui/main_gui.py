@@ -1,5 +1,5 @@
 import tkinter as tk
-# Removed: import pyperclip # No longer needed for copying
+from src.event_handlers import main_handlers as event_handlers # Updated import path
 
 class ClipWatcherGUI:
     def __init__(self, master, clipboard_monitor_callback):
@@ -41,17 +41,19 @@ class ClipWatcherGUI:
         self.history_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.history_listbox.config(yscrollcommand=self.history_scrollbar.set)
 
-        # Bind double-click to copy
-        self.history_listbox.bind("<Double-Button-1>", self.copy_selected_history)
+        # Bind double-click to copy, calling event_handlers
+        self.history_listbox.bind("<Double-Button-1>", lambda event: event_handlers.handle_copy_selected_history(self, self.history_data, self.history_listbox.curselection()[0]))
 
         # Control Buttons
         self.control_frame = tk.Frame(self.main_frame)
         self.control_frame.pack(pady=10)
 
-        self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected to Clipboard", command=self.copy_selected_history)
+        # Command for copy button, calling event_handlers
+        self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected to Clipboard", command=lambda: event_handlers.handle_copy_selected_history(self, self.history_data, self.history_listbox.curselection()[0]))
         self.copy_history_button.pack(side=tk.LEFT, padx=5)
 
-        self.quit_button = tk.Button(self.control_frame, text="Quit", command=self.on_quit)
+        # Command for quit button, calling event_handlers
+        self.quit_button = tk.Button(self.control_frame, text="Quit", command=lambda: event_handlers.handle_quit(self.clipboard_monitor_callback, self.master))
         self.quit_button.pack(side=tk.RIGHT, padx=5)
 
     def update_clipboard_display(self, current_content, history):
@@ -68,19 +70,3 @@ class ClipWatcherGUI:
         for i, item in enumerate(history):
             display_text = item.replace('\n', ' ').replace('\r', '') # Single line for display
             self.history_listbox.insert(tk.END, f"{i+1}. {display_text[:100]}...") # Show first 100 chars
-
-    def copy_selected_history(self, event=None):
-        try:
-            selected_index = self.history_listbox.curselection()[0]
-            selected_item_content = self.history_data[selected_index]
-            # Use Tkinter's clipboard methods
-            self.master.clipboard_clear()
-            self.master.clipboard_append(selected_item_content)
-            print(f"Copied from history (Tkinter): {selected_item_content[:50]}...") # For debugging
-        except IndexError:
-            pass # No item selected
-
-    def on_quit(self):
-        if self.clipboard_monitor_callback:
-            self.clipboard_monitor_callback()
-        self.master.quit()

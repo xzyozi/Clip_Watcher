@@ -1,6 +1,7 @@
 import tkinter as tk
 from src.clipboard_monitor import ClipboardMonitor
-from src.gui import ClipWatcherGUI
+from src.gui.main_gui import ClipWatcherGUI
+from src.gui import menu_bar # Import the menu_bar module
 
 class Application:
     def __init__(self, master):
@@ -11,6 +12,10 @@ class Application:
         # Pass the master (root) object to ClipboardMonitor
         self.monitor = ClipboardMonitor(master, self.gui.update_clipboard_display)
         self.monitor.start()
+
+        # Create and set the menu bar
+        self.menubar = menu_bar.create_menu_bar(master, self) # Pass self (Application instance)
+        master.config(menu=self.menubar)
 
     def stop_monitor(self):
         self.monitor.stop()
