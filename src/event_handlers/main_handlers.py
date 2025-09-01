@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.messagebox # Import messagebox
 
 # This module will contain functions or a class for event handling
 
@@ -73,3 +74,9 @@ def handle_always_on_top(master, always_on_top_var):
     # Toggle the always on top attribute of the master window
     master.attributes('-topmost', always_on_top_var.get())
     print(f"Always on Top set to: {always_on_top_var.get()}")
+
+def handle_about():
+    tkinter.messagebox.showinfo(
+        "バージョン情報 (About)",
+        "ClipWatcher\nバージョン: 0.1.0\n開発者: Gemini CLI Agent\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。"
+    )

@@ -59,7 +59,7 @@ def create_menu_bar(master, app_instance):
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0)
     help_menu.add_command(label="使い方 (How to Use)", command=lambda: print("How to Use clicked"))
-    help_menu.add_command(label="バージョン情報 (About)", command=lambda: print("About clicked"))
+    help_menu.add_command(label="バージョン情報 (About)", command=lambda: event_handlers.handle_about()) # Connect to new handler
     menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu)
 
     return menubar
