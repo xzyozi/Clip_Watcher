@@ -7,8 +7,8 @@ def create_menu_bar(master, app_instance):
     # File Menu
     file_menu = tk.Menu(menubar, tearoff=0)
     file_menu.add_command(label="設定 (Settings)...", command=lambda: print("Settings clicked"))
-    file_menu.add_command(label="履歴をエクスポート (Export History)...", command=lambda: print("Export History clicked"))
-    file_menu.add_command(label="履歴をインポート (Import History)...", command=lambda: print("Import History clicked"))
+    file_menu.add_command(label="履歴をエクスポート (Export History)...", command=lambda: event_handlers.handle_export_history(app_instance.monitor))
+    file_menu.add_command(label="履歴をインポート (Import History)...", command=lambda: event_handlers.handle_import_history(app_instance.monitor, app_instance.gui))
     file_menu.add_separator()
 
     # Fixed Phrases Sub-menu
@@ -58,8 +58,8 @@ def create_menu_bar(master, app_instance):
 
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0)
-    help_menu.add_command(label="使い方 (How to Use)", command=lambda: print("How to Use clicked"))
-    help_menu.add_command(label="バージョン情報 (About)", command=lambda: event_handlers.handle_about()) # Connect to new handler
+    help_menu.add_command(label="使い方 (How to Use)", command=lambda: event_handlers.handle_how_to_use())
+    help_menu.add_command(label="バージョン情報 (About)", command=lambda: event_handlers.handle_about())
     menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu)
 
     return menubar

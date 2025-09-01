@@ -93,3 +93,17 @@ class ClipboardMonitor:
         print("Monitor: Deleting all unpinned history (functionality not yet implemented).")
         # In a real implementation, this would iterate through history and remove unpinned items.
         # For now, it does nothing.
+
+    def import_history(self, new_history_items):
+        # Add new items to the beginning of the history, respecting the limit
+        for item in reversed(new_history_items): # Add in original order
+            if item not in self.history:
+                self.history.insert(0, item)
+                if len(self.history) > self.history_limit:
+                    self.history.pop()
+            else:
+                # Move existing item to the top
+                self.history.remove(item)
+                self.history.insert(0, item)
+        # Update GUI after import
+        self.tk_root.after(0, self.update_callback, self.last_clipboard_data, self.history)
