@@ -9,8 +9,20 @@ def create_history_context_menu(master, gui_instance, monitor_instance):
     context_menu.add_command(label="選択項目を削除 (Delete Selected)", 
                              command=lambda: event_handlers.handle_delete_selected_history(gui_instance, monitor_instance))
     context_menu.add_separator()
-    context_menu.add_command(label="ピン留め/ピン解除 (Pin/Unpin)", 
-                             command=lambda: print("Pin/Unpin clicked from context menu"))
+
+    # Dynamically set Pin/Unpin label
+    selected_index = None
+    try:
+        selected_index = gui_instance.history_listbox.curselection()[0]
+        # Get the actual item from the monitor's history based on the displayed order
+        item_tuple = monitor_instance.get_history()[selected_index]
+        is_pinned = item_tuple[1] # is_pinned is the second element of the tuple
+        pin_unpin_label = "ピン解除 (Unpin)" if is_pinned else "ピン留め (Pin)"
+    except IndexError:
+        pin_unpin_label = "ピン留め/ピン解除 (Pin/Unpin)" # Default if no item selected
+
+    context_menu.add_command(label=pin_unpin_label, 
+                             command=lambda: event_handlers.handle_pin_unpin_history(gui_instance, monitor_instance))
     
     return context_menu
 

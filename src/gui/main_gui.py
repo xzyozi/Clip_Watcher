@@ -10,7 +10,7 @@ class ClipWatcherGUI:
 
         self.clipboard_monitor_callback = clipboard_monitor_callback
         self.monitor_instance = monitor_instance # Store monitor instance
-        self.history_data = [] # To store the full history content
+        self.history_data = [] # To store the full history content (content, is_pinned) tuples
 
         # Main frame for better organization
         self.main_frame = tk.Frame(master, padx=10, pady=10)
@@ -81,12 +81,13 @@ class ClipWatcherGUI:
         self.quit_button.pack(side=tk.RIGHT, padx=5)
 
     def update_clipboard_display(self, current_content, history):
+        # history is now a list of (content, is_pinned) tuples
         self.clipboard_text_widget.config(state=tk.NORMAL) # Enable editing to update
         self.clipboard_text_widget.delete(1.0, tk.END) # Clear existing content
         self.clipboard_text_widget.insert(tk.END, current_content)
         self.clipboard_text_widget.config(state=tk.DISABLED) # Make it read-only again
 
-        self.history_data = history # Store the full history
+        self.history_data = history # Store the full history (content, is_pinned) tuples
         # When updating, also apply current search filter if any
         search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
         if search_query:
@@ -96,8 +97,15 @@ class ClipWatcherGUI:
         else:
             self.update_history_display(history)
 
-    def update_history_display(self, history_to_display): # Renamed parameter for clarity
+    def update_history_display(self, history_to_display): # history_to_display is now (content, is_pinned) tuples
         self.history_listbox.delete(0, tk.END) # Clear existing items
-        for i, item in enumerate(history_to_display):
-            display_text = item.replace('\n', ' ').replace('\r', '') # Single line for display
-            self.history_listbox.insert(tk.END, f"{i+1}. {display_text[:100]}...") # Show first 100 chars
+        for i, item_tuple in enumerate(history_to_display):
+            content, is_pinned = item_tuple
+            display_text = content.replace('\n', ' ').replace('\r', '') # Single line for display
+            
+            prefix = "📌 " if is_pinned else "" # Add pin emoji for pinned items
+            self.history_listbox.insert(tk.END, f"{prefix}{i+1}. {display_text[:100]}...")
+            
+            # Optionally, change background color for pinned items
+            if is_pinned:
+                self.history_listbox.itemconfig(i, {'bg':'#FFFACD'}) # Light yellow background
