@@ -1,3 +1,4 @@
 src/__pycache__/*
 src/gui/__pycache__/*
 src/event_handlers/__pycache__/*
+.gemini/styleguide.md
