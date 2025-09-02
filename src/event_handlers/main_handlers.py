@@ -136,3 +136,13 @@ def handle_import_history(monitor_instance, gui_instance):
             tkinter.messagebox.showinfo("インポート完了", f"履歴を以下のファイルからインポートしました:\n{file_path}")
         except Exception as e:
             tkinter.messagebox.showerror("インポートエラー", f"履歴のインポート中にエラーが発生しました:\n{e}")
+
+def handle_search_history(search_query, monitor_instance, gui_instance):
+    # This function is called when the search entry content changes.
+    # It will filter the history displayed in the GUI.
+    if search_query:
+        filtered_history = monitor_instance.get_filtered_history(search_query)
+        gui_instance.update_history_display(filtered_history)
+    else:
+        # If search query is empty, display full history
+        gui_instance.update_history_display(monitor_instance.get_history())

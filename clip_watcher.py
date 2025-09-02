@@ -8,9 +8,11 @@ class Application:
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle window close event
 
-        self.gui = ClipWatcherGUI(master, self.stop_monitor)
-        # Pass the master (root) object to ClipboardMonitor
-        self.monitor = ClipboardMonitor(master, self.gui.update_clipboard_display)
+        # Initialize monitor first, so it can be passed to GUI
+        self.monitor = ClipboardMonitor(master) # Removed update_callback from here
+        self.gui = ClipWatcherGUI(master, self.stop_monitor, self.monitor) # Pass monitor to GUI
+        self.monitor.set_gui_update_callback(self.gui.update_clipboard_display) # Set the actual GUI update callback
+
         self.monitor.start()
 
         # Create and set the menu bar

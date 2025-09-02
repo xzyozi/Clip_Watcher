@@ -1,13 +1,14 @@
 import tkinter as tk
-from src.event_handlers import main_handlers as event_handlers # Updated import path
+from src.event_handlers import main_handlers as event_handlers
 
 class ClipWatcherGUI:
-    def __init__(self, master, clipboard_monitor_callback):
+    def __init__(self, master, clipboard_monitor_callback, monitor_instance): # Added monitor_instance
         self.master = master
         master.title("ClipWatcher")
         master.geometry("600x500") # Increased size to accommodate history
 
         self.clipboard_monitor_callback = clipboard_monitor_callback
+        self.monitor_instance = monitor_instance # Store monitor instance
         self.history_data = [] # To store the full history content
 
         # Main frame for better organization
@@ -29,6 +30,20 @@ class ClipWatcherGUI:
         # Initial content
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.DISABLED) # Make it read-only
+
+        # Search Section
+        self.search_frame = tk.Frame(self.main_frame, padx=5, pady=5)
+        self.search_frame.pack(fill=tk.X, pady=5)
+
+        self.search_label = tk.Label(self.search_frame, text="検索 (Search):")
+        self.search_label.pack(side=tk.LEFT)
+
+        self.search_entry = tk.Entry(self.search_frame)
+        self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        # Bind KeyRelease event for real-time filtering
+        # Use self.monitor_instance instead of self.master.monitor
+        self.search_entry.bind("<KeyRelease>", lambda event: event_handlers.handle_search_history(self.search_entry.get(), self.monitor_instance, self))
+
 
         # Clipboard History Section
         self.history_frame = tk.LabelFrame(self.main_frame, text="Clipboard History", padx=5, pady=5)
@@ -63,10 +78,17 @@ class ClipWatcherGUI:
         self.clipboard_text_widget.config(state=tk.DISABLED) # Make it read-only again
 
         self.history_data = history # Store the full history
-        self.update_history_display(history)
+        # When updating, also apply current search filter if any
+        search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
+        if search_query:
+            # Re-filter history based on current search query using monitor_instance
+            filtered_history = self.monitor_instance.get_filtered_history(search_query)
+            self.update_history_display(filtered_history)
+        else:
+            self.update_history_display(history)
 
-    def update_history_display(self, history):
+    def update_history_display(self, history_to_display): # Renamed parameter for clarity
         self.history_listbox.delete(0, tk.END) # Clear existing items
-        for i, item in enumerate(history):
+        for i, item in enumerate(history_to_display):
             display_text = item.replace('\n', ' ').replace('\r', '') # Single line for display
             self.history_listbox.insert(tk.END, f"{i+1}. {display_text[:100]}...") # Show first 100 chars
