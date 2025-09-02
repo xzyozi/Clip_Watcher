@@ -1,5 +1,6 @@
 import tkinter as tk
 from src.event_handlers import main_handlers as event_handlers
+from src.gui import context_menu # Import the context_menu module
 
 class ClipWatcherGUI:
     def __init__(self, master, clipboard_monitor_callback, monitor_instance): # Added monitor_instance
@@ -30,6 +31,9 @@ class ClipWatcherGUI:
         # Initial content
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.DISABLED) # Make it read-only
+        # Bind right-click to show context menu for clipboard_text_widget
+        self.clipboard_text_widget.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.clipboard_text_widget))
+
 
         # Search Section
         self.search_frame = tk.Frame(self.main_frame, padx=5, pady=5)
@@ -43,6 +47,8 @@ class ClipWatcherGUI:
         # Bind KeyRelease event for real-time filtering
         # Use self.monitor_instance instead of self.master.monitor
         self.search_entry.bind("<KeyRelease>", lambda event: event_handlers.handle_search_history(self.search_entry.get(), self.monitor_instance, self))
+        # Bind right-click to show context menu for entry
+        self.search_entry.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.search_entry))
 
 
         # Clipboard History Section
@@ -58,6 +64,9 @@ class ClipWatcherGUI:
 
         # Bind double-click to copy, calling event_handlers
         self.history_listbox.bind("<Double-Button-1>", lambda event: event_handlers.handle_copy_selected_history(self, self.history_data, self.history_listbox.curselection()[0]))
+        # Bind right-click to show context menu
+        self.history_listbox.bind("<Button-3>", lambda event: context_menu.show_history_context_menu(event, self, self.monitor_instance))
+
 
         # Control Buttons
         self.control_frame = tk.Frame(self.main_frame)
