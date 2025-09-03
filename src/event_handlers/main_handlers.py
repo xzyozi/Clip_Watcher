@@ -49,11 +49,19 @@ def handle_delete_selected_history(gui_instance, monitor_instance):
     except Exception as e:
         print(f"Error deleting selected history: {e}")
 
-def handle_delete_all_unpinned_history(monitor_instance, gui_instance):
-    # Placeholder for future implementation
-    print("Delete All Unpinned clicked (functionality not yet implemented).")
-    # In a real implementation, this would call a method on monitor_instance
-    # to delete unpinned items and then update the GUI.
+def handle_delete_all_unpinned_history(monitor_instance, gui_instance, master):
+    print("DEBUG: handle_delete_all_unpinned_history called.") # Debug print
+    # Confirm with user before deleting
+    if tkinter.messagebox.askyesno(
+        "確認 (Confirm)",
+        "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
+        parent=master # Pass master as parent
+    ):
+        monitor_instance.delete_all_unpinned_history()
+        # GUI update will be triggered by monitor_instance.delete_all_unpinned_history
+        tkinter.messagebox.showinfo("完了", "ピン留めされていない履歴をすべて削除しました。", parent=master)
+    else:
+        tkinter.messagebox.showinfo("キャンセル", "操作をキャンセルしました。", parent=master)
 
 def handle_copy_fixed_phrase(gui_instance, phrase):
     try:

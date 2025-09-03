@@ -35,7 +35,7 @@ def create_menu_bar(master, app_instance):
     edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: event_handlers.handle_copy_selected_as_merged(app_instance.gui))
     edit_menu.add_separator()
     edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=lambda: event_handlers.handle_delete_selected_history(app_instance.gui, app_instance.monitor))
-    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=lambda: print("Delete All Unpinned clicked"))
+    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=lambda: event_handlers.handle_delete_all_unpinned_history(app_instance.monitor, app_instance.gui, master))
     edit_menu.add_command(label="すべての履歴を削除 (Clear All History)", command=lambda: event_handlers.handle_clear_all_history(app_instance.monitor, app_instance.gui))
     menubar.add_cascade(label="編集 (Edit)", menu=edit_menu)
 
