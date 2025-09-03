@@ -1,6 +1,7 @@
 import tkinter as tk
 import tkinter.messagebox # Import messagebox
 import tkinter.filedialog # Import filedialog
+# Removed: import keyboard # No longer needed
 
 # This module will contain functions or a class for event handling
 
@@ -137,21 +138,6 @@ def handle_search_history(search_query, monitor_instance, gui_instance):
         # If search query is empty, display full history
         gui_instance.update_history_display(monitor_instance.get_history())
 
-def handle_paste_as_plain_text(gui_instance, history_data, selected_index):
-    try:
-        selected_item_content = history_data[selected_index][0]
-        # Copy plain text to clipboard
-        gui_instance.master.clipboard_clear()
-        gui_instance.master.clipboard_append(selected_item_content)
-        
-        # Simulate Ctrl+V
-        keyboard.press_and_release('ctrl+v')
-        print(f"Pasted as plain text: {selected_item_content[:50]}...")
-    except IndexError:
-        print("No history item selected for plain text paste.")
-    except Exception as e:
-        print(f"Error pasting as plain text: {e}")
-
 def handle_pin_unpin_history(gui_instance, monitor_instance):
     try:
         selected_index = gui_instance.history_listbox.curselection()[0]
@@ -171,3 +157,40 @@ def handle_pin_unpin_history(gui_instance, monitor_instance):
         print("No history item selected for pin/unpin.")
     except Exception as e:
         print(f"Error pinning/unpinning history: {e}")
+
+def handle_copy_selected_as_merged(gui_instance):
+    try:
+        selected_indices = gui_instance.history_listbox.curselection()
+        if not selected_indices:
+            print("No history items selected for merging.")
+            return
+
+        merged_content_parts = []
+        # Get the actual history data from the monitor, not just the displayed text
+        # The selected_indices are based on the displayed listbox, which corresponds
+        # to the order in monitor_instance.history.
+        # We need to get the content from the history_data (which is already sorted by pinned status)
+        for index in selected_indices:
+            # Ensure index is valid for history_data
+            if 0 <= index < len(gui_instance.history_data):
+                merged_content_parts.append(gui_instance.history_data[index][0]) # Get content part
+
+        if merged_content_parts:
+            merged_content = "\n".join(merged_content_parts) # Join with newline
+            gui_instance.master.clipboard_clear()
+            gui_instance.master.clipboard_append(merged_content)
+            print(f"Copied merged content: {merged_content[:50]}...")
+        else:
+            print("No valid history items selected for merging.")
+
+    except Exception as e:
+        print(f"Error merging and copying selected history: {e}")
+
+from src.gui.fixed_phrases_window import FixedPhrasesWindow # Import the new window class
+from src.fixed_phrases_manager import FixedPhrasesManager # Import the manager
+
+def handle_manage_fixed_phrases(master, fixed_phrases_manager):
+    # Create and show the FixedPhrasesWindow
+    fixed_phrases_window = FixedPhrasesWindow(master, fixed_phrases_manager)
+    fixed_phrases_window.grab_set() # Make it modal
+    master.wait_window(fixed_phrases_window)

@@ -55,7 +55,8 @@ class ClipWatcherGUI:
         self.history_frame = tk.LabelFrame(self.main_frame, text="Clipboard History", padx=5, pady=5)
         self.history_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        self.history_listbox = tk.Listbox(self.history_frame, height=10)
+        # Enable multi-selection in history_listbox
+        self.history_listbox = tk.Listbox(self.history_frame, height=10, selectmode=tk.EXTENDED)
         self.history_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.history_scrollbar = tk.Scrollbar(self.history_frame, orient="vertical", command=self.history_listbox.yview)
