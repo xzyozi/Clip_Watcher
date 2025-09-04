@@ -13,11 +13,8 @@ def create_menu_bar(master, app_instance):
 
     # Fixed Phrases Sub-menu
     fixed_phrases_menu = tk.Menu(file_menu, tearoff=0)
-    fixed_phrases_menu.add_command(label="挨拶 (Greeting)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "いつもお世話になっております。"))
-    fixed_phrases_menu.add_command(label="署名 (Signature)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, """よろしくお願いいたします。
-
-[あなたの名前]
-[あなたの会社]"""))
+    fixed_phrases_menu.add_command(label="挨拶 (Greeting)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "いつもお世話になっております。\n"))
+    fixed_phrases_menu.add_command(label="署名 (Signature)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "\nよろしくお願いいたします。\n\n[あなたの名前]\n[あなたの会社]"))
     fixed_phrases_menu.add_command(label="電話番号 (Phone Number)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "090-XXXX-XXXX"))
     file_menu.add_cascade(label="定型文 (Fixed Phrases)", menu=fixed_phrases_menu)
     file_menu.add_separator()
@@ -47,10 +44,16 @@ def create_menu_bar(master, app_instance):
                               command=lambda: event_handlers.handle_always_on_top(master, app_instance.always_on_top_var),
                               variable=app_instance.always_on_top_var)
     
+    # Theme Menu
+    app_instance.theme_var = tk.StringVar(value=app_instance.gui.current_theme_name) # Initialize with current theme
     theme_menu = tk.Menu(view_menu, tearoff=0)
-    theme_menu.add_command(label="ライト (Light)", command=lambda: print("Light theme clicked"))
-    theme_menu.add_command(label="ダーク (Dark)", command=lambda: print("Dark theme clicked"))
-    theme_menu.add_command(label="システム設定に合わせる (Follow System)", command=lambda: print("Follow System theme clicked"))
+    theme_menu.add_radiobutton(label="ライト (Light)", variable=app_instance.theme_var, value="light",
+                               command=lambda: event_handlers.handle_set_theme(app_instance.gui, "light"))
+    theme_menu.add_radiobutton(label="ダーク (Dark)", variable=app_instance.theme_var, value="dark",
+                               command=lambda: event_handlers.handle_set_theme(app_instance.gui, "dark"))
+    # "Follow System" is more complex, will just print for now
+    theme_menu.add_radiobutton(label="システム設定に合わせる (Follow System)", variable=app_instance.theme_var, value="system",
+                               command=lambda: print("Follow System theme clicked (not yet implemented)"))
     view_menu.add_cascade(label="テーマ (Theme)", menu=theme_menu)
     
     view_menu.add_separator()

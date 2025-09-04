@@ -202,3 +202,10 @@ def handle_manage_fixed_phrases(master, fixed_phrases_manager):
     fixed_phrases_window = FixedPhrasesWindow(master, fixed_phrases_manager)
     fixed_phrases_window.grab_set() # Make it modal
     master.wait_window(fixed_phrases_window)
+
+def handle_set_theme(gui_instance, theme_name):
+    '''
+    Handles setting the theme for the application.
+    '''
+    gui_instance.apply_theme(theme_name)
+    print(f"Theme set to: {theme_name}")
