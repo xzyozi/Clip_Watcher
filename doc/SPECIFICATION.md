@@ -15,7 +15,7 @@
 **インストール**:
 
 ```bash
-pip install Pillow keyboard
+pip install Pillow
 ```
 
 ### **3. 機能一覧**

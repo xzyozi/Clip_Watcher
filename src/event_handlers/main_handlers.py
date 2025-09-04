@@ -1,13 +1,14 @@
 import tkinter as tk
 import tkinter.messagebox # Import messagebox
 import tkinter.filedialog # Import filedialog
+# Removed: import keyboard # No longer needed
 
 # This module will contain functions or a class for event handling
 
 # Example: A function to handle copying selected history
 def handle_copy_selected_history(gui_instance, history_data, selected_index):
     try:
-        selected_item_content = history_data[selected_index]
+        selected_item_content = history_data[selected_index][0] # Get content from (content, is_pinned) tuple
         # Use tkinter's clipboard methods
         gui_instance.master.clipboard_clear()
         gui_instance.master.clipboard_append(selected_item_content)
@@ -34,12 +35,6 @@ def handle_delete_selected_history(gui_instance, monitor_instance):
             print("No history item selected for deletion.")
             return
 
-        # Get the actual history data from the monitor, not just the displayed text
-        # This is important because the displayed text might be truncated.
-        # We need to delete from the monitor's internal history list.
-        # The selected_indices are based on the displayed listbox, which corresponds
-        # to the order in monitor_instance.history.
-
         # Convert tuple of indices to list and sort in descending order
         # to avoid issues when deleting items from a list while iterating.
         indices_to_delete = sorted(list(selected_indices), reverse=True)
@@ -48,20 +43,25 @@ def handle_delete_selected_history(gui_instance, monitor_instance):
             monitor_instance.delete_history_item(index)
 
         # After deletion, update the GUI to reflect the new history
-        # The monitor's history has changed, so we need to get the updated history
-        # and pass it to the GUI.
-        updated_history = monitor_instance.get_history()
-        gui_instance.update_clipboard_display(monitor_instance.last_clipboard_data, updated_history)
+        # The monitor's _trigger_gui_update will handle the GUI update after deletion.
         print(f"Deleted {len(selected_indices)} selected history item(s).")
 
     except Exception as e:
         print(f"Error deleting selected history: {e}")
 
-def handle_delete_all_unpinned_history(monitor_instance, gui_instance):
-    # Placeholder for future implementation
-    print("Delete All Unpinned clicked (functionality not yet implemented).")
-    # In a real implementation, this would call a method on monitor_instance
-    # to delete unpinned items and then update the GUI.
+def handle_delete_all_unpinned_history(monitor_instance, gui_instance, master):
+    print("DEBUG: handle_delete_all_unpinned_history called.") # Debug print
+    # Confirm with user before deleting
+    if tkinter.messagebox.askyesno(
+        "確認 (Confirm)",
+        "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
+        parent=master # Pass master as parent
+    ):
+        monitor_instance.delete_all_unpinned_history()
+        # GUI update will be triggered by monitor_instance.delete_all_unpinned_history
+        tkinter.messagebox.showinfo("完了", "ピン留めされていない履歴をすべて削除しました。", parent=master)
+    else:
+        tkinter.messagebox.showinfo("キャンセル", "操作をキャンセルしました。", parent=master)
 
 def handle_copy_fixed_phrase(gui_instance, phrase):
     try:
@@ -105,10 +105,10 @@ def handle_export_history(monitor_instance):
     )
     if file_path:
         try:
-            history_content = monitor_instance.get_history()
+            history_content = monitor_instance.get_history() # This returns (content, is_pinned) tuples
             with open(file_path, "w", encoding="utf-8") as f:
-                for item in history_content:
-                    f.write(item + "\n---\n") # Separator for each item
+                for item_tuple in history_content:
+                    f.write(item_tuple[0] + "\n---\n") # Write only content
             tkinter.messagebox.showinfo("エクスポート完了", f"履歴を以下のファイルにエクスポートしました:\n{file_path}")
         except Exception as e:
             tkinter.messagebox.showerror("エクスポートエラー", f"履歴のエクスポート中にエラーが発生しました:\n{e}")
@@ -131,8 +131,81 @@ def handle_import_history(monitor_instance, gui_instance):
             # Add imported history to the monitor's history
             monitor_instance.import_history(imported_history)
             
-            # Update GUI
-            gui_instance.update_clipboard_display(monitor_instance.last_clipboard_data, monitor_instance.get_history())
+            # Update GUI (monitor's _trigger_gui_update will handle this)
             tkinter.messagebox.showinfo("インポート完了", f"履歴を以下のファイルからインポートしました:\n{file_path}")
         except Exception as e:
             tkinter.messagebox.showerror("インポートエラー", f"履歴のインポート中にエラーが発生しました:\n{e}")
+
+def handle_search_history(search_query, monitor_instance, gui_instance):
+    # This function is called when the search entry content changes.
+    # It will filter the history displayed in the GUI.
+    if search_query:
+        filtered_history = monitor_instance.get_filtered_history(search_query)
+        gui_instance.update_history_display(filtered_history)
+    else:
+        # If search query is empty, display full history
+        gui_instance.update_history_display(monitor_instance.get_history())
+
+def handle_pin_unpin_history(gui_instance, monitor_instance):
+    try:
+        selected_index = gui_instance.history_listbox.curselection()[0]
+        # Get the actual item from the monitor's history based on the displayed order
+        item_tuple = monitor_instance.get_history()[selected_index]
+        content, is_pinned = item_tuple
+
+        if is_pinned:
+            monitor_instance.unpin_item(selected_index)
+            print(f"Unpinned: {content[:50]}...")
+        else:
+            monitor_instance.pin_item(selected_index)
+            print(f"Pinned: {content[:50]}...")
+        
+        # Monitor's pin/unpin methods will call _trigger_gui_update
+    except IndexError:
+        print("No history item selected for pin/unpin.")
+    except Exception as e:
+        print(f"Error pinning/unpinning history: {e}")
+
+def handle_copy_selected_as_merged(gui_instance):
+    try:
+        selected_indices = gui_instance.history_listbox.curselection()
+        if not selected_indices:
+            print("No history items selected for merging.")
+            return
+
+        merged_content_parts = []
+        # Get the actual history data from the monitor, not just the displayed text
+        # The selected_indices are based on the displayed listbox, which corresponds
+        # to the order in monitor_instance.history.
+        # We need to get the content from the history_data (which is already sorted by pinned status)
+        for index in selected_indices:
+            # Ensure index is valid for history_data
+            if 0 <= index < len(gui_instance.history_data):
+                merged_content_parts.append(gui_instance.history_data[index][0]) # Get content part
+
+        if merged_content_parts:
+            merged_content = "\n".join(merged_content_parts) # Join with newline
+            gui_instance.master.clipboard_clear()
+            gui_instance.master.clipboard_append(merged_content)
+            print(f"Copied merged content: {merged_content[:50]}...")
+        else:
+            print("No valid history items selected for merging.")
+
+    except Exception as e:
+        print(f"Error merging and copying selected history: {e}")
+
+from src.gui.fixed_phrases_window import FixedPhrasesWindow # Import the new window class
+from src.fixed_phrases_manager import FixedPhrasesManager # Import the manager
+
+def handle_manage_fixed_phrases(master, fixed_phrases_manager):
+    # Create and show the FixedPhrasesWindow
+    fixed_phrases_window = FixedPhrasesWindow(master, fixed_phrases_manager)
+    fixed_phrases_window.grab_set() # Make it modal
+    master.wait_window(fixed_phrases_window)
+
+def handle_set_theme(gui_instance, theme_name):
+    '''
+    Handles setting the theme for the application.
+    '''
+    gui_instance.apply_theme(theme_name)
+    print(f"Theme set to: {theme_name}")
