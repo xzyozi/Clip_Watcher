@@ -6,7 +6,7 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
         super().__init__(master)
         self.title("Settings")
-        self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
+        self.geometry("450x650")
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
@@ -15,6 +15,10 @@ class SettingsWindow(tk.Toplevel):
         self.history_limit_var = tk.IntVar(value=self.settings_manager.get_setting("history_limit"))
         self.always_on_top_var = tk.BooleanVar(value=self.settings_manager.get_setting("always_on_top"))
         self.startup_on_boot_var = tk.BooleanVar(value=self.settings_manager.get_setting("startup_on_boot"))
+        self.notifications_enabled_var = tk.BooleanVar(value=self.settings_manager.get_setting("notifications_enabled"))
+        self.notification_content_length_var = tk.IntVar(value=self.settings_manager.get_setting("notification_content_length"))
+        self.notification_show_app_name_var = tk.BooleanVar(value=self.settings_manager.get_setting("notification_show_app_name"))
+        self.notification_sound_enabled_var = tk.BooleanVar(value=self.settings_manager.get_setting("notification_sound_enabled"))
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
@@ -52,6 +56,26 @@ class SettingsWindow(tk.Toplevel):
 
         history_limit_spinbox = ttk.Spinbox(history_frame, from_=config.HISTORY_LIMIT_MIN, to=config.HISTORY_LIMIT_MAX, increment=config.HISTORY_LIMIT_INCREMENT, textvariable=self.history_limit_var, width=10)
         history_limit_spinbox.pack(side=tk.LEFT)
+
+        # Notification Settings
+        notification_frame = ttk.LabelFrame(main_frame, text="Notification Settings", padding=config.FRAME_PADDING)
+        notification_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+
+        notifications_enabled_check = ttk.Checkbutton(notification_frame, text="Enable Notifications", variable=self.notifications_enabled_var)
+        notifications_enabled_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        notification_show_app_name_check = ttk.Checkbutton(notification_frame, text="Show App Name in Notification", variable=self.notification_show_app_name_var)
+        notification_show_app_name_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        notification_sound_enabled_check = ttk.Checkbutton(notification_frame, text="Enable Notification Sound", variable=self.notification_sound_enabled_var)
+        notification_sound_enabled_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        notification_content_length_label = ttk.Label(notification_frame, text="Notification Content Length:")
+        notification_content_length_label.grid(row=3, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        notification_content_length_spinbox = ttk.Spinbox(notification_frame, from_=10, to=200, increment=10, textvariable=self.notification_content_length_var, width=10)
+        notification_content_length_spinbox.grid(row=3, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
 
         # Excluded Apps Settings
         excluded_apps_frame = ttk.LabelFrame(main_frame, text="Excluded Applications", padding=config.FRAME_PADDING)
@@ -141,6 +165,10 @@ class SettingsWindow(tk.Toplevel):
         self.history_limit_var.set(self.settings_manager.get_setting("history_limit"))
         self.always_on_top_var.set(self.settings_manager.get_setting("always_on_top"))
         self.startup_on_boot_var.set(self.settings_manager.get_setting("startup_on_boot"))
+        self.notifications_enabled_var.set(self.settings_manager.get_setting("notifications_enabled"))
+        self.notification_content_length_var.set(self.settings_manager.get_setting("notification_content_length"))
+        self.notification_show_app_name_var.set(self.settings_manager.get_setting("notification_show_app_name"))
+        self.notification_sound_enabled_var.set(self.settings_manager.get_setting("notification_sound_enabled"))
         
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
         self.excluded_apps_listbox.delete(0, tk.END)
@@ -153,6 +181,10 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
         self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
         self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
+        self.settings_manager.set_setting("notifications_enabled", self.notifications_enabled_var.get())
+        self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
+        self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
+        self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
         self.settings_manager.save_settings()
 

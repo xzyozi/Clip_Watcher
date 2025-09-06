@@ -4,10 +4,13 @@ import tkinter as tk
 import psutil
 import win32process
 import win32gui
+from src.notification_manager import NotificationManager
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, settings_manager, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
+        self.settings_manager = settings_manager
+        self.notification_manager = NotificationManager(settings_manager)
         self.update_callback = None
         self.last_clipboard_data = ""
         self._running = False
@@ -65,6 +68,7 @@ class ClipboardMonitor:
                         if len(self.history) > self.history_limit:
                             self.history.pop()
 
+                    self.notification_manager.play_notification_sound()
                     self._trigger_gui_update()
 
             except tk.TclError:

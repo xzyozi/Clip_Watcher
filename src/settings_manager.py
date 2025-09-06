@@ -28,7 +28,8 @@ class SettingsManager:
             "history_limit": 50,
             "always_on_top": False,
             "excluded_apps": ["keepass.exe", "bitwarden.exe"],
-            "startup_on_boot": False
+            "startup_on_boot": False,
+            "notification_sound_enabled": False
         }
 
     def save_settings(self):

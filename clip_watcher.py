@@ -9,6 +9,7 @@ from src.gui.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src.fixed_phrases_manager import FixedPhrasesManager
 
 class Application:
     def __init__(self, master):
@@ -17,17 +18,21 @@ class Application:
 
         self.settings_manager = SettingsManager()
         
-        self.monitor = ClipboardMonitor(
-            master,
-            self.settings_manager.get_setting("history_limit"),
-            self.settings_manager.get_setting("excluded_apps")
-        )
-        self.gui = ClipWatcherGUI(master, self.stop_monitor, self.monitor)
-        self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
-
+        # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self)
         self.file_handlers = FileEventHandlers(self)
         self.settings_handlers = SettingsEventHandlers(self)
+
+        self.fixed_phrases_manager = FixedPhrasesManager()
+
+        self.monitor = ClipboardMonitor(
+            master,
+            self.settings_manager,
+            self.settings_manager.get_setting("history_limit"),
+            self.settings_manager.get_setting("excluded_apps")
+        )
+        self.gui = ClipWatcherGUI(master, self)
+        self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
 
         self.monitor.start()
 
