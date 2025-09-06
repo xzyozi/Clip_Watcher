@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk, font
 from src.gui import context_menu
 from src import config
 
@@ -113,6 +114,13 @@ class ClipWatcherGUI:
 
         self.current_theme_name = theme_name
         self.update_history_display(self.app.monitor.get_filtered_history(self.search_entry.get()))
+
+    def apply_font_settings(self, clipboard_content_font_family, clipboard_content_font_size, history_font_family, history_font_size):
+        clipboard_font = font.Font(family=clipboard_content_font_family, size=clipboard_content_font_size)
+        history_font = font.Font(family=history_font_family, size=history_font_size)
+
+        self.clipboard_text_widget.config(font=clipboard_font)
+        self.history_listbox.config(font=history_font)
 
     def update_clipboard_display(self, current_content, history):
         self.clipboard_text_widget.config(state=tk.NORMAL)

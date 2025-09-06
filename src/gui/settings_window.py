@@ -1,12 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, simpledialog, filedialog, messagebox
+from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
         super().__init__(master)
         self.title("Settings")
-        self.geometry("450x650")
+        self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
@@ -19,18 +19,36 @@ class SettingsWindow(tk.Toplevel):
         self.notification_content_length_var = tk.IntVar(value=self.settings_manager.get_setting("notification_content_length"))
         self.notification_show_app_name_var = tk.BooleanVar(value=self.settings_manager.get_setting("notification_show_app_name"))
         self.notification_sound_enabled_var = tk.BooleanVar(value=self.settings_manager.get_setting("notification_sound_enabled"))
+        
+        self.clipboard_content_font_family_var = tk.StringVar(value=self.settings_manager.get_setting("clipboard_content_font_family"))
+        self.clipboard_content_font_size_var = tk.IntVar(value=self.settings_manager.get_setting("clipboard_content_font_size"))
+        self.history_font_family_var = tk.StringVar(value=self.settings_manager.get_setting("history_font_family"))
+        self.history_font_size_var = tk.IntVar(value=self.settings_manager.get_setting("history_font_size"))
+
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
 
     def _create_widgets(self):
-        main_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Create a Notebook (tabbed interface)
+        notebook = ttk.Notebook(self)
+        notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
 
-        # General Settings
-        general_frame = ttk.LabelFrame(main_frame, text="General Settings", padding=config.FRAME_PADDING)
-        general_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        # Create frames for each tab
+        general_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
+        history_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
+        notification_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
+        font_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING) # New font frame
+        excluded_apps_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
 
+        # Add tabs to the notebook
+        notebook.add(general_frame, text="General")
+        notebook.add(history_frame, text="History")
+        notebook.add(notification_frame, text="Notifications")
+        notebook.add(font_frame, text="Font") # Add font tab
+        notebook.add(excluded_apps_frame, text="Excluded Apps")
+
+        # Populate General Settings tab
         # Theme
         theme_label = ttk.Label(general_frame, text="Theme:")
         theme_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
@@ -48,19 +66,13 @@ class SettingsWindow(tk.Toplevel):
 
 
         # History Settings
-        history_frame = ttk.LabelFrame(main_frame, text="History Settings", padding=config.FRAME_PADDING)
-        history_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
-
         history_limit_label = ttk.Label(history_frame, text="History Limit:")
         history_limit_label.pack(side=tk.LEFT, padx=(0, 10))
 
         history_limit_spinbox = ttk.Spinbox(history_frame, from_=config.HISTORY_LIMIT_MIN, to=config.HISTORY_LIMIT_MAX, increment=config.HISTORY_LIMIT_INCREMENT, textvariable=self.history_limit_var, width=10)
         history_limit_spinbox.pack(side=tk.LEFT)
 
-        # Notification Settings
-        notification_frame = ttk.LabelFrame(main_frame, text="Notification Settings", padding=config.FRAME_PADDING)
-        notification_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
-
+        # Populate Notification Settings tab
         notifications_enabled_check = ttk.Checkbutton(notification_frame, text="Enable Notifications", variable=self.notifications_enabled_var)
         notifications_enabled_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
@@ -76,11 +88,36 @@ class SettingsWindow(tk.Toplevel):
         notification_content_length_spinbox = ttk.Spinbox(notification_frame, from_=10, to=200, increment=10, textvariable=self.notification_content_length_var, width=10)
         notification_content_length_spinbox.grid(row=3, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
+        # Populate Font Settings tab
+        # Clipboard Content Font
+        clipboard_content_font_label = ttk.Label(font_frame, text="Clipboard Content Font:")
+        clipboard_content_font_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        font_families = sorted(font.families())
+        clipboard_content_font_family_menu = ttk.OptionMenu(font_frame, self.clipboard_content_font_family_var, self.clipboard_content_font_family_var.get(), *font_families)
+        clipboard_content_font_family_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        # Excluded Apps Settings
-        excluded_apps_frame = ttk.LabelFrame(main_frame, text="Excluded Applications", padding=config.FRAME_PADDING)
-        excluded_apps_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y)
+        clipboard_content_font_size_label = ttk.Label(font_frame, text="Size:")
+        clipboard_content_font_size_label.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        clipboard_content_font_size_spinbox = ttk.Spinbox(font_frame, from_=8, to=24, increment=1, textvariable=self.clipboard_content_font_size_var, width=5)
+        clipboard_content_font_size_spinbox.grid(row=1, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
+        # History Font
+        history_font_label = ttk.Label(font_frame, text="History Font:")
+        history_font_label.grid(row=2, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        history_font_family_menu = ttk.OptionMenu(font_frame, self.history_font_family_var, self.history_font_family_var.get(), *font_families)
+        history_font_family_menu.grid(row=2, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        history_font_size_label = ttk.Label(font_frame, text="Size:")
+        history_font_size_label.grid(row=3, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        history_font_size_spinbox = ttk.Spinbox(font_frame, from_=8, to=24, increment=1, textvariable=self.history_font_size_var, width=5)
+        history_font_size_spinbox.grid(row=3, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+
+        # Populate Excluded Apps Settings tab
         self.excluded_apps_listbox = tk.Listbox(excluded_apps_frame)
         for app in self.excluded_apps_list:
             self.excluded_apps_listbox.insert(tk.END, app)
@@ -95,8 +132,8 @@ class SettingsWindow(tk.Toplevel):
         remove_app_button = ttk.Button(excluded_apps_button_frame, text="Remove", command=self._remove_excluded_app)
         remove_app_button.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
-        # Import/Export/Default buttons
-        io_button_frame = ttk.Frame(main_frame)
+        # Import/Export/Default buttons (placed outside the notebook, at the bottom)
+        io_button_frame = ttk.Frame(self)
         io_button_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=config.BUTTON_PADDING_Y)
 
         export_button = ttk.Button(io_button_frame, text="Export Settings", command=self._export_settings)
@@ -108,9 +145,8 @@ class SettingsWindow(tk.Toplevel):
         default_button = ttk.Button(io_button_frame, text="Restore Defaults", command=self._restore_defaults)
         default_button.pack(side=tk.LEFT)
 
-
-        # Save/Cancel Buttons
-        button_frame = ttk.Frame(main_frame, padding=config.FRAME_PADDING)
+        # Save/Cancel Buttons (placed outside the notebook, at the very bottom)
+        button_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
         button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
         save_button = ttk.Button(button_frame, text="Save", command=self._save_and_close)
@@ -169,6 +205,10 @@ class SettingsWindow(tk.Toplevel):
         self.notification_content_length_var.set(self.settings_manager.get_setting("notification_content_length"))
         self.notification_show_app_name_var.set(self.settings_manager.get_setting("notification_show_app_name"))
         self.notification_sound_enabled_var.set(self.settings_manager.get_setting("notification_sound_enabled"))
+        self.clipboard_content_font_family_var.set(self.settings_manager.get_setting("clipboard_content_font_family"))
+        self.clipboard_content_font_size_var.set(self.settings_manager.get_setting("clipboard_content_font_size"))
+        self.history_font_family_var.set(self.settings_manager.get_setting("history_font_family"))
+        self.history_font_size_var.set(self.settings_manager.get_setting("history_font_size"))
         
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
         self.excluded_apps_listbox.delete(0, tk.END)
@@ -185,6 +225,10 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
         self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
         self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_family", self.clipboard_content_font_family_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
+        self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
+        self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
         self.settings_manager.save_settings()
 

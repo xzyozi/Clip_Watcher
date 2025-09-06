@@ -29,7 +29,11 @@ class SettingsManager:
             "always_on_top": False,
             "excluded_apps": ["keepass.exe", "bitwarden.exe"],
             "startup_on_boot": False,
-            "notification_sound_enabled": False
+            "notification_sound_enabled": False,
+            "clipboard_content_font_family": "TkDefaultFont",
+            "clipboard_content_font_size": 10,
+            "history_font_family": "TkDefaultFont",
+            "history_font_size": 10
         }
 
     def save_settings(self):
@@ -78,9 +82,22 @@ class SettingsManager:
 
         # Apply startup on boot
         startup_on_boot = self.get_setting("startup_on_boot")
-        self.manage_startup(startup_on_boot)
+        self._manage_startup(startup_on_boot) # Call the internal method
 
-    def manage_startup(self, startup_enabled):
+        # Apply font settings
+        clipboard_content_font_family = self.get_setting("clipboard_content_font_family")
+        clipboard_content_font_size = self.get_setting("clipboard_content_font_size")
+        history_font_family = self.get_setting("history_font_family")
+        history_font_size = self.get_setting("history_font_size")
+
+        app_instance.gui.apply_font_settings(
+            clipboard_content_font_family,
+            clipboard_content_font_size,
+            history_font_family,
+            history_font_size
+        )
+
+    def _manage_startup(self, startup_enabled):
         if sys.platform == "win32":
             startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
             startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
