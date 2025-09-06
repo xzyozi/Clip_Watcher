@@ -1,4 +1,6 @@
 import tkinter as tk
+import os
+import sys
 from src.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
@@ -43,6 +45,23 @@ class Application:
         # Apply excluded apps
         excluded_apps = self.settings_manager.get_setting("excluded_apps")
         self.monitor.set_excluded_apps(excluded_apps)
+
+        # Apply startup on boot
+        startup_on_boot = self.settings_manager.get_setting("startup_on_boot")
+        self.manage_startup(startup_on_boot)
+
+    def manage_startup(self, startup_enabled):
+        if sys.platform == "win32":
+            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
+
+            if startup_enabled:
+                script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
+                with open(startup_script_path, "w") as f:
+                    f.write(script_content)
+            else:
+                if os.path.exists(startup_script_path):
+                    os.remove(startup_script_path)
 
     def open_settings_window(self):
         settings_window = SettingsWindow(self.master, self.settings_manager, self)

@@ -5,7 +5,7 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
         super().__init__(master)
         self.title("Settings")
-        self.geometry("450x450")
+        self.geometry("450x500")
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
@@ -13,6 +13,7 @@ class SettingsWindow(tk.Toplevel):
         self.theme_var = tk.StringVar(value=self.settings_manager.get_setting("theme"))
         self.history_limit_var = tk.IntVar(value=self.settings_manager.get_setting("history_limit"))
         self.always_on_top_var = tk.BooleanVar(value=self.settings_manager.get_setting("always_on_top"))
+        self.startup_on_boot_var = tk.BooleanVar(value=self.settings_manager.get_setting("startup_on_boot"))
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
@@ -35,6 +36,10 @@ class SettingsWindow(tk.Toplevel):
         # Always on Top
         always_on_top_check = ttk.Checkbutton(general_frame, text="Always on Top", variable=self.always_on_top_var)
         always_on_top_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+
+        # Startup on boot
+        startup_on_boot_check = ttk.Checkbutton(general_frame, text="Start with Windows", variable=self.startup_on_boot_var)
+        startup_on_boot_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
 
 
         # History Settings
@@ -94,6 +99,7 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.set_setting("theme", self.theme_var.get())
         self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
         self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
+        self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
         self.settings_manager.save_settings()
 

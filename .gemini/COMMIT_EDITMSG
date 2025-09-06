@@ -1,0 +1,7 @@
+feat: Add startup on boot setting
+
+This commit introduces a new setting that allows the application to start automatically when the user logs into Windows.
+
+- A "Start with Windows" checkbox has been added to the settings window.
+- When enabled, a batch file is created in the user's Startup folder to launch the application.
+- The setting is saved in `settings.json` and applied on application start.
