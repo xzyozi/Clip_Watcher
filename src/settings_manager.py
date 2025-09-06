@@ -39,3 +39,20 @@ class SettingsManager:
 
     def set_setting(self, key, value):
         self.settings[key] = value
+
+    def save_settings_to_file(self, filepath):
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(self.settings, f, ensure_ascii=False, indent=4)
+
+    def load_settings_from_file(self, filepath):
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                try:
+                    loaded_settings = json.load(f)
+                    # Basic validation to ensure it's a valid settings file
+                    if "theme" in loaded_settings and "history_limit" in loaded_settings:
+                        self.settings = loaded_settings
+                        return True
+                except (json.JSONDecodeError, TypeError):
+                    return False
+        return False

@@ -1,7 +1,10 @@
-feat: Add startup on boot setting
+feat: Enhance settings and update specification
 
-This commit introduces a new setting that allows the application to start automatically when the user logs into Windows.
+This commit introduces several improvements to the settings functionality and updates the specification document.
 
-- A "Start with Windows" checkbox has been added to the settings window.
-- When enabled, a batch file is created in the user's Startup folder to launch the application.
-- The setting is saved in `settings.json` and applied on application start.
+- **Settings:**
+  - Added the ability to export and import settings to/from a JSON file.
+  - Added a "Restore Defaults" button to reset all settings to their initial values.
+- **Documentation:**
+  - Updated `doc/SPECIFICATION.md` to accurately reflect the current feature set and future extension plans.
+  - Restructured the document for better readability.

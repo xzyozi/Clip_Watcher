@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import ttk, simpledialog
+from tkinter import ttk, simpledialog, filedialog, messagebox
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
         super().__init__(master)
         self.title("Settings")
-        self.geometry("450x500")
+        self.geometry("450x550")
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
@@ -70,8 +70,21 @@ class SettingsWindow(tk.Toplevel):
         remove_app_button = ttk.Button(excluded_apps_button_frame, text="Remove", command=self._remove_excluded_app)
         remove_app_button.pack(fill=tk.X, pady=5)
 
+        # Import/Export/Default buttons
+        io_button_frame = ttk.Frame(main_frame)
+        io_button_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=5)
 
-        # Buttons
+        export_button = ttk.Button(io_button_frame, text="Export Settings", command=self._export_settings)
+        export_button.pack(side=tk.LEFT)
+
+        import_button = ttk.Button(io_button_frame, text="Import Settings", command=self._import_settings)
+        import_button.pack(side=tk.LEFT, padx=5)
+
+        default_button = ttk.Button(io_button_frame, text="Restore Defaults", command=self._restore_defaults)
+        default_button.pack(side=tk.LEFT)
+
+
+        # Save/Cancel Buttons
         button_frame = ttk.Frame(main_frame, padding="10")
         button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
@@ -93,6 +106,45 @@ class SettingsWindow(tk.Toplevel):
             for i in reversed(selected_indices):
                 self.excluded_apps_listbox.delete(i)
                 del self.excluded_apps_list[i]
+
+    def _export_settings(self):
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Export Settings"
+        )
+        if filepath:
+            self.settings_manager.save_settings_to_file(filepath)
+            messagebox.showinfo("Export Successful", f"Settings exported to {filepath}")
+
+    def _import_settings(self):
+        filepath = filedialog.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Import Settings"
+        )
+        if filepath:
+            if self.settings_manager.load_settings_from_file(filepath):
+                self._update_ui_from_settings()
+                messagebox.showinfo("Import Successful", "Settings imported successfully.")
+            else:
+                messagebox.showerror("Import Failed", "Could not load settings from the selected file.")
+
+    def _restore_defaults(self):
+        if messagebox.askyesno("Restore Defaults", "Are you sure you want to restore all settings to their default values?"):
+            self.settings_manager.settings = self.settings_manager._get_default_settings()
+            self._update_ui_from_settings()
+
+    def _update_ui_from_settings(self):
+        self.theme_var.set(self.settings_manager.get_setting("theme"))
+        self.history_limit_var.set(self.settings_manager.get_setting("history_limit"))
+        self.always_on_top_var.set(self.settings_manager.get_setting("always_on_top"))
+        self.startup_on_boot_var.set(self.settings_manager.get_setting("startup_on_boot"))
+        
+        self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
+        self.excluded_apps_listbox.delete(0, tk.END)
+        for app in self.excluded_apps_list:
+            self.excluded_apps_listbox.insert(tk.END, app)
 
     def _save_and_close(self):
         # Save settings
