@@ -7,8 +7,8 @@ def create_menu_bar(master, app_instance):
     # File Menu
     file_menu = tk.Menu(menubar, tearoff=0)
     file_menu.add_command(label="設定 (Settings)...", command=app_instance.open_settings_window)
-    file_menu.add_command(label="履歴をエクスポート (Export History)...", command=lambda: event_handlers.handle_export_history(app_instance.monitor))
-    file_menu.add_command(label="履歴をインポート (Import History)...", command=lambda: event_handlers.handle_import_history(app_instance.monitor, app_instance.gui))
+    file_menu.add_command(label="履歴をエクスポート (Export History)...", command=app_instance.file_handlers.handle_export_history)
+    file_menu.add_command(label="履歴をインポート (Import History)...", command=app_instance.file_handlers.handle_import_history)
     file_menu.add_separator()
 
     # Fixed Phrases Sub-menu
@@ -23,34 +23,34 @@ def create_menu_bar(master, app_instance):
     file_menu.add_command(label="定型文の管理 (Manage Fixed Phrases)...", command=lambda: event_handlers.handle_manage_fixed_phrases(master, app_instance.fixed_phrases_manager))
     file_menu.add_separator()
 
-    file_menu.add_command(label="終了 (Exit)", command=lambda: event_handlers.handle_quit(app_instance.monitor.stop, master))
+    file_menu.add_command(label="終了 (Exit)", command=app_instance.file_handlers.handle_quit)
     menubar.add_cascade(label="ファイル (File)", menu=file_menu)
 
     # Edit Menu
     edit_menu = tk.Menu(menubar, tearoff=0)
     edit_menu.add_command(label="検索 (Find)...", command=lambda: print("Find clicked"))
-    edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: event_handlers.handle_copy_selected_as_merged(app_instance.gui))
+    edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=app_instance.history_handlers.handle_copy_selected_as_merged)
     edit_menu.add_separator()
-    edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=lambda: event_handlers.handle_delete_selected_history(app_instance.gui, app_instance.monitor))
-    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=lambda: event_handlers.handle_delete_all_unpinned_history(app_instance.monitor, app_instance.gui, master))
-    edit_menu.add_command(label="すべての履歴を削除 (Clear All History)", command=lambda: event_handlers.handle_clear_all_history(app_instance.monitor, app_instance.gui))
+    edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=app_instance.history_handlers.handle_delete_selected_history)
+    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=app_instance.history_handlers.handle_delete_all_unpinned_history)
+    edit_menu.add_command(label="すべての履歴を削除 (Clear All History)", command=app_instance.history_handlers.handle_clear_all_history)
     menubar.add_cascade(label="編集 (Edit)", menu=edit_menu)
 
     # View Menu
     view_menu = tk.Menu(menubar, tearoff=0)
     # Variable to hold the state of the "Always on Top" checkbutton
-    app_instance.always_on_top_var = tk.BooleanVar(value=False) # Initialize to False
+    app_instance.always_on_top_var = tk.BooleanVar(value=app_instance.settings_manager.get_setting("always_on_top"))
     view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)",
-                              command=lambda: event_handlers.handle_always_on_top(master, app_instance.always_on_top_var),
+                              command=app_instance.settings_handlers.handle_always_on_top,
                               variable=app_instance.always_on_top_var)
     
     # Theme Menu
-    app_instance.theme_var = tk.StringVar(value=app_instance.gui.current_theme_name) # Initialize with current theme
+    app_instance.theme_var = tk.StringVar(value=app_instance.settings_manager.get_setting("theme"))
     theme_menu = tk.Menu(view_menu, tearoff=0)
     theme_menu.add_radiobutton(label="ライト (Light)", variable=app_instance.theme_var, value="light",
-                               command=lambda: event_handlers.handle_set_theme(app_instance.gui, "light"))
+                               command=lambda: app_instance.settings_handlers.handle_set_theme("light"))
     theme_menu.add_radiobutton(label="ダーク (Dark)", variable=app_instance.theme_var, value="dark",
-                               command=lambda: event_handlers.handle_set_theme(app_instance.gui, "dark"))
+                               command=lambda: app_instance.settings_handlers.handle_set_theme("dark"))
     # "Follow System" is more complex, will just print for now
     theme_menu.add_radiobutton(label="システム設定に合わせる (Follow System)", variable=app_instance.theme_var, value="system",
                                command=lambda: print("Follow System theme clicked (not yet implemented)"))
@@ -68,8 +68,8 @@ def create_menu_bar(master, app_instance):
 
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0)
-    help_menu.add_command(label="使い方 (How to Use)", command=lambda: event_handlers.handle_how_to_use())
-    help_menu.add_command(label="バージョン情報 (About)", command=lambda: event_handlers.handle_about())
+    help_menu.add_command(label="使い方 (How to Use)", command=event_handlers.handle_how_to_use)
+    help_menu.add_command(label="バージョン情報 (About)", command=event_handlers.handle_about)
     menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu)
 
     return menubar

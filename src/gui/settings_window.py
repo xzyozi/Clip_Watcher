@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, filedialog, messagebox
+from src import config
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
         super().__init__(master)
         self.title("Settings")
-        self.geometry("450x550")
+        self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
@@ -19,42 +20,42 @@ class SettingsWindow(tk.Toplevel):
         self._create_widgets()
 
     def _create_widgets(self):
-        main_frame = ttk.Frame(self, padding="10")
+        main_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # General Settings
-        general_frame = ttk.LabelFrame(main_frame, text="General Settings", padding="10")
-        general_frame.pack(fill=tk.X, pady=5)
+        general_frame = ttk.LabelFrame(main_frame, text="General Settings", padding=config.FRAME_PADDING)
+        general_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         # Theme
         theme_label = ttk.Label(general_frame, text="Theme:")
-        theme_label.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        theme_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         theme_options = ["light", "dark"]
         theme_menu = ttk.OptionMenu(general_frame, self.theme_var, self.theme_var.get(), *theme_options)
-        theme_menu.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        theme_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         # Always on Top
         always_on_top_check = ttk.Checkbutton(general_frame, text="Always on Top", variable=self.always_on_top_var)
-        always_on_top_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        always_on_top_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         # Startup on boot
         startup_on_boot_check = ttk.Checkbutton(general_frame, text="Start with Windows", variable=self.startup_on_boot_var)
-        startup_on_boot_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        startup_on_boot_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
 
         # History Settings
-        history_frame = ttk.LabelFrame(main_frame, text="History Settings", padding="10")
-        history_frame.pack(fill=tk.X, pady=5)
+        history_frame = ttk.LabelFrame(main_frame, text="History Settings", padding=config.FRAME_PADDING)
+        history_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         history_limit_label = ttk.Label(history_frame, text="History Limit:")
         history_limit_label.pack(side=tk.LEFT, padx=(0, 10))
 
-        history_limit_spinbox = ttk.Spinbox(history_frame, from_=10, to=1000, increment=10, textvariable=self.history_limit_var, width=10)
+        history_limit_spinbox = ttk.Spinbox(history_frame, from_=config.HISTORY_LIMIT_MIN, to=config.HISTORY_LIMIT_MAX, increment=config.HISTORY_LIMIT_INCREMENT, textvariable=self.history_limit_var, width=10)
         history_limit_spinbox.pack(side=tk.LEFT)
 
         # Excluded Apps Settings
-        excluded_apps_frame = ttk.LabelFrame(main_frame, text="Excluded Applications", padding="10")
-        excluded_apps_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        excluded_apps_frame = ttk.LabelFrame(main_frame, text="Excluded Applications", padding=config.FRAME_PADDING)
+        excluded_apps_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y)
 
         self.excluded_apps_listbox = tk.Listbox(excluded_apps_frame)
         for app in self.excluded_apps_list:
@@ -65,27 +66,27 @@ class SettingsWindow(tk.Toplevel):
         excluded_apps_button_frame.pack(side=tk.LEFT, padx=(10, 0))
 
         add_app_button = ttk.Button(excluded_apps_button_frame, text="Add", command=self._add_excluded_app)
-        add_app_button.pack(fill=tk.X, pady=5)
+        add_app_button.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         remove_app_button = ttk.Button(excluded_apps_button_frame, text="Remove", command=self._remove_excluded_app)
-        remove_app_button.pack(fill=tk.X, pady=5)
+        remove_app_button.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         # Import/Export/Default buttons
         io_button_frame = ttk.Frame(main_frame)
-        io_button_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=5)
+        io_button_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=config.BUTTON_PADDING_Y)
 
         export_button = ttk.Button(io_button_frame, text="Export Settings", command=self._export_settings)
         export_button.pack(side=tk.LEFT)
 
         import_button = ttk.Button(io_button_frame, text="Import Settings", command=self._import_settings)
-        import_button.pack(side=tk.LEFT, padx=5)
+        import_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
         default_button = ttk.Button(io_button_frame, text="Restore Defaults", command=self._restore_defaults)
         default_button.pack(side=tk.LEFT)
 
 
         # Save/Cancel Buttons
-        button_frame = ttk.Frame(main_frame, padding="10")
+        button_frame = ttk.Frame(main_frame, padding=config.FRAME_PADDING)
         button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
         save_button = ttk.Button(button_frame, text="Save", command=self._save_and_close)
@@ -156,6 +157,6 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.save_settings()
 
         # Apply settings that require immediate action
-        self.app_instance.apply_settings()
+        self.settings_manager.apply_settings(self.app_instance)
 
         self.destroy()

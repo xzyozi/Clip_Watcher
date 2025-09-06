@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 class SettingsManager:
     def __init__(self, file_path="settings.json"):
@@ -56,3 +57,37 @@ class SettingsManager:
                 except (json.JSONDecodeError, TypeError):
                     return False
         return False
+
+    def apply_settings(self, app_instance):
+        # Apply theme
+        theme = self.get_setting("theme")
+        app_instance.gui.apply_theme(theme)
+
+        # Apply history limit
+        history_limit = self.get_setting("history_limit")
+        app_instance.monitor.set_history_limit(history_limit)
+
+        # Apply always on top
+        always_on_top = self.get_setting("always_on_top")
+        app_instance.master.attributes("-topmost", always_on_top)
+
+        # Apply excluded apps
+        excluded_apps = self.get_setting("excluded_apps")
+        app_instance.monitor.set_excluded_apps(excluded_apps)
+
+        # Apply startup on boot
+        startup_on_boot = self.get_setting("startup_on_boot")
+        self.manage_startup(startup_on_boot)
+
+    def manage_startup(self, startup_enabled):
+        if sys.platform == "win32":
+            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
+
+            if startup_enabled:
+                script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
+                with open(startup_script_path, "w") as f:
+                    f.write(script_content)
+            else:
+                if os.path.exists(startup_script_path):
+                    os.remove(startup_script_path)
