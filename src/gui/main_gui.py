@@ -120,8 +120,7 @@ class ClipWatcherGUI:
         self.quit_button = tk.Button(self.control_frame, text="Quit", command=lambda: event_handlers.handle_quit(self.clipboard_monitor_callback, self.master))
         self.quit_button.pack(side=tk.RIGHT, padx=5)
 
-        # Apply initial theme
-        self.apply_theme(self.current_theme_name)
+        
 
     def apply_theme(self, theme_name):
         theme = THEMES[theme_name]

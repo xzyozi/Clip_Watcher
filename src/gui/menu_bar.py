@@ -6,7 +6,7 @@ def create_menu_bar(master, app_instance):
 
     # File Menu
     file_menu = tk.Menu(menubar, tearoff=0)
-    file_menu.add_command(label="設定 (Settings)...", command=lambda: print("Settings clicked"))
+    file_menu.add_command(label="設定 (Settings)...", command=app_instance.open_settings_window)
     file_menu.add_command(label="履歴をエクスポート (Export History)...", command=lambda: event_handlers.handle_export_history(app_instance.monitor))
     file_menu.add_command(label="履歴をインポート (Import History)...", command=lambda: event_handlers.handle_import_history(app_instance.monitor, app_instance.gui))
     file_menu.add_separator()
