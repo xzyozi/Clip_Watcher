@@ -1,0 +1,21 @@
+{
+    "theme": "dark",
+    "history_limit": 50,
+    "always_on_top": false,
+    "excluded_apps": [
+        "keepass.exe",
+        "bitwarden.exe"
+    ],
+    "startup_on_boot": false,
+    "notification_sound_enabled": false,
+    "clipboard_content_font_family": "@FixedSys",
+    "clipboard_content_font_size": 10,
+    "history_font_family": "@FixedSys",
+    "history_font_size": 15,
+    "font_family": "@HGS創英角ﾎﾟｯﾌﾟ体",
+    "font_size": 10,
+    "hotkey": "ctrl_l",
+    "notifications_enabled": false,
+    "notification_content_length": 0,
+    "notification_show_app_name": false
+}
