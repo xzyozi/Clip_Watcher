@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
 from src.config import THEMES
+import copy
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
@@ -10,6 +11,10 @@ class SettingsWindow(tk.Toplevel):
         self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
         self.settings_manager = settings_manager
         self.app_instance = app_instance
+
+        # Store initial settings to revert on cancel
+        self.initial_settings = copy.deepcopy(self.settings_manager.settings)
+        self.settings_saved = False # Flag to track if settings were saved
 
         # Variables for settings
         self.theme_var = tk.StringVar(value=self.settings_manager.get_setting("theme"))
@@ -314,4 +319,16 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.apply_settings(self.app_instance)
         self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
 
+        self.settings_saved = True # Mark that settings were saved
         self.destroy()
+
+    def destroy(self):
+        # If settings were not explicitly saved, revert to initial state
+        if not self.settings_saved:
+            self.settings_manager.settings = copy.deepcopy(self.initial_settings)
+            self.settings_manager.apply_settings(self.app_instance)
+            # Reapply theme to settings window itself, in case it was changed by "Apply"
+            # This is mostly for consistency, as the window is about to be destroyed.
+            self.apply_theme(self.settings_manager.get_setting("theme"))
+
+        super().destroy() # Call the original Toplevel destroy method
