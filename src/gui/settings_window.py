@@ -51,72 +51,90 @@ class SettingsWindow(tk.Toplevel):
         notebook.add(excluded_apps_frame, text="Excluded Apps")
 
         # Populate General Settings tab
-        # Theme
-        theme_label = ttk.Label(general_frame, text="Theme:")
+        appearance_frame = ttk.LabelFrame(general_frame, text="Appearance", padding=config.FRAME_PADDING)
+        appearance_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        theme_label = ttk.Label(appearance_frame, text="Theme:")
         theme_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         theme_options = ["light", "dark"]
-        theme_menu = ttk.OptionMenu(general_frame, self.theme_var, self.theme_var.get(), *theme_options)
+        theme_menu = ttk.OptionMenu(appearance_frame, self.theme_var, self.theme_var.get(), *theme_options)
         theme_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        # Always on Top
-        always_on_top_check = ttk.Checkbutton(general_frame, text="Always on Top", variable=self.always_on_top_var)
-        always_on_top_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        window_behavior_frame = ttk.LabelFrame(general_frame, text="Window Behavior", padding=config.FRAME_PADDING)
+        window_behavior_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        # Startup on boot
-        startup_on_boot_check = ttk.Checkbutton(general_frame, text="Start with Windows", variable=self.startup_on_boot_var)
-        startup_on_boot_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        always_on_top_check = ttk.Checkbutton(window_behavior_frame, text="Always on Top", variable=self.always_on_top_var)
+        always_on_top_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
+        startup_frame = ttk.LabelFrame(general_frame, text="Startup", padding=config.FRAME_PADDING)
+        startup_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        startup_on_boot_check = ttk.Checkbutton(startup_frame, text="Start with Windows", variable=self.startup_on_boot_var)
+        startup_on_boot_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         # History Settings
-        history_limit_label = ttk.Label(history_frame, text="History Limit:")
+        history_options_frame = ttk.LabelFrame(history_frame, text="History Options", padding=config.FRAME_PADDING)
+        history_options_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        history_limit_label = ttk.Label(history_options_frame, text="History Limit:")
         history_limit_label.pack(side=tk.LEFT, padx=(0, 10))
 
-        history_limit_spinbox = ttk.Spinbox(history_frame, from_=config.HISTORY_LIMIT_MIN, to=config.HISTORY_LIMIT_MAX, increment=config.HISTORY_LIMIT_INCREMENT, textvariable=self.history_limit_var, width=10)
+        history_limit_spinbox = ttk.Spinbox(history_options_frame, from_=config.HISTORY_LIMIT_MIN, to=config.HISTORY_LIMIT_MAX, increment=config.HISTORY_LIMIT_INCREMENT, textvariable=self.history_limit_var, width=10)
         history_limit_spinbox.pack(side=tk.LEFT)
 
         # Populate Notification Settings tab
-        notifications_enabled_check = ttk.Checkbutton(notification_frame, text="Enable Notifications", variable=self.notifications_enabled_var)
+        notification_behavior_frame = ttk.LabelFrame(notification_frame, text="Notification Behavior", padding=config.FRAME_PADDING)
+        notification_behavior_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        notifications_enabled_check = ttk.Checkbutton(notification_behavior_frame, text="Enable Notifications", variable=self.notifications_enabled_var)
         notifications_enabled_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        notification_show_app_name_check = ttk.Checkbutton(notification_frame, text="Show App Name in Notification", variable=self.notification_show_app_name_var)
+        notification_show_app_name_check = ttk.Checkbutton(notification_behavior_frame, text="Show App Name in Notification", variable=self.notification_show_app_name_var)
         notification_show_app_name_check.grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         
-        notification_sound_enabled_check = ttk.Checkbutton(notification_frame, text="Enable Notification Sound", variable=self.notification_sound_enabled_var)
+        notification_sound_enabled_check = ttk.Checkbutton(notification_behavior_frame, text="Enable Notification Sound", variable=self.notification_sound_enabled_var)
         notification_sound_enabled_check.grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        notification_content_length_label = ttk.Label(notification_frame, text="Notification Content Length:")
-        notification_content_length_label.grid(row=3, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        notification_content_frame = ttk.LabelFrame(notification_frame, text="Notification Content", padding=config.FRAME_PADDING)
+        notification_content_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        notification_content_length_spinbox = ttk.Spinbox(notification_frame, from_=10, to=200, increment=10, textvariable=self.notification_content_length_var, width=10)
-        notification_content_length_spinbox.grid(row=3, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        notification_content_length_label = ttk.Label(notification_content_frame, text="Notification Content Length:")
+        notification_content_length_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        notification_content_length_spinbox = ttk.Spinbox(notification_content_frame, from_=10, to=200, increment=10, textvariable=self.notification_content_length_var, width=10)
+        notification_content_length_spinbox.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         # Populate Font Settings tab
-        # Clipboard Content Font
-        clipboard_content_font_label = ttk.Label(font_frame, text="Clipboard Content Font:")
+        clipboard_font_frame = ttk.LabelFrame(font_frame, text="Clipboard Content Font", padding=config.FRAME_PADDING)
+        clipboard_font_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        clipboard_content_font_label = ttk.Label(clipboard_font_frame, text="Clipboard Content Font:")
         clipboard_content_font_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         
         font_families = sorted(font.families())
-        clipboard_content_font_family_menu = ttk.OptionMenu(font_frame, self.clipboard_content_font_family_var, self.clipboard_content_font_family_var.get(), *font_families)
+        clipboard_content_font_family_menu = ttk.OptionMenu(clipboard_font_frame, self.clipboard_content_font_family_var, self.clipboard_content_font_family_var.get(), *font_families)
         clipboard_content_font_family_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        clipboard_content_font_size_label = ttk.Label(font_frame, text="Size:")
+        clipboard_content_font_size_label = ttk.Label(clipboard_font_frame, text="Size:")
         clipboard_content_font_size_label.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         
-        clipboard_content_font_size_spinbox = ttk.Spinbox(font_frame, from_=8, to=24, increment=1, textvariable=self.clipboard_content_font_size_var, width=5)
+        clipboard_content_font_size_spinbox = ttk.Spinbox(clipboard_font_frame, from_=8, to=24, increment=1, textvariable=self.clipboard_content_font_size_var, width=5)
         clipboard_content_font_size_spinbox.grid(row=1, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        # History Font
-        history_font_label = ttk.Label(font_frame, text="History Font:")
-        history_font_label.grid(row=2, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
-        
-        history_font_family_menu = ttk.OptionMenu(font_frame, self.history_font_family_var, self.history_font_family_var.get(), *font_families)
-        history_font_family_menu.grid(row=2, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        history_font_frame = ttk.LabelFrame(font_frame, text="History Font", padding=config.FRAME_PADDING)
+        history_font_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        history_font_size_label = ttk.Label(font_frame, text="Size:")
-        history_font_size_label.grid(row=3, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        history_font_label = ttk.Label(history_font_frame, text="History Font:")
+        history_font_label.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         
-        history_font_size_spinbox = ttk.Spinbox(font_frame, from_=8, to=24, increment=1, textvariable=self.history_font_size_var, width=5)
-        history_font_size_spinbox.grid(row=3, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        history_font_family_menu = ttk.OptionMenu(history_font_frame, self.history_font_family_var, self.history_font_family_var.get(), *font_families)
+        history_font_family_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        history_font_size_label = ttk.Label(history_font_frame, text="Size:")
+        history_font_size_label.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        
+        history_font_size_spinbox = ttk.Spinbox(history_font_frame, from_=8, to=24, increment=1, textvariable=self.history_font_size_var, width=5)
+        history_font_size_spinbox.grid(row=1, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
 
         # Populate Excluded Apps Settings tab
@@ -147,7 +165,7 @@ class SettingsWindow(tk.Toplevel):
         default_button = ttk.Button(io_button_frame, text="Restore Defaults", command=self._restore_defaults)
         default_button.pack(side=tk.LEFT)
 
-        # Save/Cancel Buttons (placed outside the notebook, at the very bottom)
+        # Save/Cancel/Apply Buttons
         button_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
         button_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
@@ -156,6 +174,9 @@ class SettingsWindow(tk.Toplevel):
 
         cancel_button = ttk.Button(button_frame, text="Cancel", command=self.destroy)
         cancel_button.pack(side=tk.RIGHT)
+
+        apply_button = ttk.Button(button_frame, text="Apply", command=self._apply_only)
+        apply_button.pack(side=tk.RIGHT)
 
     def apply_theme(self, theme_name):
         theme = THEMES.get(theme_name, THEMES["light"])
@@ -251,8 +272,8 @@ class SettingsWindow(tk.Toplevel):
         for app in self.excluded_apps_list:
             self.excluded_apps_listbox.insert(tk.END, app)
 
-    def _save_and_close(self):
-        # Save settings
+    def _apply_only(self):
+        # Save current state of variables to settings_manager (temporary save for apply)
         self.settings_manager.set_setting("theme", self.theme_var.get())
         self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
         self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
@@ -266,9 +287,30 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
         self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
-        self.settings_manager.save_settings()
+        # No self.settings_manager.save_settings() here, as "Apply" doesn't persist to file
 
-        # Apply settings that require immediate action
+        # Apply settings to app instance and settings window
+        self.settings_manager.apply_settings(self.app_instance)
+        self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
+
+    def _save_and_close(self):
+        # Save settings to file
+        self.settings_manager.set_setting("theme", self.theme_var.get())
+        self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
+        self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
+        self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
+        self.settings_manager.set_setting("notifications_enabled", self.notifications_enabled_var.get())
+        self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
+        self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
+        self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_family", self.clipboard_content_font_family_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
+        self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
+        self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
+        self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
+        self.settings_manager.save_settings() # Persist to file
+
+        # Apply settings to app instance and settings window
         self.settings_manager.apply_settings(self.app_instance)
         self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
 
