@@ -1,16 +1,42 @@
 import time
 import threading
-import tkinter as tk # Import tkinter for clipboard access
+import tkinter as tk
+import psutil
+import win32process
+import win32gui
+from src.notification_manager import NotificationManager
 
 class ClipboardMonitor:
-    def __init__(self, tk_root):
+    def __init__(self, tk_root, settings_manager, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
+        self.settings_manager = settings_manager
+        self.notification_manager = NotificationManager(settings_manager)
         self.update_callback = None
-        self.last_clipboard_data = "" # Stores only the content string
+        self.last_clipboard_data = ""
         self._running = False
         self.monitor_thread = None
-        self.history = [] # Stores (content, is_pinned) tuples
-        self.history_limit = 10
+        self.history = []
+        self.history_limit = history_limit
+        self.excluded_apps = excluded_apps if excluded_apps is not None else []
+
+    def set_history_limit(self, limit):
+        self.history_limit = limit
+        if len(self.history) > self.history_limit:
+            self.history = self.history[:self.history_limit]
+            self._trigger_gui_update()
+
+    def set_excluded_apps(self, excluded_apps):
+        self.excluded_apps = excluded_apps
+
+    def get_active_process_name(self):
+        try:
+            hwnd = win32gui.GetForegroundWindow()
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            process = psutil.Process(pid)
+            return process.name()
+        except Exception as e:
+            # print(f"Error getting active process name: {e}")
+            return None
 
     def set_gui_update_callback(self, callback):
         self.update_callback = callback
@@ -18,14 +44,16 @@ class ClipboardMonitor:
     def _monitor_clipboard(self):
         while self._running:
             try:
-                current_clipboard_data = self.tk_root.clipboard_get()
+                active_process = self.get_active_process_name()
+                if active_process and active_process in self.excluded_apps:
+                    time.sleep(1)
+                    continue
 
-                print(f"DEBUG: Pasted from clipboard (tkinter): {current_clipboard_data[:50]}...")
+                current_clipboard_data = self.tk_root.clipboard_get()
 
                 if current_clipboard_data != self.last_clipboard_data:
                     self.last_clipboard_data = current_clipboard_data
                     
-                    # Find if the item already exists in history
                     existing_item_index = -1
                     for i, (content, is_pinned) in enumerate(self.history):
                         if content == current_clipboard_data:
@@ -33,15 +61,14 @@ class ClipboardMonitor:
                             break
 
                     if existing_item_index != -1:
-                        # Item exists, move it to top, preserving pinned status
                         content_to_move, is_pinned_status = self.history.pop(existing_item_index)
                         self.history.insert(0, (content_to_move, is_pinned_status))
                     else:
-                        # New item, add to top as unpinned
                         self.history.insert(0, (current_clipboard_data, False))
                         if len(self.history) > self.history_limit:
                             self.history.pop()
 
+                    self.notification_manager.play_notification_sound()
                     self._trigger_gui_update()
 
             except tk.TclError:
@@ -51,9 +78,7 @@ class ClipboardMonitor:
             time.sleep(1)
 
     def _trigger_gui_update(self):
-        # This method ensures GUI update is called on the main thread
         if self.update_callback:
-            # Pass the current clipboard content and the sorted history
             self.tk_root.after(0, self.update_callback, self.last_clipboard_data, self.get_history())
 
     def start(self):
@@ -68,7 +93,6 @@ class ClipboardMonitor:
             self.monitor_thread.join(timeout=2)
 
     def get_history(self):
-        # Return history with pinned items first
         pinned = [item for item in self.history if item[1]]
         unpinned = [item for item in self.history if not item[1]]
         return pinned + unpinned
@@ -76,20 +100,12 @@ class ClipboardMonitor:
     def clear_history(self):
         self.history.clear()
         self.last_clipboard_data = ""
-        self._trigger_gui_update() # Update GUI after clearing
+        self._trigger_gui_update()
 
     def delete_history_item(self, index):
-        # Get the actual item from the current history order (which is sorted by pinned status)
-        # This requires re-indexing based on the displayed list.
-        # A safer way is to pass the actual content to delete, or re-sort history before deleting.
-        # For now, let's assume index refers to the index in the *currently displayed* history.
-        # We need to find the actual index in self.history.
-        
-        # Re-sort history to get the current display order
         current_display_history = self.get_history()
         if 0 <= index < len(current_display_history):
             item_to_delete = current_display_history[index]
-            # Find and remove from the actual history list
             for i, hist_item in enumerate(self.history):
                 if hist_item == item_to_delete:
                     del self.history[i]
@@ -97,7 +113,7 @@ class ClipboardMonitor:
             
             if not self.history:
                 self.last_clipboard_data = ""
-            self._trigger_gui_update() # Update GUI after deleting
+            self._trigger_gui_update()
 
     def pin_item(self, index):
         current_display_history = self.get_history()
@@ -120,15 +136,13 @@ class ClipboardMonitor:
             self._trigger_gui_update()
 
     def delete_all_unpinned_history(self):
-        self.history = [item for item in self.history if item[1]] # Keep only pinned items
+        self.history = [item for item in self.history if item[1]]
         self._trigger_gui_update()
         print("Monitor: Deleted all unpinned history.")
 
     def import_history(self, new_history_items):
-        for item_content in reversed(new_history_items): # Add in original order
-            # When importing, assume they are unpinned initially
+        for item_content in reversed(new_history_items):
             new_item = (item_content, False)
-            # Check if content already exists, if so, update its pinned status if needed
             existing_item_index = -1
             for i, (content, is_pinned) in enumerate(self.history):
                 if content == item_content:
@@ -136,21 +150,17 @@ class ClipboardMonitor:
                     break
             
             if existing_item_index != -1:
-                # Item exists, move to top, preserving its pinned status
                 content_to_move, is_pinned_status = self.history.pop(existing_item_index)
                 self.history.insert(0, (content_to_move, is_pinned_status))
             else:
-                # New item, add to top as unpinned
                 self.history.insert(0, new_item)
                 if len(self.history) > self.history_limit:
                     self.history.pop()
         self._trigger_gui_update()
 
     def get_filtered_history(self, query):
-        # Filter the full history (content, is_pinned) tuples
         filtered_raw = [item for item in self.history if query.lower() in item[0].lower()]
         
-        # Sort filtered history with pinned items first
         pinned = [item for item in filtered_raw if item[1]]
         unpinned = [item for item in filtered_raw if not item[1]]
         return pinned + unpinned
