@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
+from src.config import THEMES
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
@@ -28,6 +29,7 @@ class SettingsWindow(tk.Toplevel):
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
+        self.apply_theme(self.settings_manager.get_setting("theme")) # Apply initial theme
 
     def _create_widgets(self):
         # Create a Notebook (tabbed interface)
@@ -155,6 +157,40 @@ class SettingsWindow(tk.Toplevel):
         cancel_button = ttk.Button(button_frame, text="Cancel", command=self.destroy)
         cancel_button.pack(side=tk.RIGHT)
 
+    def apply_theme(self, theme_name):
+        theme = THEMES.get(theme_name, THEMES["light"])
+        self.config(bg=theme["bg"]) # Apply to the Toplevel window itself
+        
+        style = ttk.Style()
+        style.theme_use('default') # Reset to default to ensure consistent styling before applying custom
+        
+        # Configure general styles for themed widgets
+        style.configure('.', background=theme["bg"], foreground=theme["fg"]) # Default for all widgets
+        style.configure('TFrame', background=theme["frame_bg"]) # For ttk.Frame
+        style.configure('TLabelFrame', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.LabelFrame
+        style.configure('TLabel', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Label
+        style.configure('TButton', background=theme["button_bg"], foreground=theme["button_fg"]) # For ttk.Button
+        style.map('TButton', background=[('active', theme["button_bg"])]) # Keep active color same for now
+        style.configure('TCheckbutton', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Checkbutton
+        style.configure('TRadiobutton', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Radiobutton
+        style.configure('TEntry', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Entry
+        style.configure('TSpinbox', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Spinbox
+        style.configure('TCombobox', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Combobox
+
+        # Notebook specific styling
+        style.configure('TNotebook', background=theme["bg"], bordercolor=theme["frame_bg"]) # For ttk.Notebook
+        style.configure('TNotebook.Tab', background=theme["frame_bg"], foreground=theme["label_fg"], lightcolor=theme["frame_bg"], darkcolor=theme["frame_bg"]) # For ttk.Notebook tabs
+        style.map('TNotebook.Tab', background=[('selected', theme["bg"])], foreground=[('selected', theme["fg"])])
+        style.configure('TNotebook.Client', background=theme["frame_bg"]) # The area where the tabs content is displayed
+
+        # For tk.Listbox (not ttk), need to configure directly
+        # This assumes self.excluded_apps_listbox is a tk.Listbox
+        if hasattr(self, 'excluded_apps_listbox'):
+            self.excluded_apps_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
+
+        # Update the current theme name for future reference (optional for settings window)
+        self.current_theme_name = theme_name
+
     def _add_excluded_app(self):
         new_app = simpledialog.askstring("Add Excluded App", "Enter the executable name (e.g., keepass.exe):", parent=self)
         if new_app and new_app not in self.excluded_apps_list:
@@ -234,5 +270,6 @@ class SettingsWindow(tk.Toplevel):
 
         # Apply settings that require immediate action
         self.settings_manager.apply_settings(self.app_instance)
+        self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
 
         self.destroy()
