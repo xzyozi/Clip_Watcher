@@ -11,18 +11,6 @@ def create_menu_bar(master, app_instance):
     file_menu.add_command(label="履歴をインポート (Import History)...", command=app_instance.file_handlers.handle_import_history)
     file_menu.add_separator()
 
-    # Fixed Phrases Sub-menu
-    fixed_phrases_menu = tk.Menu(file_menu, tearoff=0)
-    fixed_phrases_menu.add_command(label="挨拶 (Greeting)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "いつもお世話になっております。\n"))
-    fixed_phrases_menu.add_command(label="署名 (Signature)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "\nよろしくお願いいたします。\n\n[あなたの名前]\n[あなたの会社]"))
-    fixed_phrases_menu.add_command(label="電話番号 (Phone Number)", command=lambda: event_handlers.handle_copy_fixed_phrase(app_instance.gui, "090-XXXX-XXXX"))
-    file_menu.add_cascade(label="定型文 (Fixed Phrases)", menu=fixed_phrases_menu)
-    file_menu.add_separator()
-
-    # Add "Manage Fixed Phrases" menu item
-    file_menu.add_command(label="定型文の管理 (Manage Fixed Phrases)...", command=lambda: event_handlers.handle_manage_fixed_phrases(master, app_instance.fixed_phrases_manager))
-    file_menu.add_separator()
-
     file_menu.add_command(label="終了 (Exit)", command=app_instance.file_handlers.handle_quit)
     menubar.add_cascade(label="ファイル (File)", menu=file_menu)
 
