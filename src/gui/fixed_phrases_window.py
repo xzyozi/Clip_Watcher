@@ -1,11 +1,9 @@
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 
-class FixedPhrasesWindow(tk.Toplevel):
+class FixedPhrasesFrame(tk.Frame):
     def __init__(self, master, fixed_phrases_manager):
         super().__init__(master)
-        self.title("定型文の管理 (Manage Fixed Phrases)")
-        self.geometry("400x300")
         self.fixed_phrases_manager = fixed_phrases_manager
 
         self._create_widgets()

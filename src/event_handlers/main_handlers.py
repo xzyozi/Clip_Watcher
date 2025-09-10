@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from src.gui.fixed_phrases_window import FixedPhrasesWindow
+from src.gui.fixed_phrases_window import FixedPhrasesFrame # Changed from FixedPhrasesWindow
 from src.fixed_phrases_manager import FixedPhrasesManager
 
 def handle_about():
@@ -32,7 +32,4 @@ def handle_copy_fixed_phrase(gui_instance, phrase):
     except Exception as e:
         print(f"Error copying fixed phrase: {e}")
 
-def handle_manage_fixed_phrases(master, fixed_phrases_manager):
-    fixed_phrases_window = FixedPhrasesWindow(master, fixed_phrases_manager)
-    fixed_phrases_window.grab_set()
-    master.wait_window(fixed_phrases_window)
+# Removed handle_manage_fixed_phrases as it's no longer needed with tabbed fixed phrases

@@ -4,10 +4,12 @@ import tkinter as tk
 import psutil
 import win32process
 import win32gui
+import json # Added
+import os   # Added
 from src.notification_manager import NotificationManager
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, settings_manager, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, settings_manager, history_file_path, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
         self.settings_manager = settings_manager
         self.notification_manager = NotificationManager(settings_manager)
@@ -15,7 +17,8 @@ class ClipboardMonitor:
         self.last_clipboard_data = ""
         self._running = False
         self.monitor_thread = None
-        self.history = []
+        self.history_file_path = history_file_path # Added
+        self.history = self._load_history_from_file() # Modified
         self.history_limit = history_limit
         self.excluded_apps = excluded_apps if excluded_apps is not None else []
 
@@ -164,3 +167,23 @@ class ClipboardMonitor:
         pinned = [item for item in filtered_raw if item[1]]
         unpinned = [item for item in filtered_raw if not item[1]]
         return pinned + unpinned
+
+    def _load_history_from_file(self):
+        if os.path.exists(self.history_file_path):
+            try:
+                with open(self.history_file_path, 'r', encoding='utf-8') as f:
+                    loaded_data = json.load(f)
+                    # Ensure loaded data is in the correct format (list of lists/tuples)
+                    # Convert lists to tuples for consistency if needed
+                    return [(item[0], item[1]) for item in loaded_data if isinstance(item, list) and len(item) == 2]
+            except (json.JSONDecodeError, FileNotFoundError):
+                # Handle corrupt or missing file
+                return []
+        return []
+
+    def _save_history_to_file(self):
+        try:
+            with open(self.history_file_path, 'w', encoding='utf-8') as f:
+                json.dump(self.history, f, ensure_ascii=False, indent=4)
+        except IOError as e:
+            print(f"Error saving history to file: {e}")
