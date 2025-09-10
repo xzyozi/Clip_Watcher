@@ -11,6 +11,16 @@ from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.fixed_phrases_manager import FixedPhrasesManager
 
+# Define history file path
+if sys.platform == "win32":
+    APP_DATA_DIR = os.path.join(os.environ['APPDATA'], 'ClipWatcher')
+else:
+    APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
+
+os.makedirs(APP_DATA_DIR, exist_ok=True)
+HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
+
+
 class Application:
     def __init__(self, master):
         self.master = master
@@ -28,6 +38,7 @@ class Application:
         self.monitor = ClipboardMonitor(
             master,
             self.settings_manager,
+            HISTORY_FILE_PATH, # Pass history file path
             self.settings_manager.get_setting("history_limit"),
             self.settings_manager.get_setting("excluded_apps")
         )
@@ -50,6 +61,7 @@ class Application:
 
     def on_closing(self):
         self.stop_monitor()
+        self.monitor._save_history_to_file() # Save history on exit
         self.master.destroy()
 
 if __name__ == "__main__":
