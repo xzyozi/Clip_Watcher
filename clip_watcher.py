@@ -61,7 +61,7 @@ class Application:
 
     def on_closing(self):
         self.stop_monitor()
-        self.monitor._save_history_to_file() # Save history on exit
+        self.monitor.save_history_to_file() # Save history on exit
         self.master.destroy()
 
 if __name__ == "__main__":

@@ -1,35 +1,22 @@
+
 import time
 import threading
 import tkinter as tk
-import json
-import os
 import ctypes
 import ctypes.wintypes
-from src.notification_manager import NotificationManager
+import winsound
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, settings_manager, history_file_path, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
-        self.settings_manager = settings_manager
-        self.notification_manager = NotificationManager(settings_manager)
         self.update_callback = None
         self.last_clipboard_data = ""
         self._running = False
         self.monitor_thread = None
-        self.history_file_path = history_file_path
-        self.history = self._load_history_from_file()
+        self.history = []
         self.history_limit = history_limit
         self.excluded_apps = excluded_apps if excluded_apps is not None else []
-
-    def set_history_limit(self, limit):
-        self.history_limit = limit
-        if len(self.history) > self.history_limit:
-            self.history = self.history[:self.history_limit]
-            self._trigger_gui_update()
-
-    def set_excluded_apps(self, excluded_apps):
-        self.excluded_apps = excluded_apps
-
+    # --- Windows APIを使ってアクティブプロセス名を取得 ---
     def get_active_process_name(self):
         user32 = ctypes.windll.user32
         kernel32 = ctypes.windll.kernel32
@@ -51,6 +38,15 @@ class ClipboardMonitor:
         kernel32.CloseHandle(process_handle)
 
         return exe_name.value.decode(errors="ignore")
+
+    def set_history_limit(self, limit):
+        self.history_limit = limit
+        if len(self.history) > self.history_limit:
+            self.history = self.history[:self.history_limit]
+            self._trigger_gui_update()
+
+    def set_excluded_apps(self, excluded_apps):
+        self.excluded_apps = excluded_apps
 
     def set_gui_update_callback(self, callback):
         self.update_callback = callback
@@ -101,26 +97,37 @@ class ClipboardMonitor:
                 # クリップボードの内容を保持
                 current_content = self.tk_root.clipboard_get()
                 
+                # Check for excessively large content before processing
+                # A heuristic limit, adjust as needed. For example, 1MB of text.
+                # Note: len() counts characters, not bytes. A single character can be multiple bytes.
+                # This check is a rough estimate.
                 if len(current_content) > 1024 * 1024: # If content is larger than 1MB (approx)
                     print("Warning: Clipboard content is excessively large. Skipping to prevent potential issues.")
                     return
 
+                # デコード処理 (assuming clipboard_get returns a string)
+                # Use the robust _decode_clipboard_data
                 try:
                     clipboard_data = self._decode_clipboard_data(current_content)
                 except Exception as e:
                     print(f"クリップボードデータ正規化エラー: {str(e)}")
+                    # Fallback to direct string if normalization fails
                     clipboard_data = str(current_content)
 
             except tk.TclError as e:
+                # クリップボードが空または利用不可の場合は無視
+                # Also catches errors when clipboard content is too large for tkinter to handle
                 if "CLIPBOARD_GET" in str(e) and "too large" in str(e).lower():
                     print(f"Warning: Clipboard content too large for Tkinter. Skipping. Error: {e}")
                 else:
+                    # print(f"Tkinterクリップボードエラー: {str(e)}") # Uncomment for debugging other TclErrors
                     pass
                 return
             except Exception as e:
                 print(f"クリップボード取得または初期デコードエラー: {str(e)}")
                 return
 
+            # 更新の確認と処理
             if clipboard_data and clipboard_data != self.last_clipboard_data:
                 active_process = self.get_active_process_name()
                 print(f"クリップボードの更新を検出 - プロセス: {active_process}")
@@ -128,31 +135,23 @@ class ClipboardMonitor:
                 if active_process in self.excluded_apps:
                     print(f"除外アプリからのコピーのため無視: {active_process}")
                     return
-                
-                existing_item_index = -1
-                for i, (content, is_pinned) in enumerate(self.history):
-                    if content == clipboard_data:
-                        existing_item_index = i
-                        break
-
-                if existing_item_index != -1:
-                    content_to_move, is_pinned_status = self.history.pop(existing_item_index)
-                    self.history.insert(0, (content_to_move, is_pinned_status))
-                else:
-                    self.history.insert(0, (clipboard_data, False))
-                    if len(self.history) > self.history_limit:
-                        unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
-                        if unpinned:
-                            del self.history[unpinned[-1]]
+                    
+                self.history.insert(0, (clipboard_data, False))
+                if len(self.history) > self.history_limit:
+                    unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
+                    if unpinned:
+                        del self.history[unpinned[-1]]
     
                 self.last_clipboard_data = clipboard_data
-                self.notification_manager.play_notification_sound()
                 self._trigger_gui_update()
 
         except Exception as e:
             print(f"予期せぬエラー: {str(e)}")
             import traceback
             print(traceback.format_exc())
+
+    def _play_notification_sound(self):
+        winsound.Beep(1000, 200)  # 周波数1000Hz, 200ms
 
     def _trigger_gui_update(self):
         if self.update_callback:
@@ -231,7 +230,7 @@ class ClipboardMonitor:
                 self.history.insert(0, (content_to_move, is_pinned_status))
             else:
                 self.history.insert(0, new_item)
-                if len(self.history) > self.history_limit:
+                if len(self.history) >  self.history_limit:
                     self.history.pop()
         self._trigger_gui_update()
 
@@ -241,23 +240,3 @@ class ClipboardMonitor:
         pinned = [item for item in filtered_raw if item[1]]
         unpinned = [item for item in filtered_raw if not item[1]]
         return pinned + unpinned
-
-    def _load_history_from_file(self):
-        if os.path.exists(self.history_file_path):
-            try:
-                with open(self.history_file_path, 'r', encoding='utf-8') as f:
-                    loaded_data = json.load(f)
-                    return [(item[0], item[1]) for item in loaded_data if isinstance(item, list) and len(item) == 2]
-            except (json.JSONDecodeError, FileNotFoundError):
-                return []
-        return []
-
-    def save_history_to_file(self):
-        self._save_history_to_file()
-
-    def _save_history_to_file(self):
-        try:
-            with open(self.history_file_path, 'w', encoding='utf-8') as f:
-                json.dump(self.history, f, ensure_ascii=False, indent=4)
-        except IOError as e:
-            print(f"Error saving history to file: {e}")
