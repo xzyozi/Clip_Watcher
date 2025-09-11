@@ -5,7 +5,10 @@ import json
 import os
 import ctypes
 import ctypes.wintypes
+import logging
 from src.notification_manager import NotificationManager
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
     def __init__(self, tk_root, settings_manager, history_file_path, history_limit=50, excluded_apps=None):
@@ -13,6 +16,7 @@ class ClipboardMonitor:
         self.settings_manager = settings_manager
         self.notification_manager = NotificationManager(settings_manager)
         self.update_callback = None
+        self.error_callback = None
         self.last_clipboard_data = ""
         self._running = False
         self.monitor_thread = None
@@ -30,6 +34,9 @@ class ClipboardMonitor:
     def set_excluded_apps(self, excluded_apps):
         self.excluded_apps = excluded_apps
 
+    def set_error_callback(self, callback):
+        self.error_callback = callback
+
     def get_active_process_name(self):
         user32 = ctypes.windll.user32
         kernel32 = ctypes.windll.kernel32
@@ -42,7 +49,7 @@ class ClipboardMonitor:
         pid = ctypes.wintypes.DWORD()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
 
-        process_handle = kernel32.OpenProcess(0x0410, False, pid.value)  # PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
+        process_handle = kernel32.OpenProcess(0x0410, False, pid.value)
         if not process_handle:
             return None
 
@@ -56,77 +63,66 @@ class ClipboardMonitor:
         self.update_callback = callback
 
     def _monitor_clipboard(self):
-        print("クリップボード監視を開始します")
+        logging.info("クリップボード監視を開始します")
         while self._running:
             try:
-                try:
-                    # スレッドセーフにクリップボードにアクセス
-                    self.tk_root.after(0, self._check_clipboard)
-                    time.sleep(0.5)  # 500ms間隔で監視
-                except RuntimeError as e:
-                    print(f"Tkinterランタイムエラー: {str(e)}")
-                    time.sleep(1)  # エラー時は待機時間を延長
-                except Exception as e:
-                    print(f"クリップボード監視エラー: {str(e)}")
-                    time.sleep(1)
+                self.tk_root.after(0, self._check_clipboard)
+                time.sleep(0.5)
+            except RuntimeError as e:
+                logging.warning(f"Tkinterランタイムエラー: {e}")
+                time.sleep(1)
             except Exception as e:
-                print(f"重大なエラー: {str(e)}")
-                break
+                logging.error("クリップボード監視ループで予期せぬエラーが発生しました。", exc_info=True)
+                time.sleep(5)
 
     def _decode_clipboard_data(self, data):
-        """クリップボードデータのデコード処理"""
         if isinstance(data, bytes):
-            # 複数のエンコーディングを試行
             encodings = ['utf-8', 'shift-jis', 'cp932', 'euc-jp', 'latin1']
             for encoding in encodings:
                 try:
                     return data.decode(encoding)
                 except UnicodeDecodeError:
                     continue
-            # すべて失敗した場合は、バイトを無視して強制的にデコード
             return data.decode('utf-8', errors='ignore')
         elif isinstance(data, str):
-            # If it's already a string, try to normalize it to valid UTF-8
             try:
                 return data.encode('utf-8', errors='surrogateescape').decode('utf-8', errors='ignore')
             except Exception:
-                return data # Fallback if normalization fails
-        return str(data) # Ensure it's a string
+                return data
+        return str(data)
 
     def _check_clipboard(self):
-        """スレッドセーフなクリップボードチェック処理"""
         try:
             clipboard_data = ""
             try:
-                # クリップボードの内容を保持
                 current_content = self.tk_root.clipboard_get()
                 
-                if len(current_content) > 1024 * 1024: # If content is larger than 1MB (approx)
-                    print("Warning: Clipboard content is excessively large. Skipping to prevent potential issues.")
+                if len(current_content) > 1024 * 1024:
+                    logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
                     return
 
                 try:
                     clipboard_data = self._decode_clipboard_data(current_content)
                 except Exception as e:
-                    print(f"クリップボードデータ正規化エラー: {str(e)}")
+                    logging.error("クリップボードデータの正規化に失敗しました。", exc_info=True)
                     clipboard_data = str(current_content)
 
             except tk.TclError as e:
                 if "CLIPBOARD_GET" in str(e) and "too large" in str(e).lower():
-                    print(f"Warning: Clipboard content too large for Tkinter. Skipping. Error: {e}")
+                    logging.warning(f"Tkinterが処理するにはクリップボードのコンテンツが大きすぎます: {e}")
                 else:
                     pass
                 return
             except Exception as e:
-                print(f"クリップボード取得または初期デコードエラー: {str(e)}")
+                logging.error("クリップボードの取得または初期デコードに失敗しました。", exc_info=True)
                 return
 
             if clipboard_data and clipboard_data != self.last_clipboard_data:
                 active_process = self.get_active_process_name()
-                print(f"クリップボードの更新を検出 - プロセス: {active_process}")
+                logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
                 
                 if active_process in self.excluded_apps:
-                    print(f"除外アプリからのコピーのため無視: {active_process}")
+                    logging.info(f"除外アプリからのコピーのため無視: {active_process}")
                     return
                 
                 existing_item_index = -1
@@ -150,9 +146,7 @@ class ClipboardMonitor:
                 self._trigger_gui_update()
 
         except Exception as e:
-            print(f"予期せぬエラー: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
+            logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
 
     def _trigger_gui_update(self):
         if self.update_callback:
@@ -215,7 +209,7 @@ class ClipboardMonitor:
     def delete_all_unpinned_history(self):
         self.history = [item for item in self.history if item[1]]
         self._trigger_gui_update()
-        print("Monitor: Deleted all unpinned history.")
+        logging.info("Monitor: Deleted all unpinned history.")
 
     def import_history(self, new_history_items):
         for item_content in reversed(new_history_items):
@@ -248,7 +242,8 @@ class ClipboardMonitor:
                 with open(self.history_file_path, 'r', encoding='utf-8') as f:
                     loaded_data = json.load(f)
                     return [(item[0], item[1]) for item in loaded_data if isinstance(item, list) and len(item) == 2]
-            except (json.JSONDecodeError, FileNotFoundError):
+            except (json.JSONDecodeError, FileNotFoundError) as e:
+                logging.error(f"履歴ファイルの読み込みに失敗しました: {e}", exc_info=True)
                 return []
         return []
 
@@ -260,4 +255,6 @@ class ClipboardMonitor:
             with open(self.history_file_path, 'w', encoding='utf-8') as f:
                 json.dump(self.history, f, ensure_ascii=False, indent=4)
         except IOError as e:
-            print(f"Error saving history to file: {e}")
+            logging.error(f"履歴ファイルの保存に失敗しました: {e}", exc_info=True)
+            if self.error_callback:
+                self.error_callback("履歴保存エラー", f"履歴ファイル '{self.history_file_path}' の保存に失敗しました。")

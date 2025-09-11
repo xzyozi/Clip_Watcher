@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import os
 import sys
 from src.clipboard_monitor import ClipboardMonitor
@@ -44,6 +45,7 @@ class Application:
         )
         self.gui = ClipWatcherGUI(master, self)
         self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
+        self.monitor.set_error_callback(self.show_error_message)
 
         self.monitor.start()
 
@@ -55,6 +57,9 @@ class Application:
     def open_settings_window(self):
         settings_window = SettingsWindow(self.master, self.settings_manager, self)
         settings_window.grab_set()
+
+    def show_error_message(self, title, message):
+        messagebox.showerror(title, message)
 
     def stop_monitor(self):
         self.monitor.stop()
