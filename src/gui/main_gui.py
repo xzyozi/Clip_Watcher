@@ -105,14 +105,40 @@ class ClipWatcherGUI:
         if hasattr(self, 'fixed_phrases_frame'):
             # FixedPhrasesFrame itself is a tk.Frame, so its background can be set directly
             self.fixed_phrases_frame.config(bg=theme["frame_bg"])
-            # Its internal widgets (listbox, buttons) also need to be themed.
-            # Looking at FixedPhrasesFrame, it uses tk.Listbox and tk.Button, so they need explicit config.
-            self.fixed_phrases_frame.phrase_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"])
-            self.fixed_phrases_frame.add_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-            self.fixed_phrases_frame.edit_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-            self.fixed_phrases_frame.delete_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-            # The button_frame inside FixedPhrasesFrame is tk.Frame, so it needs config too.
-            self.fixed_phrases_frame.winfo_children()[1].config(bg=theme["frame_bg"])
+            
+            # リストコンポーネントのテーマ適用
+            if hasattr(self.fixed_phrases_frame, 'list_component'):
+                # コンポーネント本体のテーマ
+                self.fixed_phrases_frame.list_component.config(bg=theme["frame_bg"])
+                # リストボックスのテーマ
+                if hasattr(self.fixed_phrases_frame.list_component, 'phrase_listbox'):
+                    self.fixed_phrases_frame.list_component.phrase_listbox.config(
+                        bg=theme["listbox_bg"], 
+                        fg=theme["listbox_fg"],
+                        selectbackground=theme["select_bg"],
+                        selectforeground=theme["select_fg"]
+                    )
+            
+            # 編集コンポーネントのテーマ適用
+            if hasattr(self.fixed_phrases_frame, 'edit_component'):
+                # コンポーネント本体のテーマ
+                self.fixed_phrases_frame.edit_component.config(bg=theme["frame_bg"])
+                # ボタンフレームのテーマ
+                for child in self.fixed_phrases_frame.edit_component.winfo_children():
+                    if isinstance(child, tk.Frame):  # ボタンを含むフレーム
+                        child.config(bg=theme["frame_bg"])
+                        # フレーム内のボタンにテーマを適用
+                        for button in child.winfo_children():
+                            if isinstance(button, tk.Button):
+                                button.config(
+                                    bg=theme["button_bg"],
+                                    fg=theme["button_fg"],
+                                    activebackground=theme["select_bg"],
+                                    activeforeground=theme["select_fg"]
+                                )
+                for child in self.fixed_phrases_frame.edit_component.winfo_children():
+                    if isinstance(child, tk.Button):
+                        child.config(bg=theme["button_bg"], fg=theme["button_fg"])
 
         self.current_theme_name = theme_name
         self.update_history_display(self.app.monitor.get_filtered_history(self.search_entry.get()))
