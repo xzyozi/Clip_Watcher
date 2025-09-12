@@ -33,6 +33,6 @@ def handle_copy_fixed_phrase(gui_instance, phrase):
         print(f"Error copying fixed phrase: {e}")
 
 def handle_manage_fixed_phrases(master, fixed_phrases_manager):
-    fixed_phrases_window = FixedPhrasesWindow(master, fixed_phrases_manager)
+    fixed_phrases_window = FixedPhrasesManager(master, fixed_phrases_manager)
     fixed_phrases_window.grab_set()
     master.wait_window(fixed_phrases_window)
