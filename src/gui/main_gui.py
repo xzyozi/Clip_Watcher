@@ -4,6 +4,7 @@ from src.gui import context_menu
 from src import config
 from src.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
+from src.gui import theme_manager
 
 class ClipWatcherGUI:
     def __init__(self, master, app_instance):
@@ -80,10 +81,21 @@ class ClipWatcherGUI:
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
     def _on_history_select(self, event):
-        if self.history_listbox.curselection():
+        selected_indices = self.history_listbox.curselection()
+        self.clipboard_text_widget.config(state=tk.NORMAL)
+        self.clipboard_text_widget.delete(1.0, tk.END)
+
+        if selected_indices:
             self.format_button.config(state=tk.NORMAL)
+            index = selected_indices[0]
+            if 0 <= index < len(self.history_data):
+                content, _ = self.history_data[index]
+                self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.format_button.config(state=tk.DISABLED)
+            self.clipboard_text_widget.insert(tk.END, self.app.monitor.last_clipboard_data)
+        
+        self.clipboard_text_widget.config(state=tk.DISABLED)
 
     def enable_undo_button(self):
         self.undo_button.config(state=tk.NORMAL)
@@ -92,16 +104,9 @@ class ClipWatcherGUI:
         self.undo_button.config(state=tk.DISABLED)
 
     def apply_theme(self, theme_name):
-        theme = THEMES.get(theme_name, THEMES["light"])
-        self.master.config(bg=theme["bg"])
-        
-        style = ttk.Style()
-        style.theme_use('default')
-        style.configure('TNotebook', background=theme["bg"], bordercolor=theme["frame_bg"])
-        style.configure('TNotebook.Tab', background=theme["frame_bg"], foreground=theme["label_fg"], lightcolor=theme["frame_bg"], darkcolor=theme["frame_bg"])
-        style.map('TNotebook.Tab', background=[('selected', theme["bg"])], foreground=[('selected', theme["fg"])])
-        style.configure('TNotebook.Client', background=theme["frame_bg"])
+        theme = theme_manager.apply_theme(self.master, theme_name)
 
+        # Handle non-ttk widgets specific to this window
         self.current_clipboard_frame.config(bg=theme["frame_bg"], fg=theme["label_fg"])
         self.clipboard_text_widget.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], insertbackground=theme["fg"])
         self.search_frame.config(bg=theme["bg"])
@@ -134,7 +139,7 @@ class ClipWatcherGUI:
                         child.config(bg=theme["button_bg"], fg=theme["button_fg"])
 
         self.current_theme_name = theme_name
-        self.update_history_display(self.app.monitor.get_filtered_history(self.search_entry.get()))
+        self._update_history_listbox(self.app.monitor.get_filtered_history(self.search_entry.get()))
 
     def apply_font_settings(self, clipboard_content_font_family, clipboard_content_font_size, history_font_family, history_font_size):
         clipboard_font = font.Font(family=clipboard_content_font_family, size=clipboard_content_font_size)
@@ -144,20 +149,25 @@ class ClipWatcherGUI:
         self.history_listbox.config(font=history_font)
 
     def update_clipboard_display(self, current_content, history):
-        self.clipboard_text_widget.config(state=tk.NORMAL)
-        self.clipboard_text_widget.delete(1.0, tk.END)
-        self.clipboard_text_widget.insert(tk.END, current_content)
-        self.clipboard_text_widget.config(state=tk.DISABLED)
-
         self.history_data = history
+        
         search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
         if search_query:
             filtered_history = self.app.monitor.get_filtered_history(search_query)
-            self.update_history_display(filtered_history)
+            self._update_history_listbox(filtered_history)
         else:
-            self.update_history_display(history)
+            self._update_history_listbox(history)
 
-    def update_history_display(self, history_to_display):
+        if not self.history_listbox.curselection():
+            self.clipboard_text_widget.config(state=tk.NORMAL)
+            self.clipboard_text_widget.delete(1.0, tk.END)
+            self.clipboard_text_widget.insert(tk.END, current_content)
+            self.clipboard_text_widget.config(state=tk.DISABLED)
+
+    def _update_history_listbox(self, history_to_display):
+        selected_indices = self.history_listbox.curselection()
+        scroll_pos = self.history_listbox.yview()
+
         self.history_listbox.delete(0, tk.END)
         
         current_theme = THEMES.get(getattr(self, 'current_theme_name', 'light'), THEMES['light'])
@@ -172,3 +182,7 @@ class ClipWatcherGUI:
             
             if is_pinned:
                 self.history_listbox.itemconfig(i, {'bg': pinned_bg_color})
+
+        for index in selected_indices:
+            self.history_listbox.selection_set(index)
+        self.history_listbox.yview_moveto(scroll_pos[0])

@@ -93,7 +93,7 @@ class HistoryEventHandlers:
 
             from src.gui.format_dialog import FormatDialog
             
-            dialog = FormatDialog(self.app.master, self.app.plugin_manager)
+            dialog = FormatDialog(self.app.master, self.app.plugin_manager, self.app.settings_manager)
             selected_plugin = dialog.selected_plugin
 
             if selected_plugin:
@@ -111,6 +111,13 @@ class HistoryEventHandlers:
                         }
                         
                         self.app.monitor.update_history_item(selected_index, processed_text)
+                        
+                        # Manually update the top display
+                        self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
+                        self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
+                        self.app.gui.clipboard_text_widget.insert(tk.END, processed_text)
+                        self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
+
                         self.app.gui.enable_undo_button()
                         print(f"Formatted item at index {selected_index} with {selected_plugin.name}")
                     else:
@@ -137,6 +144,13 @@ class HistoryEventHandlers:
             current_text, _ = self.app.gui.history_data[index]
             if current_text == info['processed_text']:
                 self.app.monitor.update_history_item(index, original_text)
+
+                # Manually update the top display
+                self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
+                self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
+                self.app.gui.clipboard_text_widget.insert(tk.END, original_text)
+                self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
+
                 print(f"Undo format for item at index {index}")
             else:
                 print("Cannot undo: The item has been modified since formatting.")
