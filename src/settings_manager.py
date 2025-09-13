@@ -33,11 +33,7 @@ class SettingsManager:
             "clipboard_content_font_family": "TkDefaultFont",
             "clipboard_content_font_size": 10,
             "history_font_family": "TkDefaultFont",
-            "history_font_size": 10,
-            "plugins": {
-                "JSONFormatterPlugin": False,
-                "CaseConverterPlugin": False
-            }
+            "history_font_size": 10
         }
 
     def save_settings(self):

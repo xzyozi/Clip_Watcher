@@ -29,7 +29,8 @@ class Application:
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.settings_manager = SettingsManager()
-        self.plugin_manager = PluginManager(self.settings_manager)
+        self.plugin_manager = PluginManager()
+        self.last_formatted_info = None
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self)
@@ -41,7 +42,6 @@ class Application:
         self.monitor = ClipboardMonitor(
             master,
             self.settings_manager,
-            self.plugin_manager,
             HISTORY_FILE_PATH, # Pass history file path
             self.settings_manager.get_setting("history_limit"),
             self.settings_manager.get_setting("excluded_apps")
@@ -58,7 +58,7 @@ class Application:
         self.settings_manager.apply_settings(self)
 
     def open_settings_window(self):
-        settings_window = SettingsWindow(self.master, self.settings_manager, self.plugin_manager, self)
+        settings_window = SettingsWindow(self.master, self.settings_manager, self)
         settings_window.grab_set()
 
     def show_error_message(self, title, message):
