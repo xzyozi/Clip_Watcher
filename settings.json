@@ -17,5 +17,9 @@
     "hotkey": "ctrl_l",
     "notifications_enabled": false,
     "notification_content_length": 0,
-    "notification_show_app_name": false
+    "notification_show_app_name": false,
+    "plugins": {
+        "JSONFormatterPlugin": false,
+        "CaseConverterPlugin": false
+    }
 }

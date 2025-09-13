@@ -7,13 +7,15 @@ import ctypes
 import ctypes.wintypes
 import logging
 from src.notification_manager import NotificationManager
+from src.plugin_manager import PluginManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, settings_manager, history_file_path, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, settings_manager, plugin_manager: PluginManager, history_file_path, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
         self.settings_manager = settings_manager
+        self.plugin_manager = plugin_manager
         self.notification_manager = NotificationManager(settings_manager)
         self.update_callback = None
         self.error_callback = None
@@ -118,6 +120,7 @@ class ClipboardMonitor:
                 return
 
             if clipboard_data and clipboard_data != self.last_clipboard_data:
+                self.last_clipboard_data = clipboard_data
                 active_process = self.get_active_process_name()
                 logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
                 
@@ -125,9 +128,11 @@ class ClipboardMonitor:
                     logging.info(f"除外アプリからのコピーのため無視: {active_process}")
                     return
                 
+                processed_data = self.plugin_manager.apply_plugins(clipboard_data)
+
                 existing_item_index = -1
                 for i, (content, is_pinned) in enumerate(self.history):
-                    if content == clipboard_data:
+                    if content == processed_data:
                         existing_item_index = i
                         break
 
@@ -135,13 +140,12 @@ class ClipboardMonitor:
                     content_to_move, is_pinned_status = self.history.pop(existing_item_index)
                     self.history.insert(0, (content_to_move, is_pinned_status))
                 else:
-                    self.history.insert(0, (clipboard_data, False))
+                    self.history.insert(0, (processed_data, False))
                     if len(self.history) > self.history_limit:
                         unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
                         if unpinned:
                             del self.history[unpinned[-1]]
     
-                self.last_clipboard_data = clipboard_data
                 self.notification_manager.play_notification_sound()
                 self._trigger_gui_update()
 
