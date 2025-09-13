@@ -16,7 +16,7 @@ class ClipWatcherGUI:
         self.history_data = []
 
         self.notebook = ttk.Notebook(master)
-        self.notebook.pack(pady=config.FRAME_PADDING, padx=config.FRAME_PADDING, fill=tk.BOTH, expand=True)
+        self.notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
 
         clipboard_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(clipboard_tab_frame, text="Clipboard")
