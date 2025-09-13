@@ -1,6 +1,6 @@
 from .base_plugin import Plugin
 
-class CaseConverterPlugin(Plugin):
+class UppercaseConverterPlugin(Plugin):
     @property
     def name(self) -> str:
         return "Uppercase Converter"
