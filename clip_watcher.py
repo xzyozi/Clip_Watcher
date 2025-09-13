@@ -6,6 +6,7 @@ from src.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
 from src.settings_manager import SettingsManager
+from src.plugin_manager import PluginManager
 from src.gui.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
@@ -28,6 +29,8 @@ class Application:
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.settings_manager = SettingsManager()
+        self.plugin_manager = PluginManager()
+        self.last_formatted_info = None
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self)

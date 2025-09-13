@@ -40,8 +40,8 @@ class SettingsManager:
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(self.settings, f, ensure_ascii=False, indent=4)
 
-    def get_setting(self, key):
-        return self.settings.get(key)
+    def get_setting(self, key, default=None):
+        return self.settings.get(key, default)
 
     def set_setting(self, key, value):
         self.settings[key] = value

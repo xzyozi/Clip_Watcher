@@ -118,6 +118,7 @@ class ClipboardMonitor:
                 return
 
             if clipboard_data and clipboard_data != self.last_clipboard_data:
+                self.last_clipboard_data = clipboard_data
                 active_process = self.get_active_process_name()
                 logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
                 
@@ -141,12 +142,22 @@ class ClipboardMonitor:
                         if unpinned:
                             del self.history[unpinned[-1]]
     
-                self.last_clipboard_data = clipboard_data
                 self.notification_manager.play_notification_sound()
                 self._trigger_gui_update()
 
         except Exception as e:
             logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
+
+    def update_history_item(self, index: int, new_text: str):
+        """Updates the text of a history item at a given index."""
+        current_display_history = self.get_history()
+        if 0 <= index < len(current_display_history):
+            item_to_update = current_display_history[index]
+            for i, (content, is_pinned) in enumerate(self.history):
+                if content == item_to_update[0] and is_pinned == item_to_update[1]:
+                    self.history[i] = (new_text, is_pinned)
+                    self._trigger_gui_update()
+                    return
 
     def _trigger_gui_update(self):
         if self.update_callback:

@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
-from src.config import THEMES
-import copy
+from src.gui import theme_manager
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, master, settings_manager, app_instance):
@@ -12,9 +11,8 @@ class SettingsWindow(tk.Toplevel):
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
-        # Store initial settings to revert on cancel
         self.initial_settings = copy.deepcopy(self.settings_manager.settings)
-        self.settings_saved = False # Flag to track if settings were saved
+        self.settings_saved = False
 
         # Variables for settings
         self.theme_var = tk.StringVar(value=self.settings_manager.get_setting("theme"))
@@ -37,22 +35,19 @@ class SettingsWindow(tk.Toplevel):
         self.apply_theme(self.settings_manager.get_setting("theme")) # Apply initial theme
 
     def _create_widgets(self):
-        # Create a Notebook (tabbed interface)
         notebook = ttk.Notebook(self)
         notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
 
-        # Create frames for each tab
         general_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
         history_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
         notification_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
-        font_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING) # New font frame
+        font_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
         excluded_apps_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
 
-        # Add tabs to the notebook
         notebook.add(general_frame, text="General")
         notebook.add(history_frame, text="History")
         notebook.add(notification_frame, text="Notifications")
-        notebook.add(font_frame, text="Font") # Add font tab
+        notebook.add(font_frame, text="Font")
         notebook.add(excluded_apps_frame, text="Excluded Apps")
 
         # Populate General Settings tab
@@ -183,38 +178,59 @@ class SettingsWindow(tk.Toplevel):
         apply_button = ttk.Button(button_frame, text="Apply", command=self._apply_only)
         apply_button.pack(side=tk.RIGHT)
 
+    def _save_settings_logic(self):
+        self.settings_manager.set_setting("theme", self.theme_var.get())
+        self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
+        self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
+        self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
+        self.settings_manager.set_setting("notifications_enabled", self.notifications_enabled_var.get())
+        self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
+        self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
+        self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_family", self.clipboard_content_font_family_var.get())
+        self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
+        self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
+        self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
+        self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
+
+    def _apply_only(self):
+        self._save_settings_logic()
+        self.settings_manager.apply_settings(self.app_instance)
+        self.apply_theme(self.theme_var.get())
+
+    def _save_and_close(self):
+        self._save_settings_logic()
+        self.settings_manager.save_settings()
+        self.settings_manager.apply_settings(self.app_instance)
+        self.apply_theme(self.theme_var.get())
+        self.settings_saved = True
+        self.destroy()
+
+    def _update_ui_from_settings(self):
+        self.theme_var.set(self.settings_manager.get_setting("theme"))
+        self.history_limit_var.set(self.settings_manager.get_setting("history_limit"))
+        self.always_on_top_var.set(self.settings_manager.get_setting("always_on_top"))
+        self.startup_on_boot_var.set(self.settings_manager.get_setting("startup_on_boot"))
+        self.notifications_enabled_var.set(self.settings_manager.get_setting("notifications_enabled"))
+        self.notification_content_length_var.set(self.settings_manager.get_setting("notification_content_length"))
+        self.notification_show_app_name_var.set(self.settings_manager.get_setting("notification_show_app_name"))
+        self.notification_sound_enabled_var.set(self.settings_manager.get_setting("notification_sound_enabled"))
+        self.clipboard_content_font_family_var.set(self.settings_manager.get_setting("clipboard_content_font_family"))
+        self.clipboard_content_font_size_var.set(self.settings_manager.get_setting("clipboard_content_font_size"))
+        self.history_font_family_var.set(self.settings_manager.get_setting("history_font_family"))
+        self.history_font_size_var.set(self.settings_manager.get_setting("history_font_size"))
+        
+        self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
+        self.excluded_apps_listbox.delete(0, tk.END)
+        for app in self.excluded_apps_list:
+            self.excluded_apps_listbox.insert(tk.END, app)
+
     def apply_theme(self, theme_name):
-        theme = THEMES.get(theme_name, THEMES["light"])
-        self.config(bg=theme["bg"]) # Apply to the Toplevel window itself
-        
-        style = ttk.Style()
-        style.theme_use('default') # Reset to default to ensure consistent styling before applying custom
-        
-        # Configure general styles for themed widgets
-        style.configure('.', background=theme["bg"], foreground=theme["fg"]) # Default for all widgets
-        style.configure('TFrame', background=theme["frame_bg"]) # For ttk.Frame
-        style.configure('TLabelFrame', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.LabelFrame
-        style.configure('TLabel', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Label
-        style.configure('TButton', background=theme["button_bg"], foreground=theme["button_fg"]) # For ttk.Button
-        style.map('TButton', background=[('active', theme["button_bg"])]) # Keep active color same for now
-        style.configure('TCheckbutton', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Checkbutton
-        style.configure('TRadiobutton', background=theme["frame_bg"], foreground=theme["label_fg"]) # For ttk.Radiobutton
-        style.configure('TEntry', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Entry
-        style.configure('TSpinbox', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Spinbox
-        style.configure('TCombobox', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"]) # For ttk.Combobox
+        theme = theme_manager.apply_theme(self, theme_name)
 
-        # Notebook specific styling
-        style.configure('TNotebook', background=theme["bg"], bordercolor=theme["frame_bg"]) # For ttk.Notebook
-        style.configure('TNotebook.Tab', background=theme["frame_bg"], foreground=theme["label_fg"], lightcolor=theme["frame_bg"], darkcolor=theme["frame_bg"]) # For ttk.Notebook tabs
-        style.map('TNotebook.Tab', background=[('selected', theme["bg"])], foreground=[('selected', theme["fg"])])
-        style.configure('TNotebook.Client', background=theme["frame_bg"]) # The area where the tabs content is displayed
-
-        # For tk.Listbox (not ttk), need to configure directly
-        # This assumes self.excluded_apps_listbox is a tk.Listbox
         if hasattr(self, 'excluded_apps_listbox'):
             self.excluded_apps_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
 
-        # Update the current theme name for future reference (optional for settings window)
         self.current_theme_name = theme_name
 
     def _add_excluded_app(self):
@@ -258,77 +274,10 @@ class SettingsWindow(tk.Toplevel):
             self.settings_manager.settings = self.settings_manager._get_default_settings()
             self._update_ui_from_settings()
 
-    def _update_ui_from_settings(self):
-        self.theme_var.set(self.settings_manager.get_setting("theme"))
-        self.history_limit_var.set(self.settings_manager.get_setting("history_limit"))
-        self.always_on_top_var.set(self.settings_manager.get_setting("always_on_top"))
-        self.startup_on_boot_var.set(self.settings_manager.get_setting("startup_on_boot"))
-        self.notifications_enabled_var.set(self.settings_manager.get_setting("notifications_enabled"))
-        self.notification_content_length_var.set(self.settings_manager.get_setting("notification_content_length"))
-        self.notification_show_app_name_var.set(self.settings_manager.get_setting("notification_show_app_name"))
-        self.notification_sound_enabled_var.set(self.settings_manager.get_setting("notification_sound_enabled"))
-        self.clipboard_content_font_family_var.set(self.settings_manager.get_setting("clipboard_content_font_family"))
-        self.clipboard_content_font_size_var.set(self.settings_manager.get_setting("clipboard_content_font_size"))
-        self.history_font_family_var.set(self.settings_manager.get_setting("history_font_family"))
-        self.history_font_size_var.set(self.settings_manager.get_setting("history_font_size"))
-        
-        self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
-        self.excluded_apps_listbox.delete(0, tk.END)
-        for app in self.excluded_apps_list:
-            self.excluded_apps_listbox.insert(tk.END, app)
-
-    def _apply_only(self):
-        # Save current state of variables to settings_manager (temporary save for apply)
-        self.settings_manager.set_setting("theme", self.theme_var.get())
-        self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
-        self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
-        self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
-        self.settings_manager.set_setting("notifications_enabled", self.notifications_enabled_var.get())
-        self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
-        self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
-        self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
-        self.settings_manager.set_setting("clipboard_content_font_family", self.clipboard_content_font_family_var.get())
-        self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
-        self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
-        self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
-        self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
-        # No self.settings_manager.save_settings() here, as "Apply" doesn't persist to file
-
-        # Apply settings to app instance and settings window
-        self.settings_manager.apply_settings(self.app_instance)
-        self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
-
-    def _save_and_close(self):
-        # Save settings to file
-        self.settings_manager.set_setting("theme", self.theme_var.get())
-        self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
-        self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
-        self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
-        self.settings_manager.set_setting("notifications_enabled", self.notifications_enabled_var.get())
-        self.settings_manager.set_setting("notification_content_length", self.notification_content_length_var.get())
-        self.settings_manager.set_setting("notification_show_app_name", self.notification_show_app_name_var.get())
-        self.settings_manager.set_setting("notification_sound_enabled", self.notification_sound_enabled_var.get())
-        self.settings_manager.set_setting("clipboard_content_font_family", self.clipboard_content_font_family_var.get())
-        self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
-        self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
-        self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
-        self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
-        self.settings_manager.save_settings() # Persist to file
-
-        # Apply settings to app instance and settings window
-        self.settings_manager.apply_settings(self.app_instance)
-        self.apply_theme(self.theme_var.get()) # Apply theme to settings window itself
-
-        self.settings_saved = True # Mark that settings were saved
-        self.destroy()
-
     def destroy(self):
-        # If settings were not explicitly saved, revert to initial state
         if not self.settings_saved:
             self.settings_manager.settings = copy.deepcopy(self.initial_settings)
             self.settings_manager.apply_settings(self.app_instance)
-            # Reapply theme to settings window itself, in case it was changed by "Apply"
-            # This is mostly for consistency, as the window is about to be destroyed.
             self.apply_theme(self.settings_manager.get_setting("theme"))
 
-        super().destroy() # Call the original Toplevel destroy method
+        super().destroy()

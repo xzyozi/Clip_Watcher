@@ -82,6 +82,102 @@ class HistoryEventHandlers:
         except Exception as e:
             print(f"Error merging and copying selected history: {e}")
 
+    def format_selected_item(self):
+        """Opens a dialog to choose a plugin and applies it to the selected history item."""
+        try:
+            selected_indices = self.app.gui.history_listbox.curselection()
+            if not selected_indices:
+                return
+
+            selected_index = selected_indices[0]
+
+            from src.gui.format_dialog import FormatDialog
+            
+            dialog = FormatDialog(self.app.master, self.app.plugin_manager, self.app.settings_manager)
+            selected_plugin = dialog.selected_plugin
+
+            if selected_plugin:
+                # Call the generic apply_plugin_to_selected_item with the chosen plugin
+                self.apply_plugin_to_selected_item(selected_plugin)
+
+        except IndexError:
+            print("No item selected for formatting.")
+        except Exception as e:
+            print(f"Error during formatting: {e}")
+
+    def apply_plugin_to_selected_item(self, plugin_instance):
+        """Applies a specific plugin to the selected history item."""
+        try:
+            selected_indices = self.app.gui.history_listbox.curselection()
+            if not selected_indices:
+                return
+
+            selected_index = selected_indices[0]
+
+            history_data = self.app.gui.history_data
+            if 0 <= selected_index < len(history_data):
+                original_text, _ = history_data[selected_index]
+                
+                processed_text = plugin_instance.process(original_text)
+
+                if processed_text != original_text:
+                    self.app.last_formatted_info = {
+                        'index': selected_index,
+                        'original_text': original_text,
+                        'processed_text': processed_text
+                    }
+                    
+                    self.app.monitor.update_history_item(selected_index, processed_text)
+                    
+                    # Manually update the top display
+                    self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
+                    self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
+                    self.app.gui.clipboard_text_widget.insert(tk.END, processed_text)
+                    self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
+
+                    self.app.gui.enable_undo_button()
+                    print(f"Formatted item at index {selected_index} with {plugin_instance.name}")
+                else:
+                    print(f"Plugin '{plugin_instance.name}' made no changes.")
+                    self.app.last_formatted_info = None
+                    self.app.gui.disable_undo_button()
+
+        except IndexError:
+            print("No item selected for formatting.")
+        except Exception as e:
+            print(f"Error during formatting: {e}")
+
+    def undo_last_format(self):
+        """Reverts the last formatting operation."""
+        if not hasattr(self.app, 'last_formatted_info') or not self.app.last_formatted_info:
+            print("No format operation to undo.")
+            return
+
+        try:
+            info = self.app.last_formatted_info
+            index = info['index']
+            original_text = info['original_text']
+            
+            current_text, _ = self.app.gui.history_data[index]
+            if current_text == info['processed_text']:
+                self.app.monitor.update_history_item(index, original_text)
+
+                # Manually update the top display
+                self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
+                self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
+                self.app.gui.clipboard_text_widget.insert(tk.END, original_text)
+                self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
+
+                print(f"Undo format for item at index {index}")
+            else:
+                print("Cannot undo: The item has been modified since formatting.")
+
+        except Exception as e:
+            print(f"Error during undo: {e}")
+        finally:
+            self.app.last_formatted_info = None
+            self.app.gui.disable_undo_button()
+
     def handle_search_history(self, search_query):
         if search_query:
             filtered_history = self.app.monitor.get_filtered_history(search_query)
