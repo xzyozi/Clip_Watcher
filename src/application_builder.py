@@ -67,7 +67,7 @@ class ApplicationBuilder:
             raise ConfigError("必要なコンポーネントが初期化されていません")
             
         from src.application_interface import Application
-        from main import Application as MainApplication  # 具体的な実装をインポート
+        from clip_watcher import Application as MainApplication  # 具体的な実装をインポート
         
         try:
             app = MainApplication(

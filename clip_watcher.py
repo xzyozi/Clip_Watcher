@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import sys
+import traceback
 from src.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
@@ -73,6 +74,26 @@ class Application:
         self.master.destroy()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = Application(root)
-    root.mainloop()
+    try:
+        from src.utils.logging_config import setup_logging
+        from src.application_builder import ApplicationBuilder
+        
+        logger = setup_logging()
+        logger.info("アプリケーションを開始します")
+        
+        root = tk.Tk()
+    
+        app = Application(root)
+               #.with_settings()
+               #.with_clipboard_monitor(root, HISTORY_FILE_PATH)
+               #with_fixed_phrases_manager()
+               #.build(root))
+               
+        logger.info("アプリケーションの初期化が完了しました")
+        
+        root.mainloop()
+    except Exception as e:
+        if 'logger' in locals():
+            logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
+        print(f"アプリケーション起動エラー: {str(e)}")
+        traceback.print_exc()
