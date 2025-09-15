@@ -7,7 +7,7 @@ class HTMLEscapePlugin(Plugin):
         return "HTML Escape/Unescape"
 
     @property
-    def def description(self) -> str:
+    def description(self) -> str:
         return "Escapes or unescapes HTML special characters."
 
     def process(self, text: str) -> str:

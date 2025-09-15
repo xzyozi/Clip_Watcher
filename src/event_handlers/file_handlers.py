@@ -1,45 +1,21 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from src.event_dispatcher import EventDispatcher
 
 class FileEventHandlers:
-    def __init__(self, app_instance):
-        self.app = app_instance
+    def __init__(self, event_dispatcher: EventDispatcher):
+        self.event_dispatcher = event_dispatcher
+
+        # Subscribe to events
+        self.event_dispatcher.subscribe("FILE_QUIT", self.handle_quit)
+        self.event_dispatcher.subscribe("FILE_EXPORT_HISTORY", self.handle_export_history)
+        self.event_dispatcher.subscribe("FILE_IMPORT_HISTORY", self.handle_import_history)
 
     def handle_quit(self):
-        self.app.stop_monitor()
-        self.app.master.quit()
+        self.event_dispatcher.dispatch("REQUEST_QUIT")
 
     def handle_export_history(self):
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="履歴をエクスポート (Export History)"
-        )
-        if file_path:
-            try:
-                history_content = self.app.monitor.get_history()
-                with open(file_path, "w", encoding="utf-8") as f:
-                    for item_tuple in history_content:
-                        f.write(item_tuple[0] + "\n---")
-                messagebox.showinfo("エクスポート完了", f"履歴を以下のファイルにエクスポートしました:\n{file_path}")
-            except Exception as e:
-                messagebox.showerror("エクスポートエラー", f"履歴のエクスポート中にエラーが発生しました:\n{e}")
+        self.event_dispatcher.dispatch("REQUEST_EXPORT_HISTORY")
 
     def handle_import_history(self):
-        file_path = filedialog.askopenfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="履歴をインポート (Import History)"
-        )
-        if file_path:
-            try:
-                imported_history = []
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    raw_items = content.split("---")
-                    imported_history = [item.strip() for item in raw_items if item.strip()]
-                
-                self.app.monitor.import_history(imported_history)
-                messagebox.showinfo("インポート完了", f"履歴を以下のファイルからインポートしました:\n{file_path}")
-            except Exception as e:
-                messagebox.showerror("インポートエラー", f"履歴のインポート中にエラーが発生しました:\n{e}")
+        self.event_dispatcher.dispatch("REQUEST_IMPORT_HISTORY")

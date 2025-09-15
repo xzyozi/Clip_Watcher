@@ -1,12 +1,15 @@
-class SettingsEventHandlers:
-    def __init__(self, app_instance):
-        self.app = app_instance
+from src.event_dispatcher import EventDispatcher
 
-    def handle_always_on_top(self):
-        always_on_top = self.app.always_on_top_var.get()
-        self.app.master.attributes('-topmost', always_on_top)
-        print(f"Always on Top set to: {always_on_top}")
+class SettingsEventHandlers:
+    def __init__(self, event_dispatcher: EventDispatcher):
+        self.event_dispatcher = event_dispatcher
+
+        # Subscribe to events
+        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_always_on_top)
+        self.event_dispatcher.subscribe("SETTINGS_SET_THEME", self.handle_set_theme)
+
+    def handle_always_on_top(self, always_on_top):
+        self.event_dispatcher.dispatch("REQUEST_ALWAYS_ON_TOP", always_on_top)
 
     def handle_set_theme(self, theme_name):
-        self.app.gui.apply_theme(theme_name)
-        print(f"Theme set to: {theme_name}")
+        self.event_dispatcher.dispatch("REQUEST_SET_THEME", theme_name)

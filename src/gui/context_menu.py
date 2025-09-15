@@ -12,7 +12,7 @@ def create_history_context_menu(master, app_instance):
         pass
 
     context_menu.add_command(label="選択項目をコピー (Copy Selected)", 
-                             command=app_instance.history_handlers.handle_copy_selected_history)
+                             command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", app_instance.gui.history_listbox.curselection()))
     
     format_state = "normal" if has_selection else "disabled"
     context_menu.add_command(label="フォーマット (Format)",
@@ -20,7 +20,7 @@ def create_history_context_menu(master, app_instance):
                              state=format_state)
 
     context_menu.add_command(label="選択項目を削除 (Delete Selected)", 
-                             command=app_instance.history_handlers.handle_delete_selected_history)
+                             command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_DELETE_SELECTED", app_instance.gui.history_listbox.curselection()))
     
     context_menu.add_separator()
 
@@ -42,7 +42,7 @@ def create_history_context_menu(master, app_instance):
         pin_unpin_state = "normal"
 
     context_menu.add_command(label=pin_unpin_label, 
-                             command=app_instance.history_handlers.handle_pin_unpin_history,
+                             command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_PIN_UNPIN", selected_index),
                              state=pin_unpin_state)
     
     return context_menu

@@ -1,4 +1,5 @@
 import tkinter as tk
+import copy
 from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
 from src.gui import theme_manager
