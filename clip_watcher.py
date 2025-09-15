@@ -25,14 +25,14 @@ HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
 
 
 class Application:
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.settings_manager = settings_manager
         self.monitor = monitor
         self.fixed_phrases_manager = fixed_phrases_manager
-        self.plugin_manager = PluginManager()
+        self.plugin_manager = plugin_manager
         self.last_formatted_info = None
         
         # Initialize event handlers first
@@ -78,6 +78,7 @@ if __name__ == "__main__":
         builder = ApplicationBuilder()
         app = builder.with_settings()\
                      .with_fixed_phrases_manager()\
+                     .with_plugin_manager()\
                      .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
                      .build(root)
                
