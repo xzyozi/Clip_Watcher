@@ -17,7 +17,7 @@ def create_menu_bar(master, app_instance):
     # Edit Menu
     edit_menu = tk.Menu(menubar, tearoff=0)
     edit_menu.add_command(label="検索 (Find)...", command=lambda: print("Find clicked"))
-    edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=app_instance.history_handlers.handle_copy_selected_as_merged)
+    edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_listbox.curselection()))
     edit_menu.add_separator()
     edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=app_instance.history_handlers.handle_delete_selected_history)
     edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=app_instance.history_handlers.handle_delete_all_unpinned_history)
@@ -29,7 +29,7 @@ def create_menu_bar(master, app_instance):
     # Variable to hold the state of the "Always on Top" checkbutton
     app_instance.always_on_top_var = tk.BooleanVar(value=app_instance.settings_manager.get_setting("always_on_top"))
     view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)",
-                              command=app_instance.settings_handlers.handle_always_on_top,
+                              command=lambda: app_instance.event_dispatcher.dispatch("SETTINGS_ALWAYS_ON_TOP", app_instance.always_on_top_var.get()),
                               variable=app_instance.always_on_top_var)
     
     # Theme Menu

@@ -43,7 +43,7 @@ class ClipWatcherGUI:
 
         self.search_entry = tk.Entry(self.search_frame)
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X)
-        self.search_entry.bind("<KeyRelease>", lambda event: self.app.history_handlers.handle_search_history(self.search_entry.get()))
+        self.search_entry.bind("<KeyRelease>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_SEARCH", self.search_entry.get()))
         self.search_entry.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.search_entry))
 
         self.history_frame = tk.LabelFrame(clipboard_tab_frame, text="Clipboard History", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
@@ -57,19 +57,19 @@ class ClipWatcherGUI:
         self.history_listbox.config(yscrollcommand=self.history_scrollbar.set)
 
         self.history_listbox.bind("<<ListboxSelect>>", self._on_history_select)
-        self.history_listbox.bind("<Double-Button-1>", lambda event: self.app.history_handlers.handle_copy_selected_history())
+        self.history_listbox.bind("<Double-Button-1>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED"))
         self.history_listbox.bind("<Button-3>", lambda event: context_menu.show_history_context_menu(event, self.app))
 
         self.control_frame = tk.Frame(clipboard_tab_frame)
         self.control_frame.pack(pady=config.FRAME_PADDING)
 
-        self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=self.app.history_handlers.handle_copy_selected_history)
+        self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_listbox.curselection()))
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.format_button = tk.Button(self.control_frame, text="Format", command=self.app.history_handlers.format_selected_item, state=tk.DISABLED)
+        self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.undo_button = tk.Button(self.control_frame, text="Undo Format", command=self.app.history_handlers.undo_last_format, state=tk.DISABLED)
+        self.undo_button = tk.Button(self.control_frame, text="Undo Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_UNDO_FORMAT"), state=tk.DISABLED)
         self.undo_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
         self.quit_button = tk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
