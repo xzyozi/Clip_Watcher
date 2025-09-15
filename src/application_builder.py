@@ -7,6 +7,7 @@ from src.exceptions import ConfigError
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src.plugin_manager import PluginManager
 import logging
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ class ApplicationBuilder:
         self.settings_manager: Optional[SettingsManager] = None
         self.monitor: Optional[ClipboardMonitor] = None
         self.fixed_phrases_manager: Optional[FixedPhrasesManager] = None
+        self.plugin_manager: Optional[PluginManager] = None
         
     def with_settings(self, settings_file_path: str = "settings.json") -> 'ApplicationBuilder':
         """設定マネージャーの初期化"""
@@ -61,20 +63,31 @@ class ApplicationBuilder:
             logger.error(f"定型文マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"定型文マネージャーの初期化に失敗しました: {str(e)}")
 
+    def with_plugin_manager(self) -> 'ApplicationBuilder':
+        """プラグインマネージャーの初期化"""
+        try:
+            self.plugin_manager = PluginManager()
+            logger.info("プラグインマネージャーを初期化しました")
+            return self
+        except Exception as e:
+            logger.error(f"プラグインマネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
+
     def build(self, master: tk.Tk) -> 'Application':
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager]):
+        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
             
         from src.application_interface import Application
-        from main import Application as MainApplication  # 具体的な実装をインポート
+        from clip_watcher import Application as MainApplication  # 具体的な実装をインポート
         
         try:
             app = MainApplication(
                 master=master,
                 settings_manager=self.settings_manager,
                 monitor=self.monitor,
-                fixed_phrases_manager=self.fixed_phrases_manager
+                fixed_phrases_manager=self.fixed_phrases_manager,
+                plugin_manager=self.plugin_manager
             )
             logger.info("アプリケーションのビルドが完了しました")
             return app

@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import sys
+import traceback
 from src.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
@@ -24,28 +25,20 @@ HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
 
 
 class Application:
-    def __init__(self, master):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        self.settings_manager = SettingsManager()
-        self.plugin_manager = PluginManager()
+        self.settings_manager = settings_manager
+        self.monitor = monitor
+        self.fixed_phrases_manager = fixed_phrases_manager
+        self.plugin_manager = plugin_manager
         self.last_formatted_info = None
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self)
         self.file_handlers = FileEventHandlers(self)
         self.settings_handlers = SettingsEventHandlers(self)
-
-        self.fixed_phrases_manager = FixedPhrasesManager()
-
-        self.monitor = ClipboardMonitor(
-            master,
-            self.settings_manager,
-            HISTORY_FILE_PATH, # Pass history file path
-            self.settings_manager.get_setting("history_limit"),
-            self.settings_manager.get_setting("excluded_apps")
-        )
         self.gui = ClipWatcherGUI(master, self)
         self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
         self.monitor.set_error_callback(self.show_error_message)
@@ -73,6 +66,27 @@ class Application:
         self.master.destroy()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = Application(root)
-    root.mainloop()
+    try:
+        from src.utils.logging_config import setup_logging
+        from src.application_builder import ApplicationBuilder
+        
+        logger = setup_logging()
+        logger.info("アプリケーションを開始します")
+        
+        root = tk.Tk()
+    
+        builder = ApplicationBuilder()
+        app = builder.with_settings()\
+                     .with_fixed_phrases_manager()\
+                     .with_plugin_manager()\
+                     .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
+                     .build(root)
+               
+        logger.info("アプリケーションの初期化が完了しました")
+        
+        root.mainloop()
+    except Exception as e:
+        if 'logger' in locals():
+            logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
+        print(f"アプリケーション起動エラー: {str(e)}")
+        traceback.print_exc()
