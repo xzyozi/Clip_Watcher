@@ -10,7 +10,6 @@ class BaseFrameGUI(tk.Frame):
         self.master = master
         self.app = app_instance
         self.current_theme_name = self.app.settings_manager.get_setting("theme")
-        self.apply_theme(self.current_theme_name)
 
     def apply_theme(self, theme_name):
         theme = theme_manager.apply_theme(self.master, theme_name)

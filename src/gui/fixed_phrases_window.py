@@ -26,7 +26,7 @@ class FixedPhrasesFrame(BaseFrameGUI):
             components_dir.mkdir(exist_ok=True)
             
             # リストコンポーネントの作成と配置
-            self.list_component = PhraseListComponent(self, self.app.fixed_phrases_manager)
+            self.list_component = PhraseListComponent(self, self.app)
             self.list_component.pack(fill=tk.BOTH, expand=True)
 
             # 編集コンポーネントの作成と配置
