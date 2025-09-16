@@ -81,6 +81,8 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
+        self.apply_theme(self.current_theme_name)
+
     def _on_history_select(self, event):
         selected_indices = self.history_listbox.curselection()
         self.clipboard_text_widget.config(state=tk.NORMAL)
