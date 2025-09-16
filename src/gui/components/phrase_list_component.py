@@ -5,12 +5,13 @@ from src.exceptions import PhraseError
 
 logger = logging.getLogger(__name__)
 
-class PhraseListComponent(tk.Frame):
+from src.gui.base_frame_gui import BaseFrameGUI
+
+class PhraseListComponent(BaseFrameGUI):
     """定型文リスト表示コンポーネント"""
     
-    def __init__(self, master, phrases_manager):
-        super().__init__(master)
-        self.phrases_manager = phrases_manager
+    def __init__(self, master, app_instance):
+        super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self._create_widgets()
         self._populate_listbox()
@@ -34,7 +35,7 @@ class PhraseListComponent(tk.Frame):
     def _populate_listbox(self):
         """リストボックスに定型文を表示"""
         self.phrase_listbox.delete(0, tk.END)
-        for phrase in self.phrases_manager.get_phrases():
+        for phrase in self.app.fixed_phrases_manager.get_phrases():
             self.phrase_listbox.insert(tk.END, phrase)
 
     def _copy_selected_phrase(self):
@@ -46,8 +47,8 @@ class PhraseListComponent(tk.Frame):
             if not selected_phrase:
                 raise PhraseError("空の定型文はコピーできません")
                 
-            self.clipboard_clear()
-            self.clipboard_append(selected_phrase)
+            self.master.clipboard_clear()
+            self.master.clipboard_append(selected_phrase)
             
             self.logger.info(f"定型文をコピーしました: {selected_phrase[:20]}...")
             messagebox.showinfo("コピー完了", "定型文をクリップボードにコピーしました。", parent=self)

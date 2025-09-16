@@ -2,12 +2,12 @@ import tkinter as tk
 from tkinter import ttk
 from src.gui import theme_manager
 
-class FormatDialog(tk.Toplevel):
-    def __init__(self, master, plugin_manager, settings_manager):
-        super().__init__(master)
+from src.gui.base_toplevel_gui import BaseToplevelGUI
+
+class FormatDialog(BaseToplevelGUI):
+    def __init__(self, master, app_instance):
+        super().__init__(master, app_instance)
         self.title("Select Formatter")
-        self.plugin_manager = plugin_manager
-        self.settings_manager = settings_manager
         self.selected_plugin = None
 
         self.geometry("350x300") # Adjusted height for buttons
@@ -17,7 +17,7 @@ class FormatDialog(tk.Toplevel):
         self._create_widgets()
         
         # Apply theme
-        theme = theme_manager.apply_theme(self, self.settings_manager.get_setting("theme"))
+        # theme = theme_manager.apply_theme(self, self.settings_manager.get_setting("theme"))
         # No listbox to style, but other ttk widgets will be themed
 
         self.protocol("WM_DELETE_WINDOW", self._on_cancel)
@@ -34,7 +34,7 @@ class FormatDialog(tk.Toplevel):
         plugin_button_frame = ttk.Frame(main_frame)
         plugin_button_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        self.plugins = self.plugin_manager.get_available_plugins()
+        self.plugins = self.app.plugin_manager.get_available_plugins()
         for plugin in self.plugins:
             button = ttk.Button(plugin_button_frame, text=plugin.name, 
                                 command=lambda p=plugin: self._on_plugin_select(p))

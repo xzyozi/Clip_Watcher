@@ -6,10 +6,11 @@ from src.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui import theme_manager
 
-class ClipWatcherGUI:
+from src.gui.base_frame_gui import BaseFrameGUI
+
+class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master, app_instance):
-        self.master = master
-        self.app = app_instance
+        super().__init__(master, app_instance)
         master.title("ClipWatcher")
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
 
@@ -77,7 +78,7 @@ class ClipWatcherGUI:
 
         fixed_phrases_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(fixed_phrases_tab_frame, text="Fixed Phrases")
-        self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app.fixed_phrases_manager)
+        self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
     def _on_history_select(self, event):
@@ -104,7 +105,9 @@ class ClipWatcherGUI:
         self.undo_button.config(state=tk.DISABLED)
 
     def apply_theme(self, theme_name):
-        theme = theme_manager.apply_theme(self.master, theme_name)
+        super().apply_theme(theme_name) # Call base class method
+
+        theme = THEMES.get(theme_name, THEMES['light']) # Get theme directly from THEMES
 
         # Handle non-ttk widgets specific to this window
         self.current_clipboard_frame.config(bg=theme["frame_bg"], fg=theme["label_fg"])
@@ -138,7 +141,7 @@ class ClipWatcherGUI:
                     if isinstance(child, tk.Button):
                         child.config(bg=theme["button_bg"], fg=theme["button_fg"])
 
-        self.current_theme_name = theme_name
+        # self.current_theme_name = theme_name # Handled by base class
         self._update_history_listbox(self.app.monitor.get_filtered_history(self.search_entry.get()))
 
     def apply_font_settings(self, clipboard_content_font_family, clipboard_content_font_size, history_font_family, history_font_size):

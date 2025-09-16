@@ -5,12 +5,15 @@ from src.exceptions import PhraseError
 
 logger = logging.getLogger(__name__)
 
-class PhraseEditComponent(tk.Frame):
+from src.gui.base_frame_gui import BaseFrameGUI
+
+logger = logging.getLogger(__name__)
+
+class PhraseEditComponent(BaseFrameGUI):
     """定型文編集コンポーネント"""
     
-    def __init__(self, master, phrases_manager, list_component):
-        super().__init__(master)
-        self.phrases_manager = phrases_manager
+    def __init__(self, master, list_component, app_instance):
+        super().__init__(master, app_instance)
         self.list_component = list_component
         self.logger = logging.getLogger(__name__)
         self._create_widgets()
@@ -49,13 +52,13 @@ class PhraseEditComponent(tk.Frame):
             if not new_phrase.strip():
                 raise PhraseError("空の定型文は追加できません")
 
-            if self.phrases_manager.add_phrase(new_phrase):
+            if self.app.fixed_phrases_manager.add_phrase(new_phrase):
                 self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
                 self.list_component._populate_listbox()  # リストを更新
             else:
                 raise PhraseError("その定型文は既に存在します")
 
-            if self.phrases_manager.add_phrase(new_phrase):
+            if self.app.fixed_phrases_manager.add_phrase(new_phrase):
                 self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
                 self.list_component.refresh()
             else:
@@ -83,7 +86,7 @@ class PhraseEditComponent(tk.Frame):
             )
             
             if edited_phrase:
-                if self.phrases_manager.update_phrase(old_phrase, edited_phrase):
+                if self.app.fixed_phrases_manager.update_phrase(old_phrase, edited_phrase):
                     self.logger.info(f"定型文を更新しました: {edited_phrase[:20]}...")
                     self.list_component.refresh()
                 else:
@@ -104,7 +107,7 @@ class PhraseEditComponent(tk.Frame):
                 raise PhraseError("削除する定型文を選択してください")
 
             if messagebox.askyesno("確認", f"'{phrase_to_delete}' を削除しますか？", parent=self):
-                if self.phrases_manager.delete_phrase(phrase_to_delete):
+                if self.app.fixed_phrases_manager.delete_phrase(phrase_to_delete):
                     self.logger.info(f"定型文を削除しました: {phrase_to_delete[:20]}...")
                     self.list_component.refresh()
                 else:
