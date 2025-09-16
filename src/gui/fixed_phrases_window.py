@@ -8,12 +8,13 @@ from src.gui.components.phrase_edit_component import PhraseEditComponent
 
 logger = logging.getLogger(__name__)
 
-class FixedPhrasesFrame(tk.Frame):
+from src.gui.base_frame_gui import BaseFrameGUI
+
+class FixedPhrasesFrame(BaseFrameGUI):
     """定型文管理フレーム"""
     
-    def __init__(self, master, fixed_phrases_manager):
-        super().__init__(master)
-        self.fixed_phrases_manager = fixed_phrases_manager
+    def __init__(self, master, app_instance):
+        super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self._create_widgets()
 
@@ -25,14 +26,14 @@ class FixedPhrasesFrame(tk.Frame):
             components_dir.mkdir(exist_ok=True)
             
             # リストコンポーネントの作成と配置
-            self.list_component = PhraseListComponent(self, self.fixed_phrases_manager)
+            self.list_component = PhraseListComponent(self, self.app.fixed_phrases_manager)
             self.list_component.pack(fill=tk.BOTH, expand=True)
 
             # 編集コンポーネントの作成と配置
             self.edit_component = PhraseEditComponent(
                 self, 
-                self.fixed_phrases_manager, 
-                self.list_component
+                self.list_component, 
+                self.app
             )
             self.edit_component.pack(fill=tk.X)
             

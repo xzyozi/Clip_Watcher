@@ -4,9 +4,11 @@ from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src import config
 from src.gui import theme_manager
 
-class SettingsWindow(tk.Toplevel):
+from src.gui.base_toplevel_gui import BaseToplevelGUI
+
+class SettingsWindow(BaseToplevelGUI):
     def __init__(self, master, settings_manager, app_instance):
-        super().__init__(master)
+        super().__init__(master, app_instance)
         self.title("Settings")
         self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
         self.settings_manager = settings_manager
@@ -227,12 +229,14 @@ class SettingsWindow(tk.Toplevel):
             self.excluded_apps_listbox.insert(tk.END, app)
 
     def apply_theme(self, theme_name):
-        theme = theme_manager.apply_theme(self, theme_name)
+        super().apply_theme(theme_name) # Call base class method
+
+        theme = THEMES.get(theme_name, THEMES['light']) # Get theme directly from THEMES
 
         if hasattr(self, 'excluded_apps_listbox'):
             self.excluded_apps_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
 
-        self.current_theme_name = theme_name
+        # self.current_theme_name = theme_name # Handled by base class
 
     def _add_excluded_app(self):
         new_app = simpledialog.askstring("Add Excluded App", "Enter the executable name (e.g., keepass.exe):", parent=self)
