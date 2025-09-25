@@ -21,7 +21,7 @@ class PluginManager:
                     if issubclass(obj, Plugin) and obj is not Plugin:
                         self.plugins.append(obj())
             except Exception as e:
-                print(f"Failed to load plugin {module_name}: {e}")
+                logger.info(f"Failed to load plugin {module_name}: {e}")
 
     def get_available_plugins(self):
         """Return a list of all available plugin instances."""

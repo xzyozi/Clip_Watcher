@@ -1,9 +1,9 @@
 from collections import defaultdict
 from typing import Callable, List, Dict, Any
 import traceback
-from .utils.logging_config import setup_logging
+import logging
 
-logger = setup_logging()
+logger = logging.getLogger(__name__)
 
 class EventDispatcher:
     """
