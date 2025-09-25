@@ -5,10 +5,11 @@ from src.gui import theme_manager
 from src.gui.base_toplevel_gui import BaseToplevelGUI
 
 class FormatDialog(BaseToplevelGUI):
-    def __init__(self, master, app_instance):
+    def __init__(self, master, app_instance, settings_manager):
         super().__init__(master, app_instance)
         self.title("Select Formatter")
         self.selected_plugin = None
+        self.settings_manager = settings_manager
 
         self.geometry("350x300") # Adjusted height for buttons
         self.transient(master)
