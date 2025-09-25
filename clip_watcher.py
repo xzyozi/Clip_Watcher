@@ -70,6 +70,13 @@ class Application:
     def on_toggle_history_sort(self):
         """Toggles the history sort order and refreshes the GUI."""
         self.history_sort_ascending = not self.history_sort_ascending
+        
+        # Update button text to reflect the NEW sort order
+        if self.history_sort_ascending:
+            self.gui.sort_button.config(text="Sort: Asc")
+        else:
+            self.gui.sort_button.config(text="Sort: Desc")
+
         # Trigger a GUI update to reflect the new sort order
         self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")

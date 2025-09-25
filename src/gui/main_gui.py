@@ -67,7 +67,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_listbox.curselection()))
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.sort_button = tk.Button(self.control_frame, text="Sort", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
+        self.sort_button = tk.Button(self.control_frame, text="Sort: Desc", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
         self.sort_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
         self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
