@@ -54,13 +54,7 @@ class PhraseEditComponent(BaseFrameGUI):
 
             if self.app.fixed_phrases_manager.add_phrase(new_phrase):
                 self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
-                self.list_component._populate_listbox()  # リストを更新
-            else:
-                raise PhraseError("その定型文は既に存在します")
-
-            if self.app.fixed_phrases_manager.add_phrase(new_phrase):
-                self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
-                self.list_component.refresh()
+                self.list_component.refresh()  # リストを更新
             else:
                 raise PhraseError("その定型文は既に存在します")
 
