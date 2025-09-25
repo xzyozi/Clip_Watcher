@@ -232,7 +232,7 @@ class SettingsWindow(BaseToplevelGUI):
     def apply_theme(self, theme_name):
         super().apply_theme(theme_name) # Call base class method
 
-        theme = THEMES.get(theme_name, THEMES['light']) # Get theme directly from THEMES
+        theme = config.THEMES.get(theme_name, config.THEMES['light']) # Get theme directly from THEMES
 
         if hasattr(self, 'excluded_apps_listbox'):
             self.excluded_apps_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
