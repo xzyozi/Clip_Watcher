@@ -53,11 +53,16 @@ def create_history_context_menu(master, app_instance):
 
 def show_history_context_menu(event, app_instance):
     try:
-        # Select the item under the cursor before showing the menu
-        app_instance.gui.history_listbox.selection_clear(0, tk.END)
-        item_index = app_instance.gui.history_listbox.nearest(event.y)
-        app_instance.gui.history_listbox.selection_set(item_index)
-        app_instance.gui.history_listbox.activate(item_index)
+        listbox = app_instance.gui.history_listbox
+        item_index = listbox.nearest(event.y)
+        
+        # Check if the clicked item is already selected
+        if not listbox.selection_includes(item_index):
+            # If not, clear previous selections and select the new item
+            listbox.selection_clear(0, tk.END)
+            listbox.selection_set(item_index)
+            listbox.activate(item_index)
+
     except tk.TclError:
         # This can happen if the listbox is empty
         pass
