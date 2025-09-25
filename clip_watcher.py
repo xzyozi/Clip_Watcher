@@ -219,11 +219,9 @@ if __name__ == "__main__":
     try:
         from src.utils.logging_config import setup_logging
         from src.application_builder import ApplicationBuilder
-        from src.utils.error_handler import setup_global_error_handler
 
-        # Setup logging and global error handler at the very beginning
+        # Setup logging at the very beginning
         logger = setup_logging()
-        setup_global_error_handler()
         
         logger.info("アプリケーションを開始します")
         
