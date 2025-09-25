@@ -57,11 +57,9 @@ class PhraseListComponent(BaseFrameGUI):
             self.logger.warning("定型文が選択されていません")
             messagebox.showwarning("警告", "定型文を選択してください。", parent=self)
         except PhraseError as e:
-            self.logger.error(f"定型文コピーエラー: {str(e)}")
-            messagebox.showerror("エラー", str(e), parent=self)
+            self.log_and_show_error("エラー",f"定型文コピーエラー: {str(e)}")
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"コピー中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def get_selected_phrase(self):
         """選択された定型文を返す"""

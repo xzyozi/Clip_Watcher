@@ -68,8 +68,7 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文追加エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の追加中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def _edit_phrase(self):
         """選択された定型文を編集"""
@@ -96,8 +95,7 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文編集エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の編集中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def _delete_phrase(self):
         """選択された定型文を削除"""
@@ -117,5 +115,4 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文削除エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の削除中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)

@@ -10,6 +10,7 @@ from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.plugin_manager import PluginManager
 from src.event_dispatcher import EventDispatcher
 import logging
+from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
     from src.application_interface import Application
@@ -33,7 +34,7 @@ class ApplicationBuilder:
             logger.info("設定マネージャーを初期化しました")
             return self
         except Exception as e:
-            logger.error(f"設定マネージャーの初期化に失敗: {str(e)}")
+            log_and_show_error(f"設定マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}")
 
     def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> 'ApplicationBuilder':
@@ -52,7 +53,7 @@ class ApplicationBuilder:
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
-            logger.error(f"クリップボードモニターの初期化に失敗: {str(e)}")
+            log_and_show_error("エラー", f"クリップボードモニターの初期化に失敗: {str(e)}")
             raise ConfigError(f"クリップボードモニターの初期化に失敗しました: {str(e)}")
 
     def with_fixed_phrases_manager(self, file_path: str = "fixed_phrases.json") -> 'ApplicationBuilder':
@@ -62,7 +63,7 @@ class ApplicationBuilder:
             logger.info("定型文マネージャーを初期化しました")
             return self
         except Exception as e:
-            logger.error(f"定型文マネージャーの初期化に失敗: {str(e)}")
+            log_and_show_error("エラー", f"定型文マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"定型文マネージャーの初期化に失敗しました: {str(e)}")
 
     def with_plugin_manager(self) -> 'ApplicationBuilder':
@@ -72,7 +73,7 @@ class ApplicationBuilder:
             logger.info("プラグインマネージャーを初期化しました")
             return self
         except Exception as e:
-            logger.error(f"プラグインマネージャーの初期化に失敗: {str(e)}")
+            log_and_show_error("エラー", f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
 
     def with_event_dispatcher(self) -> 'ApplicationBuilder':
@@ -82,7 +83,7 @@ class ApplicationBuilder:
             logger.info("イベントディスパッチャを初期化しました")
             return self
         except Exception as e:
-            logger.error(f"イベントディスパッチャの初期化に失敗: {str(e)}")
+            log_and_show_error("エラー", f"イベントディスパッチャの初期化に失敗: {str(e)}")
             raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}")
 
     def build(self, master: tk.Tk) -> 'Application':
@@ -105,5 +106,5 @@ class ApplicationBuilder:
             logger.info("アプリケーションのビルドが完了しました")
             return app
         except Exception as e:
-            logger.error(f"アプリケーションのビルドに失敗: {str(e)}")
+            log_and_show_error("エラー", f"アプリケーションのビルドに失敗: {str(e)}")
             raise ConfigError(f"アプリケーションの構築に失敗しました: {str(e)}")

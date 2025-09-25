@@ -40,7 +40,7 @@ class FixedPhrasesFrame(BaseFrameGUI):
             self.logger.info("定型文管理フレームを初期化しました")
             
         except Exception as e:
-            self.logger.error(f"定型文管理フレームの初期化中にエラー: {str(e)}", exc_info=True)
+            self.log_and_show_error("エラー",f"定型文管理フレームの初期化中にエラー: {str(e)}", exc_info=True)
             raise
 
     # 他のメソッドはすべてPhraseListComponentとPhraseEditComponentに移動しました

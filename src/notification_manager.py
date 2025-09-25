@@ -1,6 +1,8 @@
 import winsound
 import logging
 
+from src.utils.error_handler import log_and_show_error
+
 logger = logging.getLogger(__name__)
 
 class NotificationManager:
@@ -12,4 +14,4 @@ class NotificationManager:
             try:
                 winsound.Beep(1000, 200) # 1000Hz for 200ms
             except Exception as e:
-                logger.error(f"Error playing sound: {e}", exc_info=True)
+                log_and_show_error("エラー",f"Error playing sound: {e}", exc_info=True)

@@ -1,7 +1,7 @@
 import tkinter as tk
 import logging
-from tkinter import messagebox
 from src.event_dispatcher import EventDispatcher
+from src.utils.error_handler import log_and_show_error
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +85,9 @@ class HistoryEventHandlers:
                 self.apply_plugin_to_selected_item(selected_plugin)
 
         except IndexError:
-            logger.error("No item selected for formatting.", exc_info=True)
+            log_and_show_error("エラー", "フォーマット対象の項目が選択されていません。", exc_info=True)
         except Exception as e:
-            logger.error(f"Error during formatting: {e}", exc_info=True)
+            log_and_show_error("エラー", f"フォーマット中に予期せぬエラーが発生しました。\n\n{e}", exc_info=True)
 
     def apply_plugin_to_selected_item(self, plugin_instance):
         """Applies a specific plugin to the selected history item."""
@@ -127,9 +127,9 @@ class HistoryEventHandlers:
                     self.app.gui.disable_undo_button()
 
         except IndexError:
-            logger.error("No item selected for formatting.", exc_info=True)
+            log_and_show_error("エラー", "フォーマット対象の項目が選択されていません。", exc_info=True)
         except Exception as e:
-            logger.error(f"Error during formatting: {e}", exc_info=True)
+            log_and_show_error("エラー", f"プラグインの適用中にエラーが発生しました。\n\n{e}", exc_info=True)
 
     def undo_last_format(self):
         """Reverts the last formatting operation."""
@@ -157,7 +157,7 @@ class HistoryEventHandlers:
                 logger.warn("Cannot undo: The item has been modified since formatting.")
 
         except Exception as e:
-            logger.error(f"Error during undo: {e}", exc_info=True)
+            log_and_show_error("エラー", f"元に戻す処理中にエラーが発生しました。\n\n{e}", exc_info=True)
         finally:
             self.app.last_formatted_info = None
             self.app.gui.disable_undo_button()

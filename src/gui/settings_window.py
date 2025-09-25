@@ -5,6 +5,7 @@ from src import config
 from src.gui import theme_manager
 
 from src.gui.base_toplevel_gui import BaseToplevelGUI
+from src.utils.error_handler import log_and_show_error
 
 class SettingsWindow(BaseToplevelGUI):
     def __init__(self, master, settings_manager, app_instance):
@@ -272,7 +273,7 @@ class SettingsWindow(BaseToplevelGUI):
                 self._update_ui_from_settings()
                 messagebox.showinfo("Import Successful", "Settings imported successfully.")
             else:
-                messagebox.showerror("Import Failed", "Could not load settings from the selected file.")
+                log_and_show_error("Import Failed", "Could not load settings from the selected file.")
 
     def _restore_defaults(self):
         if messagebox.askyesno("Restore Defaults", "Are you sure you want to restore all settings to their default values?"):

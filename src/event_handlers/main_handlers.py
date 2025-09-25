@@ -4,6 +4,8 @@ from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.fixed_phrases_manager import FixedPhrasesManager
 import logging
 
+from src.utils.error_handler import log_and_show_error
+
 logger = logging.getLogger(__name__)
 
 def handle_about():
@@ -33,7 +35,7 @@ def handle_copy_fixed_phrase(gui_instance, phrase):
         gui_instance.master.clipboard_append(phrase)
         logger.info(f"Copied fixed phrase: {phrase[:50]}...")
     except Exception as e:
-        logger.error(f"Error copying fixed phrase: {e}")
+        log_and_show_error("エラー",f"Error copying fixed phrase: {e}")
 
 def handle_manage_fixed_phrases(master, fixed_phrases_manager):
     fixed_phrases_window = FixedPhrasesManager(master, fixed_phrases_manager)
