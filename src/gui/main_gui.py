@@ -58,7 +58,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.history_listbox.config(yscrollcommand=self.history_scrollbar.set)
 
         self.history_listbox.bind("<<ListboxSelect>>", self._on_history_select)
-        self.history_listbox.bind("<Double-Button-1>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED"))
+        self.history_listbox.bind("<Double-Button-1>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_listbox.curselection()))
         self.history_listbox.bind("<Button-3>", lambda event: context_menu.show_history_context_menu(event, self.app))
 
         self.control_frame = tk.Frame(clipboard_tab_frame)
