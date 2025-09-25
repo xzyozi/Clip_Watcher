@@ -24,6 +24,7 @@ class QuickTaskDialog(BaseToplevelGUI):
         scrollbar = ttk.Scrollbar(main_frame, orient='vertical', command=self.task_list.yview)
         scrollbar.pack(side='right', fill='y')
         self.task_list.configure(yscrollcommand=scrollbar.set)
+        self.task_list.bind("<Double-1>", lambda event: self._copy_selected())
 
         # ボタンフレーム
         button_frame = ttk.Frame(self)

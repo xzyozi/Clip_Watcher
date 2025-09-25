@@ -177,7 +177,7 @@ class ClipboardMonitor:
     def get_history(self):
         pinned = [item for item in self.history if item[1]]
         unpinned = [item for item in self.history if not item[1]]
-        return pinned + unpinned
+        return pinned[::-1] + unpinned[::-1]
 
     def clear_history(self):
         self.history.clear()
@@ -245,7 +245,7 @@ class ClipboardMonitor:
         
         pinned = [item for item in filtered_raw if item[1]]
         unpinned = [item for item in filtered_raw if not item[1]]
-        return pinned + unpinned
+        return pinned[::-1] + unpinned[::-1]
 
     def _load_history_from_file(self):
         if os.path.exists(self.history_file_path):
