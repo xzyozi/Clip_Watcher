@@ -157,13 +157,21 @@ class Application:
 
     def on_request_pin_unpin_history_item(self, selected_index):
         try:
-            item_tuple = self.monitor.get_history()[selected_index]
+            # Get the history list in the same order as the GUI is displaying it
+            history_list = self.monitor.get_history()
+            if self.history_sort_ascending:
+                history_list = history_list[::-1]
+
+            # Get the correct item tuple
+            item_tuple = history_list[selected_index]
             content, is_pinned = item_tuple
+
+            # Call the monitor with the unambiguous item tuple
             if is_pinned:
-                self.monitor.unpin_item(selected_index)
+                self.monitor.unpin_item(item_tuple)
                 print(f"Unpinned: {content[:50]}...")
             else:
-                self.monitor.pin_item(selected_index)
+                self.monitor.pin_item(item_tuple)
                 print(f"Pinned: {content[:50]}...")
         except IndexError:
             print("No history item selected for pin/unpin.")

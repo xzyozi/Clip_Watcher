@@ -197,25 +197,19 @@ class ClipboardMonitor:
                 self.last_clipboard_data = ""
             self._trigger_gui_update()
 
-    def pin_item(self, index):
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_pin = current_display_history[index]
-            for i, (content, is_pinned) in enumerate(self.history):
-                if (content, is_pinned) == item_to_pin:
-                    self.history[i] = (content, True)
-                    break
-            self._trigger_gui_update()
+    def pin_item(self, item_to_pin):
+        for i, (content, is_pinned) in enumerate(self.history):
+            if (content, is_pinned) == item_to_pin:
+                self.history[i] = (content, True)
+                self._trigger_gui_update()
+                return
 
-    def unpin_item(self, index):
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_unpin = current_display_history[index]
-            for i, (content, is_pinned) in enumerate(self.history):
-                if (content, is_pinned) == item_to_unpin:
-                    self.history[i] = (content, False)
-                    break
-            self._trigger_gui_update()
+    def unpin_item(self, item_to_unpin):
+        for i, (content, is_pinned) in enumerate(self.history):
+            if (content, is_pinned) == item_to_unpin:
+                self.history[i] = (content, False)
+                self._trigger_gui_update()
+                return
 
     def delete_all_unpinned_history(self):
         self.history = [item for item in self.history if item[1]]
