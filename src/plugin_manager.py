@@ -2,6 +2,9 @@ import os
 import importlib
 import inspect
 from src.plugins.base_plugin import Plugin
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PluginManager:
     def __init__(self):
