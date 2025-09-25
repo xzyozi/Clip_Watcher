@@ -35,6 +35,7 @@ class Application:
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.last_formatted_info = None
+        self.history_sort_ascending = False
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher)
@@ -63,7 +64,15 @@ class Application:
         self.event_dispatcher.subscribe("REQUEST_COPY_MERGED_HISTORY_ITEMS", self.on_request_copy_merged_history_items)
         self.event_dispatcher.subscribe("REQUEST_SEARCH_HISTORY", self.on_request_search_history)
         self.event_dispatcher.subscribe("APPLY_INITIAL_SETTINGS", self.on_apply_initial_settings)
+        self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.dispatch("APPLY_INITIAL_SETTINGS")
+
+    def on_toggle_history_sort(self):
+        """Toggles the history sort order and refreshes the GUI."""
+        self.history_sort_ascending = not self.history_sort_ascending
+        # Trigger a GUI update to reflect the new sort order
+        self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
+        print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
 
     def on_apply_initial_settings(self):
         self.settings_manager.apply_settings(self)

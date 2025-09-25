@@ -67,6 +67,9 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_listbox.curselection()))
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
+        self.sort_button = tk.Button(self.control_frame, text="Sort", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
+        self.sort_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
+
         self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
@@ -121,6 +124,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.history_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
         self.control_frame.config(bg=theme["bg"])
         self.copy_history_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
+        self.sort_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.format_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.undo_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.quit_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
@@ -170,6 +174,9 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.clipboard_text_widget.config(state=tk.DISABLED)
 
     def _update_history_listbox(self, history_to_display):
+        if self.app.history_sort_ascending:
+            history_to_display = history_to_display[::-1]
+
         selected_indices = self.history_listbox.curselection()
         scroll_pos = self.history_listbox.yview()
 
