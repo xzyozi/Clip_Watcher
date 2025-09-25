@@ -1,5 +1,8 @@
 import tkinter as tk
 from src.event_handlers import main_handlers as event_handlers
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_menu_bar(master, app_instance):
     menubar = tk.Menu(master)
@@ -16,7 +19,7 @@ def create_menu_bar(master, app_instance):
 
     # Edit Menu
     edit_menu = tk.Menu(menubar, tearoff=0)
-    edit_menu.add_command(label="検索 (Find)...", command=lambda: print("Find clicked"))
+    edit_menu.add_command(label="検索 (Find)...", command=lambda: logger.info("Find clicked"))
     edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_listbox.curselection()))
     edit_menu.add_separator()
     edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=app_instance.history_handlers.handle_delete_selected_history)
@@ -39,17 +42,17 @@ def create_menu_bar(master, app_instance):
                                command=lambda: app_instance.settings_handlers.handle_set_theme("light"))
     theme_menu.add_radiobutton(label="ダーク (Dark)", variable=app_instance.theme_var, value="dark",
                                command=lambda: app_instance.settings_handlers.handle_set_theme("dark"))
-    # "Follow System" is more complex, will just print for now
+    # "Follow System" is more complex, will just logger.info for now
     theme_menu.add_radiobutton(label="システム設定に合わせる (Follow System)", variable=app_instance.theme_var, value="system",
-                               command=lambda: print("Follow System theme clicked (not yet implemented)"))
+                               command=lambda: logger.info("Follow System theme clicked (not yet implemented)"))
     view_menu.add_cascade(label="テーマ (Theme)", menu=theme_menu)
     
     view_menu.add_separator()
     
     filter_menu = tk.Menu(view_menu, tearoff=0)
-    filter_menu.add_command(label="すべて表示 (Show All)", command=lambda: print("Show All clicked"))
-    filter_menu.add_command(label="テキストのみ (Show Text Only)", command=lambda: print("Show Text Only clicked"))
-    filter_menu.add_command(label="画像のみ (Show Images Only)", command=lambda: print("Show Images Only clicked"))
+    filter_menu.add_command(label="すべて表示 (Show All)", command=lambda: logger.info("Show All clicked"))
+    filter_menu.add_command(label="テキストのみ (Show Text Only)", command=lambda: logger.info("Show Text Only clicked"))
+    filter_menu.add_command(label="画像のみ (Show Images Only)", command=lambda: logger.info("Show Images Only clicked"))
     view_menu.add_cascade(label="表示内容のフィルタ (Filter)", menu=filter_menu)
     
     menubar.add_cascade(label="表示 (View)", menu=view_menu)

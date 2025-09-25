@@ -31,3 +31,6 @@ def setup_logging():
     logger.setLevel(logging.INFO)
 
     return logger
+
+# グローバルロガーの設定
+logger = setup_logging()

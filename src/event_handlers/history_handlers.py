@@ -1,6 +1,9 @@
 import tkinter as tk
+import logging
 from tkinter import messagebox
 from src.event_dispatcher import EventDispatcher
+
+logger = logging.getLogger(__name__)
 
 class HistoryEventHandlers:
     def __init__(self, app_instance, event_dispatcher: EventDispatcher):
@@ -43,7 +46,7 @@ class HistoryEventHandlers:
 
     def handle_delete_selected_history(self, selected_indices):
         if not selected_indices:
-            print("No history item selected for deletion.")
+            logger.warn("No history item selected for deletion.")
             return
         indices_to_delete = sorted(list(selected_indices), reverse=True)
         self.event_dispatcher.dispatch("REQUEST_DELETE_HISTORY_ITEMS", indices_to_delete)
@@ -53,13 +56,13 @@ class HistoryEventHandlers:
 
     def handle_pin_unpin_history(self, selected_index):
         if selected_index is None:
-            print("No history item selected for pin/unpin.")
+            logger.warn("No history item selected for pin/unpin.")
             return
         self.event_dispatcher.dispatch("REQUEST_PIN_UNPIN_HISTORY_ITEM", selected_index)
 
     def handle_copy_selected_as_merged(self, selected_indices):
         if not selected_indices:
-            print("No history items selected for merging.")
+            logger.warn("No history items selected for merging.")
             return
         self.event_dispatcher.dispatch("REQUEST_COPY_MERGED_HISTORY_ITEMS", selected_indices)
 
@@ -82,9 +85,9 @@ class HistoryEventHandlers:
                 self.apply_plugin_to_selected_item(selected_plugin)
 
         except IndexError:
-            print("No item selected for formatting.")
+            logger.error("No item selected for formatting.", exc_info=True)
         except Exception as e:
-            print(f"Error during formatting: {e}")
+            logger.error(f"Error during formatting: {e}", exc_info=True)
 
     def apply_plugin_to_selected_item(self, plugin_instance):
         """Applies a specific plugin to the selected history item."""
@@ -117,21 +120,21 @@ class HistoryEventHandlers:
                     self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
 
                     self.app.gui.enable_undo_button()
-                    print(f"Formatted item at index {selected_index} with {plugin_instance.name}")
+                    logger.info(f"Formatted item at index {selected_index} with {plugin_instance.name}")
                 else:
-                    print(f"Plugin '{plugin_instance.name}' made no changes.")
+                    logger.warn(f"Plugin '{plugin_instance.name}' made no changes.")
                     self.app.last_formatted_info = None
                     self.app.gui.disable_undo_button()
 
         except IndexError:
-            print("No item selected for formatting.")
+            logger.error("No item selected for formatting.", exc_info=True)
         except Exception as e:
-            print(f"Error during formatting: {e}")
+            logger.error(f"Error during formatting: {e}", exc_info=True)
 
     def undo_last_format(self):
         """Reverts the last formatting operation."""
         if not hasattr(self.app, 'last_formatted_info') or not self.app.last_formatted_info:
-            print("No format operation to undo.")
+            logger.warn("No format operation to undo.")
             return
 
         try:
@@ -149,12 +152,12 @@ class HistoryEventHandlers:
                 self.app.gui.clipboard_text_widget.insert(tk.END, original_text)
                 self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
 
-                print(f"Undo format for item at index {index}")
+                logger.info(f"Undo format for item at index {index}")
             else:
-                print("Cannot undo: The item has been modified since formatting.")
+                logger.warn("Cannot undo: The item has been modified since formatting.")
 
         except Exception as e:
-            print(f"Error during undo: {e}")
+            logger.error(f"Error during undo: {e}", exc_info=True)
         finally:
             self.app.last_formatted_info = None
             self.app.gui.disable_undo_button()
