@@ -14,6 +14,10 @@ def create_history_context_menu(master, app_instance):
     context_menu.add_command(label="選択項目をコピー (Copy Selected)", 
                              command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", app_instance.gui.history_listbox.curselection()))
     
+    context_menu.add_command(label="クイックタスクとして開く (Open as Quick Task)",
+                             command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", app_instance.gui.history_listbox.curselection()),
+                             state="normal" if has_selection else "disabled")
+    
     format_state = "normal" if has_selection else "disabled"
     context_menu.add_command(label="フォーマット (Format)",
                              command=app_instance.history_handlers.format_selected_item,

@@ -17,6 +17,20 @@ class HistoryEventHandlers:
         self.event_dispatcher.subscribe("HISTORY_FORMAT_ITEM", self.format_selected_item)
         self.event_dispatcher.subscribe("HISTORY_UNDO_FORMAT", self.undo_last_format)
         self.event_dispatcher.subscribe("HISTORY_SEARCH", self.handle_search_history)
+        self.event_dispatcher.subscribe("HISTORY_CREATE_QUICK_TASK", self.handle_create_quick_task)
+
+    def handle_create_quick_task(self, selected_indices):
+        if not selected_indices:
+            return
+        
+        tasks = []
+        for index in selected_indices:
+            content, _ = self.app.monitor.get_history()[index]
+            tasks.append(content)
+
+        if tasks:
+            from src.gui.quick_task_dialog import QuickTaskDialog
+            dialog = QuickTaskDialog(self.app.master, self.app, tasks)
 
     def handle_copy_selected_history(self, selected_indices):
         if not selected_indices:
