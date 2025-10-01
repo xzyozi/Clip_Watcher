@@ -15,6 +15,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
 
         self.history_data = []
+        self._debounce_job = None
 
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
@@ -35,6 +36,8 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.DISABLED)
         self.clipboard_text_widget.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.clipboard_text_widget))
+        self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
+        self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
         self.search_frame = tk.Frame(clipboard_tab_frame, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         self.search_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
@@ -73,7 +76,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.undo_button = tk.Button(self.control_frame, text="Undo Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_UNDO_FORMAT"), state=tk.DISABLED)
+        self.undo_button = tk.Button(self.control_frame, text="元に戻す (Undo)", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
         self.undo_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
         self.quit_button = tk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
@@ -97,11 +100,11 @@ class ClipWatcherGUI(BaseFrameGUI):
             if 0 <= index < len(self.history_data):
                 content, _ = self.history_data[index]
                 self.clipboard_text_widget.insert(tk.END, content)
+            # Widget is editable, so we leave the state as NORMAL
         else:
             self.format_button.config(state=tk.DISABLED)
             self.clipboard_text_widget.insert(tk.END, self.app.monitor.last_clipboard_data)
-        
-        self.clipboard_text_widget.config(state=tk.DISABLED)
+            self.clipboard_text_widget.config(state=tk.DISABLED) # Disable if no selection
 
     def enable_undo_button(self):
         self.undo_button.config(state=tk.NORMAL)
@@ -160,6 +163,10 @@ class ClipWatcherGUI(BaseFrameGUI):
     def update_clipboard_display(self, current_content, history):
         self.history_data = history
         
+        # Preserve selection and scroll position
+        selected_indices = self.history_listbox.curselection()
+        scroll_pos = self.history_listbox.yview()
+
         search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
         if search_query:
             filtered_history = self.app.monitor.get_filtered_history(search_query)
@@ -167,11 +174,43 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self._update_history_listbox(history)
 
-        if not self.history_listbox.curselection():
-            self.clipboard_text_widget.config(state=tk.NORMAL)
-            self.clipboard_text_widget.delete(1.0, tk.END)
+        # Re-apply selection and scroll position
+        self.history_listbox.yview_moveto(scroll_pos[0])
+        for index in selected_indices:
+            self.history_listbox.selection_set(index)
+
+        # Update the text widget based on selection
+        self.clipboard_text_widget.config(state=tk.NORMAL)
+        self.clipboard_text_widget.delete(1.0, tk.END)
+        if selected_indices:
+            index = selected_indices[0]
+            if 0 <= index < len(self.history_data):
+                content, _ = self.history_data[index]
+                self.clipboard_text_widget.insert(tk.END, content)
+        else:
             self.clipboard_text_widget.insert(tk.END, current_content)
             self.clipboard_text_widget.config(state=tk.DISABLED)
+
+    def _on_text_widget_change(self, event):
+        if self._debounce_job:
+            self.master.after_cancel(self._debounce_job)
+        if str(event.type) == 'FocusOut':
+            self._save_edited_text()
+        else:
+            self._debounce_job = self.master.after(500, self._save_edited_text)
+
+    def _save_edited_text(self):
+        selected_indices = self.history_listbox.curselection()
+        if not selected_indices:
+            return
+
+        selected_index = selected_indices[0]
+        new_text = self.clipboard_text_widget.get("1.0", "end-1c")
+        
+        if 0 <= selected_index < len(self.history_data):
+            original_text, _ = self.history_data[selected_index]
+            if new_text != original_text:
+                self.app.event_dispatcher.dispatch("HISTORY_ITEM_EDITED", {'new_text': new_text, 'original_text': original_text})
 
     def _update_history_listbox(self, history_to_display):
         if self.app.history_sort_ascending:

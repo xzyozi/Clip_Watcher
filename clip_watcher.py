@@ -34,7 +34,7 @@ class Application:
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
-        self.last_formatted_info = None
+        self.undo_state = None
         self.history_sort_ascending = False
         
         # Initialize event handlers first
@@ -211,9 +211,9 @@ class Application:
     def on_request_search_history(self, search_query):
         if search_query:
             filtered_history = self.monitor.get_filtered_history(search_query)
-            self.gui.update_history_display(filtered_history)
+            self.gui.update_clipboard_display(self.monitor.last_clipboard_data, filtered_history)
         else:
-            self.gui.update_history_display(self.monitor.get_history())
+            self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
 
     def open_settings_window(self):
         settings_window = SettingsWindow(self.master, self.settings_manager, self)
