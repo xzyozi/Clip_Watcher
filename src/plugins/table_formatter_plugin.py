@@ -1,8 +1,8 @@
 ﻿import csv
 import io
-from .base_plugin import BasePlugin
+from .base_plugin import Plugin
 
-class TableFormatterPlugin(BasePlugin):
+class TableFormatterPlugin(Plugin):
     def __init__(self):
         super().__init__()
         self.name = "Table Formatter"
