@@ -26,6 +26,12 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.current_clipboard_frame = tk.LabelFrame(clipboard_tab_frame, text="Current Clipboard Content", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         self.current_clipboard_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
+        self.redo_button = tk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
+        self.redo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
+
+        self.undo_button = tk.Button(self.current_clipboard_frame, text="⟲", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
+        self.undo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
+
         self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5)
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -76,8 +82,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.undo_button = tk.Button(self.control_frame, text="元に戻す (Undo)", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
-        self.undo_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
+        
 
         self.quit_button = tk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
         self.quit_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
@@ -112,6 +117,12 @@ class ClipWatcherGUI(BaseFrameGUI):
     def disable_undo_button(self):
         self.undo_button.config(state=tk.DISABLED)
 
+    def enable_redo_button(self):
+        self.redo_button.config(state=tk.NORMAL)
+
+    def disable_redo_button(self):
+        self.redo_button.config(state=tk.DISABLED)
+
     def apply_theme(self, theme_name):
         super().apply_theme(theme_name) # Call base class method
 
@@ -130,6 +141,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.sort_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.format_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.undo_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
+        self.redo_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
         self.quit_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
 
         if hasattr(self, 'fixed_phrases_frame'):

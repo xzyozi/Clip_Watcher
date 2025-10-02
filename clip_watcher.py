@@ -36,7 +36,8 @@ class Application(BaseApplication):
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
-        self.undo_state = None
+        self.undo_stack = []
+        self.redo_stack = []
         self.history_sort_ascending = False
         
         # Initialize event handlers first
