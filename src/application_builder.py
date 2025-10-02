@@ -13,7 +13,7 @@ import logging
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from src.application_interface import Application
+    from src.base_application import BaseApplication
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +86,12 @@ class ApplicationBuilder:
             log_and_show_error("エラー", f"イベントディスパッチャの初期化に失敗: {str(e)}")
             raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}")
 
-    def build(self, master: tk.Tk) -> 'Application':
+    def build(self, master: tk.Tk) -> 'BaseApplication':
         """アプリケーションのビルド"""
         if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
             
-        from src.application_interface import Application
+        
         from clip_watcher import Application as MainApplication  # 具体的な実装をインポート
         
         try:

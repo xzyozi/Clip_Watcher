@@ -24,7 +24,9 @@ os.makedirs(APP_DATA_DIR, exist_ok=True)
 HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
 
 
-class Application:
+from src.base_application import BaseApplication
+
+class Application(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
