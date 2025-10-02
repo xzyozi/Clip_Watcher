@@ -92,7 +92,13 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
+        self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
+
         self.apply_theme(self.current_theme_name)
+
+    def _update_undo_redo_buttons(self, data):
+        self.undo_button.config(state=tk.NORMAL if data['can_undo'] else tk.DISABLED)
+        self.redo_button.config(state=tk.NORMAL if data['can_redo'] else tk.DISABLED)
 
     def _on_history_select(self, event):
         selected_indices = self.history_listbox.curselection()
@@ -111,17 +117,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.clipboard_text_widget.insert(tk.END, self.app.monitor.last_clipboard_data)
             self.clipboard_text_widget.config(state=tk.DISABLED) # Disable if no selection
 
-    def enable_undo_button(self):
-        self.undo_button.config(state=tk.NORMAL)
-
-    def disable_undo_button(self):
-        self.undo_button.config(state=tk.DISABLED)
-
-    def enable_redo_button(self):
-        self.redo_button.config(state=tk.NORMAL)
-
-    def disable_redo_button(self):
-        self.redo_button.config(state=tk.DISABLED)
+    
 
     def apply_theme(self, theme_name):
         super().apply_theme(theme_name) # Call base class method

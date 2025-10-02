@@ -13,6 +13,7 @@ from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.fixed_phrases_manager import FixedPhrasesManager
+from src.utils.undo_manager import UndoManager
 
 # Define history file path
 if sys.platform == "win32":
@@ -36,12 +37,11 @@ class Application(BaseApplication):
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
-        self.undo_stack = []
-        self.redo_stack = []
+        self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
         
         # Initialize event handlers first
-        self.history_handlers = HistoryEventHandlers(self, event_dispatcher)
+        self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
         self.file_handlers = FileEventHandlers(event_dispatcher)
         self.settings_handlers = SettingsEventHandlers(event_dispatcher)
         
