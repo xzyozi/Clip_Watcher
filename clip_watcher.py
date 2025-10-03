@@ -42,7 +42,7 @@ class Application(BaseApplication):
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
-        self.file_handlers = FileEventHandlers(event_dispatcher)
+        self.file_handlers = FileEventHandlers(self, event_dispatcher)
         self.settings_handlers = SettingsEventHandlers(event_dispatcher)
         
         self.gui = ClipWatcherGUI(master, self)
@@ -54,16 +54,6 @@ class Application(BaseApplication):
         self.menubar = menu_bar.create_menu_bar(master, self)
         master.config(menu=self.menubar)
 
-        self.event_dispatcher.subscribe("REQUEST_CLEAR_ALL_HISTORY", self.on_request_clear_all_history)
-        self.event_dispatcher.subscribe("REQUEST_DELETE_ALL_UNPINNED_HISTORY", self.on_request_delete_all_unpinned_history)
-        self.event_dispatcher.subscribe("REQUEST_QUIT", self.on_request_quit)
-        self.event_dispatcher.subscribe("REQUEST_EXPORT_HISTORY", self.on_request_export_history)
-        self.event_dispatcher.subscribe("REQUEST_IMPORT_HISTORY", self.on_request_import_history)
-        self.event_dispatcher.subscribe("REQUEST_DELETE_HISTORY_ITEMS", self.on_request_delete_history_items)
-        self.event_dispatcher.subscribe("REQUEST_PIN_UNPIN_HISTORY_ITEM", self.on_request_pin_unpin_history_item)
-        self.event_dispatcher.subscribe("REQUEST_COPY_HISTORY_ITEM", self.on_request_copy_history_item)
-        self.event_dispatcher.subscribe("REQUEST_COPY_MERGED_HISTORY_ITEMS", self.on_request_copy_merged_history_items)
-        self.event_dispatcher.subscribe("REQUEST_SEARCH_HISTORY", self.on_request_search_history)
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
 
     def on_toggle_history_sort(self):
@@ -77,126 +67,6 @@ class Application(BaseApplication):
 
         self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
-
-    def on_request_clear_all_history(self):
-        self.monitor.clear_history()
-        self.gui.update_clipboard_display("", [])
-        print("All history cleared.")
-
-    def on_request_delete_all_unpinned_history(self):
-        if messagebox.askyesno(
-            "確認 (Confirm)",
-            "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
-            parent=self.master
-        ):
-            self.monitor.delete_all_unpinned_history()
-            messagebox.showinfo("完了", "ピン留めされていない履歴をすべて削除しました。", parent=self.master)
-        else:
-            messagebox.showinfo("キャンセル", "操作をキャンセルしました。", parent=self.master)
-
-    def on_request_quit(self):
-        self.stop_monitor()
-        self.master.quit()
-
-    def on_request_export_history(self):
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="履歴をエクスポート (Export History)"
-        )
-        if file_path:
-            try:
-                history_content = self.monitor.get_history()
-                with open(file_path, "w", encoding="utf-8") as f:
-                    for item_tuple in history_content:
-                        f.write(item_tuple[0] + "\n---")
-                messagebox.showinfo("エクスポート完了", f"履歴を以下のファイルにエクスポートしました:\n{file_path}")
-            except Exception as e:
-                messagebox.showerror("エクスポートエラー", f"履歴のエクスポート中にエラーが発生しました:\n{e}")
-
-    def on_request_import_history(self):
-        file_path = filedialog.askopenfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="履歴をインポート (Import History)"
-        )
-        if file_path:
-            try:
-                imported_history = []
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    raw_items = content.split("---")
-                    imported_history = [item.strip() for item in raw_items if item.strip()]
-                
-                self.monitor.import_history(imported_history)
-                messagebox.showinfo("インポート完了", f"履歴を以下のファイルからインポートしました:\n{file_path}")
-            except Exception as e:
-                messagebox.showerror("インポートエラー", f"履歴のインポート中にエラーが発生しました:\n{e}")
-
-    def on_request_delete_history_items(self, indices_to_delete):
-        try:
-            for index in indices_to_delete:
-                self.monitor.delete_history_item(index)
-            print(f"Deleted {len(indices_to_delete)} selected history item(s).")
-        except Exception as e:
-            print(f"Error deleting selected history: {e}")
-
-    def on_request_pin_unpin_history_item(self, selected_index):
-        try:
-            history_list = self.monitor.get_history()
-            if self.history_sort_ascending:
-                history_list = history_list[::-1]
-
-            item_tuple = history_list[selected_index]
-            content, is_pinned = item_tuple
-
-            if is_pinned:
-                self.monitor.unpin_item(item_tuple)
-                print(f"Unpinned: {content[:50]}...")
-            else:
-                self.monitor.pin_item(item_tuple)
-                print(f"Pinned: {content[:50]}...")
-        except IndexError:
-            print("No history item selected for pin/unpin.")
-        except Exception as e:
-            print(f"Error pinning/unpinning history: {e}")
-
-    def on_request_copy_history_item(self, selected_index):
-        try:
-            history_data = self.monitor.get_history()
-            selected_item_content = history_data[selected_index][0]
-            self.master.clipboard_clear()
-            self.master.clipboard_append(selected_item_content)
-            print(f"Copied from history (Tkinter): {selected_item_content[:50]}...")
-        except IndexError:
-            pass
-
-    def on_request_copy_merged_history_items(self, selected_indices):
-        try:
-            if not selected_indices:
-                print("No history items selected for merging.")
-                return
-            merged_content_parts = []
-            history_data = self.monitor.get_history()
-            for index in selected_indices:
-                if 0 <= index < len(history_data):
-                    merged_content_parts.append(history_data[index][0])
-            if merged_content_parts:
-                merged_content = "\n".join(merged_content_parts)
-                self.master.clipboard_clear()
-                self.master.clipboard_append(merged_content)
-                print(f"Copied merged content: {merged_content[:50]}...")
-            else:
-                print("No valid history items selected for merging.")
-        except Exception as e:
-            print(f"Error merging and copying selected history: {e}")
-
-    def on_request_search_history(self, search_query):
-        if search_query:
-            filtered_history = self.monitor.get_filtered_history(search_query)
-            self.gui.update_clipboard_display(self.monitor.last_clipboard_data, filtered_history)
-        else:
-            self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
 
     def open_settings_window(self):
         settings_window = SettingsWindow(self.master, self.settings_manager, self)

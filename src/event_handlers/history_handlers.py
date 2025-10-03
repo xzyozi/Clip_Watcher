@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import logging
 from src.event_dispatcher import EventDispatcher
 from src.utils.error_handler import log_and_show_error
@@ -28,7 +29,6 @@ class HistoryEventHandlers:
         self.event_dispatcher.subscribe("REQUEST_REDO_LAST_ACTION", self.undo_manager.redo)
 
     def handle_history_item_edited(self, data):
-        """Handles the request to update a history item by creating and executing a command."""
         try:
             selected_indices = self.app.gui.history_listbox.curselection()
             if not selected_indices:
@@ -68,36 +68,87 @@ class HistoryEventHandlers:
     def handle_copy_selected_history(self, selected_indices):
         if not selected_indices:
             return
-        selected_index = selected_indices[0]
-        self.event_dispatcher.dispatch("REQUEST_COPY_HISTORY_ITEM", selected_index)
+        try:
+            history_data = self.app.monitor.get_history()
+            selected_item_content = history_data[selected_indices[0]][0]
+            self.app.master.clipboard_clear()
+            self.app.master.clipboard_append(selected_item_content)
+            logger.info(f"Copied from history: {selected_item_content[:50]}...")
+        except IndexError:
+            pass
 
     def handle_clear_all_history(self):
-        self.event_dispatcher.dispatch("REQUEST_CLEAR_ALL_HISTORY")
+        self.app.monitor.clear_history()
+        self.app.gui.update_clipboard_display("", [])
+        logger.info("All history cleared.")
 
     def handle_delete_selected_history(self, selected_indices):
         if not selected_indices:
-            logger.warn("No history item selected for deletion.")
+            logger.warning("No history item selected for deletion.")
             return
-        indices_to_delete = sorted(list(selected_indices), reverse=True)
-        self.event_dispatcher.dispatch("REQUEST_DELETE_HISTORY_ITEMS", indices_to_delete)
+        try:
+            indices_to_delete = sorted(list(selected_indices), reverse=True)
+            for index in indices_to_delete:
+                self.app.monitor.delete_history_item(index)
+            logger.info(f"Deleted {len(indices_to_delete)} selected history item(s).")
+        except Exception as e:
+            logger.error(f"Error deleting selected history: {e}")
 
     def handle_delete_all_unpinned_history(self):
-        self.event_dispatcher.dispatch("REQUEST_DELETE_ALL_UNPINNED_HISTORY")
+        if messagebox.askyesno(
+            "確認 (Confirm)",
+            "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
+            parent=self.app.master
+        ):
+            self.app.monitor.delete_all_unpinned_history()
+            messagebox.showinfo("完了", "ピン留めされていない履歴をすべて削除しました。", parent=self.app.master)
+        else:
+            messagebox.showinfo("キャンセル", "操作をキャンセルしました。", parent=self.app.master)
 
     def handle_pin_unpin_history(self, selected_index):
         if selected_index is None:
-            logger.warn("No history item selected for pin/unpin.")
+            logger.warning("No history item selected for pin/unpin.")
             return
-        self.event_dispatcher.dispatch("REQUEST_PIN_UNPIN_HISTORY_ITEM", selected_index)
+        try:
+            history_list = self.app.monitor.get_history()
+            if self.app.history_sort_ascending:
+                history_list = history_list[::-1]
+
+            item_tuple = history_list[selected_index]
+            content, is_pinned = item_tuple
+
+            if is_pinned:
+                self.app.monitor.unpin_item(item_tuple)
+                logger.info(f"Unpinned: {content[:50]}...")
+            else:
+                self.app.monitor.pin_item(item_tuple)
+                logger.info(f"Pinned: {content[:50]}...")
+        except IndexError:
+            logger.error("No history item selected for pin/unpin.")
+        except Exception as e:
+            logger.error(f"Error pinning/unpinning history: {e}")
 
     def handle_copy_selected_as_merged(self, selected_indices):
         if not selected_indices:
-            logger.warn("No history items selected for merging.")
+            logger.warning("No history items selected for merging.")
             return
-        self.event_dispatcher.dispatch("REQUEST_COPY_MERGED_HISTORY_ITEMS", selected_indices)
+        try:
+            merged_content_parts = []
+            history_data = self.app.monitor.get_history()
+            for index in selected_indices:
+                if 0 <= index < len(history_data):
+                    merged_content_parts.append(history_data[index][0])
+            if merged_content_parts:
+                merged_content = "\n".join(merged_content_parts)
+                self.app.master.clipboard_clear()
+                self.app.master.clipboard_append(merged_content)
+                logger.info(f"Copied merged content: {merged_content[:50]}...")
+            else:
+                logger.warning("No valid history items selected for merging.")
+        except Exception as e:
+            logger.error(f"Error merging and copying selected history: {e}")
 
     def format_selected_item(self):
-        """Opens a dialog to choose a plugin and applies it to the selected history item."""
         try:
             selected_indices = self.app.gui.history_listbox.curselection()
             if not selected_indices:
@@ -117,7 +168,6 @@ class HistoryEventHandlers:
             log_and_show_error("エラー", f"フォーマット中に予期せぬエラーが発生しました。\n\n{e}", exc_info=True)
 
     def apply_plugin_to_selected_item(self, plugin_instance):
-        """Applies a specific plugin to the selected history item by creating and executing a command."""
         try:
             selected_indices = self.app.gui.history_listbox.curselection()
             if not selected_indices:
@@ -141,7 +191,7 @@ class HistoryEventHandlers:
                     self.undo_manager.execute_command(command)
                     logger.info(f"Executed format command for item at index {selected_index} with {plugin_instance.name}")
                 else:
-                    logger.warn(f"Plugin '{plugin_instance.name}' made no changes.")
+                    logger.warning(f"Plugin '{plugin_instance.name}' made no changes.")
 
         except IndexError:
             log_and_show_error("エラー", "フォーマット対象の項目が選択されていません。", exc_info=True)
@@ -149,4 +199,8 @@ class HistoryEventHandlers:
             log_and_show_error("エラー", f"プラグインの適用中にエラーが発生しました。\n\n{e}", exc_info=True)
 
     def handle_search_history(self, search_query):
-        self.event_dispatcher.dispatch("REQUEST_SEARCH_HISTORY", search_query)
+        if search_query:
+            filtered_history = self.app.monitor.get_filtered_history(search_query)
+            self.app.gui.update_clipboard_display(self.app.monitor.last_clipboard_data, filtered_history)
+        else:
+            self.app.gui.update_clipboard_display(self.app.monitor.last_clipboard_data, self.app.monitor.get_history())
