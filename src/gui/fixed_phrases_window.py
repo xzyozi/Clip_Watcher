@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import logging
 from pathlib import Path
-from src.exceptions import PhraseError
+from src.core.exceptions import PhraseError
 from src.gui.components.phrase_list_component import PhraseListComponent
 from src.gui.components.phrase_edit_component import PhraseEditComponent
 

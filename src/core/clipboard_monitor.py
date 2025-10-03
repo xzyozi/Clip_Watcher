@@ -6,8 +6,8 @@ import os
 import ctypes
 import ctypes.wintypes
 import logging
-from src.notification_manager import NotificationManager
-from src.event_dispatcher import EventDispatcher
+from .notification_manager import NotificationManager
+from .event_dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

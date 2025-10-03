@@ -3,16 +3,16 @@ from tkinter import messagebox, filedialog
 import os
 import sys
 import traceback
-from src.clipboard_monitor import ClipboardMonitor
+from src.core.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
-from src.settings_manager import SettingsManager
-from src.plugin_manager import PluginManager
+from src.core.settings_manager import SettingsManager
+from src.core.plugin_manager import PluginManager
 from src.gui.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
-from src.fixed_phrases_manager import FixedPhrasesManager
+from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.undo_manager import UndoManager
 
 # Define history file path
@@ -25,7 +25,7 @@ os.makedirs(APP_DATA_DIR, exist_ok=True)
 HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
 
 
-from src.base_application import BaseApplication
+from src.core.base_application import BaseApplication
 
 class Application(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher):
@@ -86,7 +86,7 @@ class Application(BaseApplication):
 if __name__ == "__main__":
     try:
         from src.utils.logging_config import setup_logging
-        from src.application_builder import ApplicationBuilder
+        from src.core.application_builder import ApplicationBuilder
 
         logger = setup_logging()
         

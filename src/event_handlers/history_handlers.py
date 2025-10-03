@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
 import logging
-from src.event_dispatcher import EventDispatcher
+from src.core.event_dispatcher import EventDispatcher
 from src.utils.error_handler import log_and_show_error
 from src.utils.undo_manager import UndoManager
-from src.commands import UpdateHistoryCommand
+from src.core.commands import UpdateHistoryCommand
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class HistoryEventHandlers:
 
     def handle_history_item_edited(self, data):
         try:
-            selected_indices = self.app.gui.history_listbox.curselection()
+            selected_indices = self.app.gui.history_component.listbox.curselection()
             if not selected_indices:
                 return
             
@@ -150,7 +150,7 @@ class HistoryEventHandlers:
 
     def format_selected_item(self):
         try:
-            selected_indices = self.app.gui.history_listbox.curselection()
+            selected_indices = self.app.gui.history_component.listbox.curselection()
             if not selected_indices:
                 return
 
@@ -169,7 +169,7 @@ class HistoryEventHandlers:
 
     def apply_plugin_to_selected_item(self, plugin_instance):
         try:
-            selected_indices = self.app.gui.history_listbox.curselection()
+            selected_indices = self.app.gui.history_component.listbox.curselection()
             if not selected_indices:
                 return
 

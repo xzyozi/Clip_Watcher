@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from src import config
-from src.config import THEMES
+from src.core import config
+from src.core.config import THEMES
 from src.gui import theme_manager
 
 class BaseToplevelGUI(tk.Toplevel):

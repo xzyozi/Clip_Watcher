@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
-from src.fixed_phrases_manager import FixedPhrasesManager
+from src.core.fixed_phrases_manager import FixedPhrasesManager
 import logging
 
 from src.utils.error_handler import log_and_show_error

@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, font
 from src.gui import context_menu
-from src import config
-from src.config import THEMES
+from src.core import config
+from src.core.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
 

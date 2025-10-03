@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from src.event_dispatcher import EventDispatcher
+from src.core.event_dispatcher import EventDispatcher
 
 class UndoableCommand(ABC):
     """An interface for a command that can be undone."""

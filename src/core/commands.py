@@ -1,5 +1,5 @@
 from src.utils.undo_manager import UndoableCommand
-from src.clipboard_monitor import ClipboardMonitor
+from .clipboard_monitor import ClipboardMonitor
 
 class UpdateHistoryCommand(UndoableCommand):
     """A command to update a history item, which can be undone."""

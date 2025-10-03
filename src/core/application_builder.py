@@ -1,16 +1,16 @@
 from typing import Optional, TYPE_CHECKING
 import tkinter as tk
-from src.clipboard_monitor import ClipboardMonitor
-from src.settings_manager import SettingsManager
-from src.fixed_phrases_manager import FixedPhrasesManager
-from src.exceptions import ConfigError
-from src.plugin_manager import PluginManager
-from src.event_dispatcher import EventDispatcher
+from .clipboard_monitor import ClipboardMonitor
+from .settings_manager import SettingsManager
+from .fixed_phrases_manager import FixedPhrasesManager
+from .exceptions import ConfigError
+from .plugin_manager import PluginManager
+from .event_dispatcher import EventDispatcher
 import logging
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from src.base_application import BaseApplication
+    from .base_application import BaseApplication
 
 logger = logging.getLogger(__name__)
 

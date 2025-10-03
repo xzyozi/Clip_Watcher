@@ -1,5 +1,5 @@
 from tkinter import ttk
-from src.config import THEMES
+from src.core.config import THEMES
 
 def apply_theme(window, theme_name):
     """Applies a theme to a window and its ttk widgets."""

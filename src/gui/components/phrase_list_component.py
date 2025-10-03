@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import logging
-from src.exceptions import PhraseError
+from src.core.exceptions import PhraseError
 
 logger = logging.getLogger(__name__)
 

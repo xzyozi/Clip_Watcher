@@ -13,7 +13,8 @@ class PluginManager:
 
     def load_plugins(self):
         """Dynamically load all plugins from the plugins directory."""
-        plugins_dir = os.path.join(os.path.dirname(__file__), 'plugins')
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        plugins_dir = os.path.join(project_root,"src", "plugins")
         plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith('_plugin.py')]
 
         for plugin_file in plugin_files:

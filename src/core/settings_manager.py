@@ -1,6 +1,6 @@
 import json
 import os
-from src.event_dispatcher import EventDispatcher
+from .event_dispatcher import EventDispatcher
 
 class SettingsManager:
     def __init__(self, event_dispatcher: EventDispatcher, file_path="settings.json"):

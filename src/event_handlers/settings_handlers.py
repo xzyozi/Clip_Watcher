@@ -1,6 +1,6 @@
 import os
 import sys
-from src.event_dispatcher import EventDispatcher
+from src.core.event_dispatcher import EventDispatcher
 
 class SettingsEventHandlers:
     def __init__(self, event_dispatcher: EventDispatcher):
