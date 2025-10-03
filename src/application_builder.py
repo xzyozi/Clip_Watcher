@@ -4,9 +4,6 @@ from src.clipboard_monitor import ClipboardMonitor
 from src.settings_manager import SettingsManager
 from src.fixed_phrases_manager import FixedPhrasesManager
 from src.exceptions import ConfigError
-from src.event_handlers.history_handlers import HistoryEventHandlers
-from src.event_handlers.file_handlers import FileEventHandlers
-from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.plugin_manager import PluginManager
 from src.event_dispatcher import EventDispatcher
 import logging
@@ -27,10 +24,22 @@ class ApplicationBuilder:
         self.plugin_manager: Optional[PluginManager] = None
         self.event_dispatcher: Optional[EventDispatcher] = None
         
+    def with_event_dispatcher(self) -> 'ApplicationBuilder':
+        """イベントディスパッチャの初期化"""
+        try:
+            self.event_dispatcher = EventDispatcher()
+            logger.info("イベントディスパッチャを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error("エラー", f"イベントディスパッチャの初期化に失敗: {str(e)}")
+            raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}")
+
     def with_settings(self, settings_file_path: str = "settings.json") -> 'ApplicationBuilder':
         """設定マネージャーの初期化"""
+        if not self.event_dispatcher:
+            raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
-            self.settings_manager = SettingsManager(settings_file_path)
+            self.settings_manager = SettingsManager(self.event_dispatcher, settings_file_path)
             logger.info("設定マネージャーを初期化しました")
             return self
         except Exception as e:
@@ -39,17 +48,11 @@ class ApplicationBuilder:
 
     def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> 'ApplicationBuilder':
         """クリップボードモニターの初期化"""
-        if not self.settings_manager:
-            raise ConfigError("設定マネージャーが初期化されていません")
+        if not self.event_dispatcher:
+            raise ConfigError("イベントディスパッチャが初期化されていません")
         
         try:
-            self.monitor = ClipboardMonitor(
-                master,
-                self.settings_manager,
-                history_file_path,
-                self.settings_manager.get_setting("history_limit"),
-                self.settings_manager.get_setting("excluded_apps")
-            )
+            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path)
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
@@ -76,23 +79,12 @@ class ApplicationBuilder:
             log_and_show_error("エラー", f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
 
-    def with_event_dispatcher(self) -> 'ApplicationBuilder':
-        """イベントディスパッチャの初期化"""
-        try:
-            self.event_dispatcher = EventDispatcher()
-            logger.info("イベントディスパッチャを初期化しました")
-            return self
-        except Exception as e:
-            log_and_show_error("エラー", f"イベントディスパッチャの初期化に失敗: {str(e)}")
-            raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}")
-
     def build(self, master: tk.Tk) -> 'BaseApplication':
         """アプリケーションのビルド"""
         if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
-            
         
-        from clip_watcher import Application as MainApplication  # 具体的な実装をインポート
+        from clip_watcher import Application as MainApplication
         
         try:
             app = MainApplication(
@@ -104,6 +96,10 @@ class ApplicationBuilder:
                 event_dispatcher=self.event_dispatcher
             )
             logger.info("アプリケーションのビルドが完了しました")
+
+            # Load settings and notify all components
+            self.settings_manager.load_and_notify()
+
             return app
         except Exception as e:
             log_and_show_error("エラー", f"アプリケーションのビルドに失敗: {str(e)}")

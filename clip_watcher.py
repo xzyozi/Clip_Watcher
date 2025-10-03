@@ -59,33 +59,24 @@ class Application(BaseApplication):
         self.event_dispatcher.subscribe("REQUEST_QUIT", self.on_request_quit)
         self.event_dispatcher.subscribe("REQUEST_EXPORT_HISTORY", self.on_request_export_history)
         self.event_dispatcher.subscribe("REQUEST_IMPORT_HISTORY", self.on_request_import_history)
-        self.event_dispatcher.subscribe("REQUEST_ALWAYS_ON_TOP", self.on_request_always_on_top)
-        self.event_dispatcher.subscribe("REQUEST_SET_THEME", self.on_request_set_theme)
         self.event_dispatcher.subscribe("REQUEST_DELETE_HISTORY_ITEMS", self.on_request_delete_history_items)
         self.event_dispatcher.subscribe("REQUEST_PIN_UNPIN_HISTORY_ITEM", self.on_request_pin_unpin_history_item)
         self.event_dispatcher.subscribe("REQUEST_COPY_HISTORY_ITEM", self.on_request_copy_history_item)
         self.event_dispatcher.subscribe("REQUEST_COPY_MERGED_HISTORY_ITEMS", self.on_request_copy_merged_history_items)
         self.event_dispatcher.subscribe("REQUEST_SEARCH_HISTORY", self.on_request_search_history)
-        self.event_dispatcher.subscribe("APPLY_INITIAL_SETTINGS", self.on_apply_initial_settings)
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
-        self.event_dispatcher.dispatch("APPLY_INITIAL_SETTINGS")
 
     def on_toggle_history_sort(self):
         """Toggles the history sort order and refreshes the GUI."""
         self.history_sort_ascending = not self.history_sort_ascending
         
-        # Update button text to reflect the NEW sort order
         if self.history_sort_ascending:
             self.gui.sort_button.config(text="Sort: Asc")
         else:
             self.gui.sort_button.config(text="Sort: Desc")
 
-        # Trigger a GUI update to reflect the new sort order
         self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
-
-    def on_apply_initial_settings(self):
-        self.settings_manager.apply_settings(self)
 
     def on_request_clear_all_history(self):
         self.monitor.clear_history()
@@ -142,14 +133,6 @@ class Application(BaseApplication):
             except Exception as e:
                 messagebox.showerror("インポートエラー", f"履歴のインポート中にエラーが発生しました:\n{e}")
 
-    def on_request_always_on_top(self, always_on_top):
-        self.master.attributes('-topmost', always_on_top)
-        print(f"Always on Top set to: {always_on_top}")
-
-    def on_request_set_theme(self, theme_name):
-        self.gui.apply_theme(theme_name)
-        print(f"Theme set to: {theme_name}")
-
     def on_request_delete_history_items(self, indices_to_delete):
         try:
             for index in indices_to_delete:
@@ -160,16 +143,13 @@ class Application(BaseApplication):
 
     def on_request_pin_unpin_history_item(self, selected_index):
         try:
-            # Get the history list in the same order as the GUI is displaying it
             history_list = self.monitor.get_history()
             if self.history_sort_ascending:
                 history_list = history_list[::-1]
 
-            # Get the correct item tuple
             item_tuple = history_list[selected_index]
             content, is_pinned = item_tuple
 
-            # Call the monitor with the unambiguous item tuple
             if is_pinned:
                 self.monitor.unpin_item(item_tuple)
                 print(f"Unpinned: {content[:50]}...")
@@ -230,24 +210,14 @@ class Application(BaseApplication):
 
     def on_closing(self):
         self.stop_monitor()
-        self.monitor.save_history_to_file() # Save history on exit
+        self.monitor.save_history_to_file()
         self.master.destroy()
-
-
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
     try:
         from src.utils.logging_config import setup_logging
         from src.application_builder import ApplicationBuilder
 
-        # Setup logging at the very beginning
         logger = setup_logging()
         
         logger.info("アプリケーションを開始します")
@@ -255,10 +225,10 @@ if __name__ == "__main__":
         root = tk.Tk()
     
         builder = ApplicationBuilder()
-        app = builder.with_settings()\
+        app = builder.with_event_dispatcher()\
+                     .with_settings()\
                      .with_fixed_phrases_manager()\
                      .with_plugin_manager()\
-                     .with_event_dispatcher()\
                      .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
                      .build(root)
                

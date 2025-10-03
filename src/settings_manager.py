@@ -1,26 +1,27 @@
 import json
 import os
-import sys
+from src.event_dispatcher import EventDispatcher
 
 class SettingsManager:
-    def __init__(self, file_path="settings.json"):
+    def __init__(self, event_dispatcher: EventDispatcher, file_path="settings.json"):
+        self.event_dispatcher = event_dispatcher
         self.file_path = file_path
-        self.settings = self._load_settings()
+        self.settings = self._get_default_settings()
+
+    def load_and_notify(self):
+        """Loads settings from the file and notifies listeners."""
+        loaded_settings = self._load_settings()
+        self.settings.update(loaded_settings)
+        self.event_dispatcher.dispatch("SETTINGS_CHANGED", self.settings)
 
     def _load_settings(self):
-        # Start with default settings
-        default_settings = self._get_default_settings()
         if os.path.exists(self.file_path):
             with open(self.file_path, "r", encoding="utf-8") as f:
                 try:
-                    # Update defaults with loaded settings
-                    loaded_settings = json.load(f)
-                    default_settings.update(loaded_settings)
+                    return json.load(f)
                 except json.JSONDecodeError:
-                    pass # Keep defaults if file is corrupt
-        self.settings = default_settings
-        return self.settings
-
+                    return {}
+        return {}
 
     def _get_default_settings(self):
         return {
@@ -39,6 +40,8 @@ class SettingsManager:
     def save_settings(self):
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(self.settings, f, ensure_ascii=False, indent=4)
+        # Notify listeners that settings have changed
+        self.event_dispatcher.dispatch("SETTINGS_CHANGED", self.settings)
 
     def get_setting(self, key, default=None):
         return self.settings.get(key, default)
@@ -55,57 +58,10 @@ class SettingsManager:
             with open(filepath, "r", encoding="utf-8") as f:
                 try:
                     loaded_settings = json.load(f)
-                    # Basic validation to ensure it's a valid settings file
                     if "theme" in loaded_settings and "history_limit" in loaded_settings:
-                        self.settings = loaded_settings
+                        self.settings.update(loaded_settings)
+                        self.event_dispatcher.dispatch("SETTINGS_CHANGED", self.settings)
                         return True
                 except (json.JSONDecodeError, TypeError):
                     return False
         return False
-
-    def apply_settings(self, app_instance):
-        # Apply theme
-        theme = self.get_setting("theme")
-        app_instance.gui.apply_theme(theme)
-
-        # Apply history limit
-        history_limit = self.get_setting("history_limit")
-        app_instance.monitor.set_history_limit(history_limit)
-
-        # Apply always on top
-        always_on_top = self.get_setting("always_on_top")
-        app_instance.master.attributes("-topmost", always_on_top)
-
-        # Apply excluded apps
-        excluded_apps = self.get_setting("excluded_apps")
-        app_instance.monitor.set_excluded_apps(excluded_apps)
-
-        # Apply startup on boot
-        startup_on_boot = self.get_setting("startup_on_boot")
-        self._manage_startup(startup_on_boot) # Call the internal method
-
-        # Apply font settings
-        clipboard_content_font_family = self.get_setting("clipboard_content_font_family")
-        clipboard_content_font_size = self.get_setting("clipboard_content_font_size")
-        history_font_family = self.get_setting("history_font_family")
-        history_font_size = self.get_setting("history_font_size")
-
-        app_instance.gui.apply_font_settings(
-            clipboard_content_font_family,
-            clipboard_content_font_size,
-            history_font_family,
-            history_font_size
-        )
-
-    def _manage_startup(self, startup_enabled):
-        if sys.platform == "win32":
-            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
-            startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
-
-            if startup_enabled:
-                script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
-                with open(startup_script_path, "w") as f:
-                    f.write(script_content)
-            else:
-                if os.path.exists(startup_script_path):
-                    os.remove(startup_script_path)
