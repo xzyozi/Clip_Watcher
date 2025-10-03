@@ -1,64 +1,56 @@
-﻿import csv
-import io
 from .base_plugin import Plugin
+import io
+import csv
 
 class TableFormatterPlugin(Plugin):
-    def __init__(self):
-        super().__init__()
-        self.name = "Table Formatter"
-        self.description = "Format CSV/TSV data as a table"
-        self.version = "1.0.0"
 
-    def detect_delimiter(self, text):
-        """Detect if the text is CSV or TSV by counting delimiters"""
-        comma_count = text.count(',')
-        tab_count = text.count('\t')
-        return '\t' if tab_count > comma_count else ','
+    @property
+    def name(self) -> str:
+        return "Table Formatter"
 
-    def format_data(self, text):
-        """Format the data as a table"""
+    @property
+    def description(self) -> str:
+        return "Formats comma-separated or tab-separated text into a simple table."
+
+    def process(self, text: str) -> str:
+        if not text.strip():
+            return text
+
+        # Detect delimiter
+        if '\t' in text and ',' not in text:
+            delimiter = '\t'
+        elif ',' in text:
+            delimiter = ','
+        else:
+            return text
+
         try:
-            delimiter = self.detect_delimiter(text)
-            # Create a string buffer
-            buffer = io.StringIO(text)
-            # Read CSV/TSV data
-            reader = csv.reader(buffer, delimiter=delimiter)
+            # Read the data
+            string_io = io.StringIO(text)
+            reader = csv.reader(string_io, delimiter=delimiter)
             rows = list(reader)
-            
+
             if not rows:
                 return text
 
-            # Calculate column widths
-            col_widths = []
-            for col in range(len(rows[0])):
-                width = max(len(str(row[col])) for row in rows if col < len(row))
-                col_widths.append(width)
-
-            # Format as table
-            formatted_rows = []
+            # Calculate max width for each column
+            num_columns = max(len(row) for row in rows)
+            col_widths = [0] * num_columns
             for row in rows:
-                formatted_cells = []
                 for i, cell in enumerate(row):
-                    if i < len(col_widths):
-                        formatted_cells.append(f"{cell:<{col_widths[i]}}")
-                formatted_rows.append(" | ".join(formatted_cells))
+                    col_widths[i] = max(col_widths[i], len(cell.strip()))
 
-            # Add header separator
-            if len(formatted_rows) > 1:
-                separator = "-" * len(formatted_rows[0])
-                formatted_rows.insert(1, separator)
-
-            return "\n".join(formatted_rows)
-
-        except Exception as e:
-            return f"Error formatting table: {str(e)}\n{text}"
-
-    def process(self, text):
-        """Process the clipboard text"""
-        if not text.strip():
-            return text
-        
-        # Check if text looks like CSV/TSV
-        if ',' in text or '\t' in text:
-            return self.format_data(text)
-        return text
+            # Format table
+            formatted_table = []
+            for row in rows:
+                formatted_row = []
+                for i, cell in enumerate(row):
+                    formatted_row.append(cell.strip().ljust(col_widths[i]))
+                # Ensure row has num_columns items
+                while len(formatted_row) < num_columns:
+                    formatted_row.append(''.ljust(col_widths[len(formatted_row)]))
+                formatted_table.append(' | '.join(formatted_row))
+            
+            return '\n'.join(formatted_table)
+        except Exception:
+            return text # Return original text if formatting fails
