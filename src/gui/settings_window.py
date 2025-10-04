@@ -8,7 +8,7 @@ from src.gui.base_toplevel_gui import BaseToplevelGUI
 from src.utils.error_handler import log_and_show_error
 
 class SettingsWindow(BaseToplevelGUI):
-    def __init__(self, master, settings_manager, app_instance):
+    def __init__(self, master, app_instance, settings_manager):
         super().__init__(master, app_instance)
         self.title("Settings")
         self.geometry(config.SETTINGS_WINDOW_GEOMETRY)

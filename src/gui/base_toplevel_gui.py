@@ -9,7 +9,7 @@ class BaseToplevelGUI(tk.Toplevel):
         super().__init__(master, **kwargs)
         self.master = master
         self.app = app_instance
-        self.app.theme_manager.apply_theme_to_widget(self, self.app.theme_manager.get_current_theme())
+        self.app.theme_manager.apply_theme_to_widget_tree(self, THEMES[self.app.theme_manager.get_current_theme()])
 
     # Placeholder for common widget creation or layout methods
     def _create_common_widgets(self):

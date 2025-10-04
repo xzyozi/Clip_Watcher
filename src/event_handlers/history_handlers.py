@@ -156,7 +156,7 @@ class HistoryEventHandlers:
 
             from src.gui.format_dialog import FormatDialog
             
-            dialog = FormatDialog(self.app.master, self.app, self.app.settings_manager)
+            dialog = self.app.create_toplevel(FormatDialog, self.app.settings_manager)
             selected_plugin = dialog.selected_plugin
 
             if selected_plugin:

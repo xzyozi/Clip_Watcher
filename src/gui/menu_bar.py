@@ -8,7 +8,7 @@ def create_menu_bar(master, app_instance):
     menubar = tk.Menu(master)
 
     # File Menu
-    file_menu = tk.Menu(menubar, tearoff=0)
+    file_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     file_menu.add_command(label="設定 (Settings)...", command=app_instance.open_settings_window)
     file_menu.add_command(label="履歴をエクスポート (Export History)...", command=app_instance.file_handlers.handle_export_history)
     file_menu.add_command(label="履歴をインポート (Import History)...", command=app_instance.file_handlers.handle_import_history)
@@ -18,7 +18,7 @@ def create_menu_bar(master, app_instance):
     menubar.add_cascade(label="ファイル (File)", menu=file_menu)
 
     # Edit Menu
-    edit_menu = tk.Menu(menubar, tearoff=0)
+    edit_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     edit_menu.add_command(label="検索 (Find)...", command=lambda: logger.info("Find clicked"))
     edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_listbox.curselection()))
     edit_menu.add_separator()
@@ -28,7 +28,7 @@ def create_menu_bar(master, app_instance):
     menubar.add_cascade(label="編集 (Edit)", menu=edit_menu)
 
     # View Menu
-    view_menu = tk.Menu(menubar, tearoff=0)
+    view_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     # Variable to hold the state of the "Always on Top" checkbutton
     app_instance.always_on_top_var = tk.BooleanVar(value=app_instance.settings_manager.get_setting("always_on_top"))
     view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)",
@@ -58,9 +58,9 @@ def create_menu_bar(master, app_instance):
     menubar.add_cascade(label="表示 (View)", menu=view_menu)
 
     # Help Menu
-    help_menu = tk.Menu(menubar, tearoff=0)
+    help_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     help_menu.add_command(label="使い方 (How to Use)", command=event_handlers.handle_how_to_use)
     help_menu.add_command(label="バージョン情報 (About)", command=event_handlers.handle_about)
-    menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu)
+    menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu, command=app_instance.open_settings_window)
 
     return menubar

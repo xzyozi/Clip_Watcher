@@ -12,6 +12,11 @@ class SettingsEventHandlers:
     def __init__(self, event_dispatcher: "EventDispatcher", settings_manager: "SettingsManager"):
         self.event_dispatcher = event_dispatcher
         self.settings_manager = settings_manager
+        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
+
+    def handle_set_always_on_top(self, value: bool):
+        self.settings_manager.set_setting("always_on_top", value)
+        self.settings_manager.save_settings()
 
     def handle_set_theme(self, theme_name: str):
         self.settings_manager.set_setting("theme", theme_name)

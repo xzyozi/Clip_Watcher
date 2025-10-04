@@ -55,16 +55,30 @@ class Application(BaseApplication):
 
         self.menubar = menu_bar.create_menu_bar(master, self)
         master.config(menu=self.menubar)
+        self.theme_manager.set_menubar(self.menubar)
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+        self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def on_focus_in(self, event=None):
+        self.reassert_topmost()
+
+    def reassert_topmost(self):
+        if self.settings_manager.get_setting("always_on_top", False):
+            self.master.attributes("-topmost", False)
+            self.master.attributes("-topmost", True)
 
     def on_settings_changed(self, settings):
         theme = settings.get("theme", "light")
         self.theme_manager.apply_theme(theme)
+        if hasattr(self, 'theme_var'):
+            self.theme_var.set(theme)
         
         always_on_top = settings.get("always_on_top", False)
         self.master.attributes("-topmost", always_on_top)
+        if hasattr(self, 'always_on_top_var'):
+            self.always_on_top_var.set(always_on_top)
 
         startup_enabled = settings.get("startup_on_boot", False)
         self._manage_startup(startup_enabled)
@@ -99,8 +113,21 @@ class Application(BaseApplication):
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
 
     def open_settings_window(self):
-        settings_window = SettingsWindow(self.master, self.settings_manager, self)
-        settings_window.grab_set()
+        self.create_toplevel(SettingsWindow, self.settings_manager)
+
+    def create_toplevel(self, ToplevelClass, *args, **kwargs):
+        toplevel_window = ToplevelClass(self.master, self, *args, **kwargs)
+        if self.settings_manager.get_setting("always_on_top", False):
+            toplevel_window.attributes("-topmost", True)
+        toplevel_window.grab_set()
+        return toplevel_window
+
+    def create_toplevel(self, ToplevelClass, *args, **kwargs):
+        toplevel_window = ToplevelClass(self.master, *args, app_instance=self, **kwargs)
+        if self.settings_manager.get_setting("always_on_top", False):
+            toplevel_window.attributes("-topmost", True)
+        toplevel_window.grab_set()
+        return toplevel_window
 
     def show_error_message(self, title, message):
         messagebox.showerror(title, message)

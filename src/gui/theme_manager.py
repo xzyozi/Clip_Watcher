@@ -6,41 +6,25 @@ class ThemeManager:
     def __init__(self, root):
         self.root = root
         self.current_theme = "light"
+        self.menubar = None
+
+    def set_menubar(self, menubar):
+        self.menubar = menubar
 
     def apply_theme(self, theme_name):
-        """
-        Apply the specified theme to all windows of the application.
-        """
         if theme_name not in THEMES:
             print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
         self.current_theme = theme_name
-        
-        # Apply theme to the root window
-        self.apply_theme_to_widget(self.root, theme_name)
-
-    def apply_theme_to_widget(self, widget, theme_name):
-        """
-        Recursively apply the theme to a widget and all its children.
-        """
         theme = THEMES[theme_name]
-        
-        # Apply to the widget itself
-        try:
-            widget.config(bg=theme["bg"], fg=theme["fg"])
-        except tk.TclError:
-            try:
-                widget.config(bg=theme["bg"])
-            except tk.TclError:
-                pass # Ignore errors for widgets that don't support -bg
 
-        # Special handling for ttk widgets
-        style = ttk.Style(widget)
+        # 1. Configure ttk styles
+        style = ttk.Style(self.root)
         if theme_name == 'dark':
             style.theme_use('clam')
         else:
             style.theme_use('default')
-            
+
         style.configure('.', background=theme["bg"], foreground=theme["fg"])
         style.configure('TFrame', background=theme["frame_bg"])
         style.configure('TLabel', background=theme["frame_bg"], foreground=theme["label_fg"])
@@ -58,9 +42,53 @@ class ThemeManager:
         style.configure('TNotebook.Tab', background=theme["frame_bg"], foreground=theme["label_fg"])
         style.map('TNotebook.Tab', background=[('selected', theme["bg"])], foreground=[('selected', theme["fg"])])
 
-        # Apply to all children recursively
+        # Treeview specific styling
+        style.configure('Treeview', background=theme["listbox_bg"], foreground=theme["listbox_fg"], fieldbackground=theme["listbox_bg"])
+        style.map('Treeview', background=[('selected', theme["select_bg"])], foreground=[('selected', theme["select_fg"])])
+        style.configure('Treeview.Heading', background=theme["button_bg"], foreground=theme["button_fg"])
+
+        # 2. Recursively apply theme to non-ttk widgets
+        self.apply_theme_to_widget_tree(self.root, theme)
+        
+        # 3. Apply theme to menubar
+        if self.menubar:
+            self._apply_theme_to_menu(self.menubar, theme)
+
+    def _apply_theme_to_menu(self, menu, theme):
+        try:
+            menu.config(
+                background=theme.get("menu_bg"),
+                foreground=theme.get("menu_fg"),
+                activebackground=theme.get("active_menu_bg"),
+                activeforeground=theme.get("active_menu_fg"),
+                relief=tk.FLAT,
+                borderwidth=0
+            )
+        except tk.TclError:
+            pass # May fail on some systems
+
+        try:
+            for i in range(menu.index("end") + 1):
+                if menu.type(i) == "cascade":
+                    submenu_name = menu.entrycget(i, "menu")
+                    if submenu_name:
+                        submenu = menu.nametowidget(submenu_name)
+                        self._apply_theme_to_menu(submenu, theme)
+        except (tk.TclError, AttributeError):
+            # This can fail on some systems or if the menu is torn off
+            pass
+
+    def apply_theme_to_widget_tree(self, widget, theme):
+        try:
+            if isinstance(widget, (tk.Tk, tk.Toplevel, tk.Frame, tk.LabelFrame)):
+                 widget.config(bg=theme["bg"])
+            elif isinstance(widget, (tk.Text, tk.Listbox)):
+                widget.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
+        except (tk.TclError, AttributeError):
+            pass # Ignore errors for widgets that don't support these properties
+
         for child in widget.winfo_children():
-            self.apply_theme_to_widget(child, theme_name)
+            self.apply_theme_to_widget_tree(child, theme)
 
     def get_current_theme(self):
         return self.current_theme
