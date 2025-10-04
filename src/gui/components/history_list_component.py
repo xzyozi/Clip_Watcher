@@ -31,7 +31,7 @@ class HistoryListComponent(tk.Frame):
             "selected_indices": self.listbox.curselection()
         })
 
-    def update_history(self, history):
+    def update_history(self, history, theme):
         self.history_data = history
         
         selected_indices = self.listbox.curselection()
@@ -39,8 +39,7 @@ class HistoryListComponent(tk.Frame):
 
         self.listbox.delete(0, tk.END)
         
-        current_theme = THEMES.get(self.app.gui.current_theme_name, THEMES['light'])
-        pinned_bg_color = current_theme["pinned_bg"]
+        pinned_bg_color = theme["pinned_bg"]
 
         for i, item_tuple in enumerate(history):
             content, is_pinned = item_tuple
@@ -56,7 +55,7 @@ class HistoryListComponent(tk.Frame):
 
     def apply_theme(self, theme):
         self.listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
-        self.update_history(self.history_data) # Re-apply pinned colors
+        self.update_history(self.history_data, theme) # Re-apply pinned colors
 
     def apply_font(self, font):
         self.listbox.config(font=font)

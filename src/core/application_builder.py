@@ -6,6 +6,7 @@ from .fixed_phrases_manager import FixedPhrasesManager
 from .exceptions import ConfigError
 from .plugin_manager import PluginManager
 from .event_dispatcher import EventDispatcher
+from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
 
@@ -23,6 +24,7 @@ class ApplicationBuilder:
         self.fixed_phrases_manager: Optional[FixedPhrasesManager] = None
         self.plugin_manager: Optional[PluginManager] = None
         self.event_dispatcher: Optional[EventDispatcher] = None
+        self.theme_manager: Optional[ThemeManager] = None
         
     def with_event_dispatcher(self) -> 'ApplicationBuilder':
         """イベントディスパッチャの初期化"""
@@ -45,6 +47,16 @@ class ApplicationBuilder:
         except Exception as e:
             log_and_show_error(f"設定マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}")
+
+    def with_theme_manager(self, root: tk.Tk) -> 'ApplicationBuilder':
+        """テーママネージャーの初期化"""
+        try:
+            self.theme_manager = ThemeManager(root)
+            logger.info("テーママネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error("エラー", f"テーママネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}")
 
     def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> 'ApplicationBuilder':
         """クリップボードモニターの初期化"""
@@ -81,7 +93,7 @@ class ApplicationBuilder:
 
     def build(self, master: tk.Tk) -> 'BaseApplication':
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher]):
+        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
         
         from clip_watcher import Application as MainApplication
@@ -93,7 +105,8 @@ class ApplicationBuilder:
                 monitor=self.monitor,
                 fixed_phrases_manager=self.fixed_phrases_manager,
                 plugin_manager=self.plugin_manager,
-                event_dispatcher=self.event_dispatcher
+                event_dispatcher=self.event_dispatcher,
+                theme_manager=self.theme_manager
             )
             logger.info("アプリケーションのビルドが完了しました")
 

@@ -82,18 +82,16 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
-        self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+        self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_font_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
 
-    def on_settings_changed(self, settings):
-        self.apply_theme(settings.get("theme", "light"))
+    def on_font_settings_changed(self, settings):
         self.apply_font_settings(
             settings.get("clipboard_content_font_family", "TkDefaultFont"),
             settings.get("clipboard_content_font_size", 10),
             settings.get("history_font_family", "TkDefaultFont"),
             settings.get("history_font_size", 10)
         )
-        self.app.master.attributes("-topmost", settings.get("always_on_top", False))
 
     def _update_undo_redo_buttons(self, data):
         self.undo_button.config(state=tk.NORMAL if data['can_undo'] else tk.DISABLED)
@@ -115,40 +113,6 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.clipboard_text_widget.insert(tk.END, self.app.monitor.last_clipboard_data)
             self.clipboard_text_widget.config(state=tk.DISABLED)
 
-    def apply_theme(self, theme_name):
-        super().apply_theme(theme_name)
-        theme = THEMES.get(theme_name, THEMES['light'])
-        self.current_clipboard_frame.config(bg=theme["frame_bg"], fg=theme["label_fg"])
-        self.clipboard_text_widget.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], insertbackground=theme["fg"])
-        self.search_frame.config(bg=theme["bg"])
-        self.search_label.config(bg=theme["bg"], fg=theme["label_fg"])
-        self.search_entry.config(bg=theme["entry_bg"], fg=theme["entry_fg"], insertbackground=theme["fg"])
-        self.history_component.apply_theme(theme)
-        self.control_frame.config(bg=theme["bg"])
-        self.copy_history_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        self.sort_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        self.format_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        self.undo_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        self.redo_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        self.quit_button.config(bg=theme["button_bg"], fg=theme["button_fg"])
-        if hasattr(self, 'fixed_phrases_frame'):
-            self.fixed_phrases_frame.config(bg=theme["frame_bg"])
-            if hasattr(self.fixed_phrases_frame, 'list_component'):
-                self.fixed_phrases_frame.list_component.config(bg=theme["frame_bg"])
-                if hasattr(self.fixed_phrases_frame.list_component, 'phrase_listbox'):
-                    self.fixed_phrases_frame.list_component.phrase_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
-            if hasattr(self.fixed_phrases_frame, 'edit_component'):
-                self.fixed_phrases_frame.edit_component.config(bg=theme["frame_bg"])
-                for child in self.fixed_phrases_frame.edit_component.winfo_children():
-                    if isinstance(child, tk.Frame):
-                        child.config(bg=theme["frame_bg"])
-                        for button in child.winfo_children():
-                            if isinstance(button, tk.Button):
-                                button.config(bg=theme["button_bg"], fg=theme["button_fg"], activebackground=theme["select_bg"], activeforeground=theme["select_fg"])
-                for child in self.fixed_phrases_frame.edit_component.winfo_children():
-                    if isinstance(child, tk.Button):
-                        child.config(bg=theme["button_bg"], fg=theme["button_fg"])
-
     def apply_font_settings(self, clipboard_content_font_family, clipboard_content_font_size, history_font_family, history_font_size):
         clipboard_font = font.Font(family=clipboard_content_font_family, size=clipboard_content_font_size)
         history_font = font.Font(family=history_font_family, size=history_font_size)
@@ -158,11 +122,13 @@ class ClipWatcherGUI(BaseFrameGUI):
     def update_clipboard_display(self, current_content, history):
         self.history_data = history
         search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
+        theme_name = self.app.theme_manager.get_current_theme()
+        theme = THEMES.get(theme_name, THEMES['light'])
         if search_query:
             filtered_history = self.app.monitor.get_filtered_history(search_query)
-            self.history_component.update_history(filtered_history)
+            self.history_component.update_history(filtered_history, theme)
         else:
-            self.history_component.update_history(history)
+            self.history_component.update_history(history, theme)
 
         selected_indices = self.history_component.listbox.curselection()
         self.clipboard_text_widget.config(state=tk.NORMAL)

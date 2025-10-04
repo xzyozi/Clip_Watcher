@@ -14,6 +14,7 @@ from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.undo_manager import UndoManager
+from src.gui.theme_manager import ThemeManager
 
 # Define history file path
 if sys.platform == "win32":
@@ -28,7 +29,7 @@ HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
 from src.core.base_application import BaseApplication
 
 class Application(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -37,13 +38,14 @@ class Application(BaseApplication):
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
+        self.theme_manager = theme_manager
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
         self.file_handlers = FileEventHandlers(self, event_dispatcher)
-        self.settings_handlers = SettingsEventHandlers(event_dispatcher)
+        self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
         self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
@@ -55,6 +57,34 @@ class Application(BaseApplication):
         master.config(menu=self.menubar)
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
+        self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+
+    def on_settings_changed(self, settings):
+        theme = settings.get("theme", "light")
+        self.theme_manager.apply_theme(theme)
+        
+        always_on_top = settings.get("always_on_top", False)
+        self.master.attributes("-topmost", always_on_top)
+
+        startup_enabled = settings.get("startup_on_boot", False)
+        self._manage_startup(startup_enabled)
+
+    def _manage_startup(self, startup_enabled):
+        if sys.platform == "win32":
+            startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
+
+            try:
+                if startup_enabled:
+                    script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
+                    with open(startup_script_path, "w") as f:
+                        f.write(script_content)
+                else:
+                    if os.path.exists(startup_script_path):
+                        os.remove(startup_script_path)
+            except Exception as e:
+                # Handle potential errors, e.g., permissions
+                print(f"Failed to manage startup script: {e}")
 
     def on_toggle_history_sort(self):
         """Toggles the history sort order and refreshes the GUI."""
@@ -97,6 +127,7 @@ if __name__ == "__main__":
         builder = ApplicationBuilder()
         app = builder.with_event_dispatcher()\
                      .with_settings()\
+                     .with_theme_manager(root)\
                      .with_fixed_phrases_manager()\
                      .with_plugin_manager()\
                      .with_clipboard_monitor(root, HISTORY_FILE_PATH)\

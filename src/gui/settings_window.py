@@ -36,7 +36,6 @@ class SettingsWindow(BaseToplevelGUI):
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
-        self.apply_theme(self.settings_manager.get_setting("theme")) # Apply initial theme
 
     def _create_widgets(self):
         notebook = ttk.Notebook(self)
@@ -199,14 +198,11 @@ class SettingsWindow(BaseToplevelGUI):
 
     def _apply_only(self):
         self._save_settings_logic()
-        self.settings_manager.apply_settings(self.app_instance)
-        self.apply_theme(self.theme_var.get())
+        self.settings_manager.notify_listeners()
 
     def _save_and_close(self):
         self._save_settings_logic()
         self.settings_manager.save_settings()
-        self.settings_manager.apply_settings(self.app_instance)
-        self.apply_theme(self.theme_var.get())
         self.settings_saved = True
         self.destroy()
 
@@ -228,16 +224,6 @@ class SettingsWindow(BaseToplevelGUI):
         self.excluded_apps_listbox.delete(0, tk.END)
         for app in self.excluded_apps_list:
             self.excluded_apps_listbox.insert(tk.END, app)
-
-    def apply_theme(self, theme_name):
-        super().apply_theme(theme_name) # Call base class method
-
-        theme = config.THEMES.get(theme_name, config.THEMES['light']) # Get theme directly from THEMES
-
-        if hasattr(self, 'excluded_apps_listbox'):
-            self.excluded_apps_listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
-
-        # self.current_theme_name = theme_name # Handled by base class
 
     def _add_excluded_app(self):
         new_app = simpledialog.askstring("Add Excluded App", "Enter the executable name (e.g., keepass.exe):", parent=self)
@@ -283,7 +269,6 @@ class SettingsWindow(BaseToplevelGUI):
     def destroy(self):
         if not self.settings_saved:
             self.settings_manager.settings = copy.deepcopy(self.initial_settings)
-            self.settings_manager.apply_settings(self.app_instance)
-            self.apply_theme(self.settings_manager.get_setting("theme"))
+            self.settings_manager.notify_listeners()
 
         super().destroy()

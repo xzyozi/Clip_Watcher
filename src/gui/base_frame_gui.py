@@ -9,13 +9,6 @@ class BaseFrameGUI(tk.Frame):
         super().__init__(master, **kwargs)
         self.master = master
         self.app = app_instance
-        self.current_theme_name = self.app.settings_manager.get_setting("theme")
-
-    def apply_theme(self, theme_name):
-        theme = theme_manager.apply_theme(self.master, theme_name)
-        # Apply theme to this frame itself
-        self.config(bg=theme["bg"])
-        self.current_theme_name = theme_name
 
     # Placeholder for common widget creation or layout methods
     def _create_common_widgets(self):

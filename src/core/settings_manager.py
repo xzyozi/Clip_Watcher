@@ -49,6 +49,10 @@ class SettingsManager:
     def set_setting(self, key, value):
         self.settings[key] = value
 
+    def notify_listeners(self):
+        """Notifies listeners about the current settings."""
+        self.event_dispatcher.dispatch("SETTINGS_CHANGED", self.settings)
+
     def save_settings_to_file(self, filepath):
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(self.settings, f, ensure_ascii=False, indent=4)
