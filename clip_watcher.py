@@ -122,13 +122,6 @@ class Application(BaseApplication):
         toplevel_window.grab_set()
         return toplevel_window
 
-    def create_toplevel(self, ToplevelClass, *args, **kwargs):
-        toplevel_window = ToplevelClass(self.master, *args, app_instance=self, **kwargs)
-        if self.settings_manager.get_setting("always_on_top", False):
-            toplevel_window.attributes("-topmost", True)
-        toplevel_window.grab_set()
-        return toplevel_window
-
     def show_error_message(self, title, message):
         messagebox.showerror(title, message)
 
