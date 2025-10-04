@@ -19,8 +19,7 @@ Clip_Watcher/
 ├── requirements.txt      # 依存ライブラリ
 ├── README.md             # プロジェクト説明
 ├── doc/                  # ドキュメント
-│   ├── SPECIFICATION.md  # 詳細な仕様書
-│   └── menu.md           # メニュー構成
+│   └──SPECIFICATION.md  # 詳細な仕様書
 └── src/
     ├── __init__.py
     ├── clipboard_monitor.py      # クリップボード監視ロジック
