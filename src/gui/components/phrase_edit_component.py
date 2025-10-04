@@ -1,7 +1,7 @@
 import tkinter as tk
-from tkinter import messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog
 import logging
-from src.exceptions import PhraseError
+from src.core.exceptions import PhraseError
 
 logger = logging.getLogger(__name__)
 
@@ -19,23 +19,23 @@ class PhraseEditComponent(BaseFrameGUI):
         self._create_widgets()
 
     def _create_widgets(self):
-        button_frame = tk.Frame(self)
+        button_frame = ttk.Frame(self)
         button_frame.pack(pady=5)
 
         # コピーボタン
-        self.copy_button = tk.Button(button_frame, text="コピー (Copy)", command=self._copy_phrase)
+        self.copy_button = ttk.Button(button_frame, text="コピー (Copy)", command=self._copy_phrase)
         self.copy_button.pack(side=tk.LEFT, padx=5)
 
         # 追加ボタン
-        self.add_button = tk.Button(button_frame, text="追加 (Add)", command=self._add_phrase)
+        self.add_button = ttk.Button(button_frame, text="追加 (Add)", command=self._add_phrase)
         self.add_button.pack(side=tk.LEFT, padx=5)
 
         # 編集ボタン
-        self.edit_button = tk.Button(button_frame, text="編集 (Edit)", command=self._edit_phrase)
+        self.edit_button = ttk.Button(button_frame, text="編集 (Edit)", command=self._edit_phrase)
         self.edit_button.pack(side=tk.LEFT, padx=5)
 
         # 削除ボタン
-        self.delete_button = tk.Button(button_frame, text="削除 (Delete)", command=self._delete_phrase)
+        self.delete_button = ttk.Button(button_frame, text="削除 (Delete)", command=self._delete_phrase)
         self.delete_button.pack(side=tk.LEFT, padx=5)
 
     def _copy_phrase(self):
@@ -54,13 +54,7 @@ class PhraseEditComponent(BaseFrameGUI):
 
             if self.app.fixed_phrases_manager.add_phrase(new_phrase):
                 self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
-                self.list_component._populate_listbox()  # リストを更新
-            else:
-                raise PhraseError("その定型文は既に存在します")
-
-            if self.app.fixed_phrases_manager.add_phrase(new_phrase):
-                self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
-                self.list_component.refresh()
+                self.list_component.refresh()  # リストを更新
             else:
                 raise PhraseError("その定型文は既に存在します")
 
@@ -68,8 +62,7 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文追加エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の追加中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def _edit_phrase(self):
         """選択された定型文を編集"""
@@ -96,8 +89,7 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文編集エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の編集中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def _delete_phrase(self):
         """選択された定型文を削除"""
@@ -117,5 +109,4 @@ class PhraseEditComponent(BaseFrameGUI):
             self.logger.warning(f"定型文削除エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"定型文の削除中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)

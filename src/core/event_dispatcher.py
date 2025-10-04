@@ -1,5 +1,10 @@
 from collections import defaultdict
 from typing import Callable, List, Dict, Any
+import traceback
+import logging
+from src.utils.error_handler import log_and_show_error
+
+logger = logging.getLogger(__name__)
 
 class EventDispatcher:
     """
@@ -44,4 +49,4 @@ class EventDispatcher:
                 listener(*args, **kwargs)
             except Exception as e:
                 # エラーハンドリングを強化することも可能
-                print(f"Error dispatching event {event_type} to listener {listener.__name__}: {e}")
+                log_and_show_error("エラー",f"Error dispatching event {event_type} to listener {listener.__name__}: {traceback.format_exc()}", exc_info=True)

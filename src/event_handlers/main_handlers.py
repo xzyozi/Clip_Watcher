@@ -1,7 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
-from src.fixed_phrases_manager import FixedPhrasesManager
+from src.core.fixed_phrases_manager import FixedPhrasesManager
+import logging
+
+from src.utils.error_handler import log_and_show_error
+
+logger = logging.getLogger(__name__)
 
 def handle_about():
     messagebox.showinfo(
@@ -28,9 +33,9 @@ def handle_copy_fixed_phrase(gui_instance, phrase):
     try:
         gui_instance.master.clipboard_clear()
         gui_instance.master.clipboard_append(phrase)
-        print(f"Copied fixed phrase: {phrase[:50]}...")
+        logger.info(f"Copied fixed phrase: {phrase[:50]}...")
     except Exception as e:
-        print(f"Error copying fixed phrase: {e}")
+        log_and_show_error("エラー",f"Error copying fixed phrase: {e}")
 
 def handle_manage_fixed_phrases(master, fixed_phrases_manager):
     fixed_phrases_window = FixedPhrasesManager(master, fixed_phrases_manager)

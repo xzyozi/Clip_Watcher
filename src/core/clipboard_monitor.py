@@ -6,15 +6,16 @@ import os
 import ctypes
 import ctypes.wintypes
 import logging
-from src.notification_manager import NotificationManager
+from .notification_manager import NotificationManager
+from .event_dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, settings_manager, history_file_path, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
-        self.settings_manager = settings_manager
-        self.notification_manager = NotificationManager(settings_manager)
+        self.event_dispatcher = event_dispatcher
+        self.notification_manager = NotificationManager(None) # Settings will be passed via event
         self.update_callback = None
         self.error_callback = None
         self.last_clipboard_data = ""
@@ -25,14 +26,15 @@ class ClipboardMonitor:
         self.history_limit = history_limit
         self.excluded_apps = excluded_apps if excluded_apps is not None else []
 
-    def set_history_limit(self, limit):
-        self.history_limit = limit
+        self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+
+    def on_settings_changed(self, settings):
+        self.history_limit = settings.get("history_limit", 50)
+        self.excluded_apps = settings.get("excluded_apps", [])
+        self.notification_manager.update_settings(settings)
         if len(self.history) > self.history_limit:
             self.history = self.history[:self.history_limit]
             self._trigger_gui_update()
-
-    def set_excluded_apps(self, excluded_apps):
-        self.excluded_apps = excluded_apps
 
     def set_error_callback(self, callback):
         self.error_callback = callback
@@ -197,25 +199,19 @@ class ClipboardMonitor:
                 self.last_clipboard_data = ""
             self._trigger_gui_update()
 
-    def pin_item(self, index):
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_pin = current_display_history[index]
-            for i, (content, is_pinned) in enumerate(self.history):
-                if (content, is_pinned) == item_to_pin:
-                    self.history[i] = (content, True)
-                    break
-            self._trigger_gui_update()
+    def pin_item(self, item_to_pin):
+        for i, (content, is_pinned) in enumerate(self.history):
+            if (content, is_pinned) == item_to_pin:
+                self.history[i] = (content, True)
+                self._trigger_gui_update()
+                return
 
-    def unpin_item(self, index):
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_unpin = current_display_history[index]
-            for i, (content, is_pinned) in enumerate(self.history):
-                if (content, is_pinned) == item_to_unpin:
-                    self.history[i] = (content, False)
-                    break
-            self._trigger_gui_update()
+    def unpin_item(self, item_to_unpin):
+        for i, (content, is_pinned) in enumerate(self.history):
+            if (content, is_pinned) == item_to_unpin:
+                self.history[i] = (content, False)
+                self._trigger_gui_update()
+                return
 
     def delete_all_unpinned_history(self):
         self.history = [item for item in self.history if item[1]]

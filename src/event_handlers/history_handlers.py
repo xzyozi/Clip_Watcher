@@ -1,11 +1,18 @@
 import tkinter as tk
 from tkinter import messagebox
-from src.event_dispatcher import EventDispatcher
+import logging
+from src.core.event_dispatcher import EventDispatcher
+from src.utils.error_handler import log_and_show_error
+from src.utils.undo_manager import UndoManager
+from src.core.commands import UpdateHistoryCommand
+
+logger = logging.getLogger(__name__)
 
 class HistoryEventHandlers:
-    def __init__(self, app_instance, event_dispatcher: EventDispatcher):
+    def __init__(self, app_instance, event_dispatcher: EventDispatcher, undo_manager: UndoManager):
         self.app = app_instance
         self.event_dispatcher = event_dispatcher
+        self.undo_manager = undo_manager
 
         # Subscribe to events
         self.event_dispatcher.subscribe("HISTORY_COPY_SELECTED", self.handle_copy_selected_history)
@@ -15,67 +22,154 @@ class HistoryEventHandlers:
         self.event_dispatcher.subscribe("HISTORY_PIN_UNPIN", self.handle_pin_unpin_history)
         self.event_dispatcher.subscribe("HISTORY_COPY_MERGED", self.handle_copy_selected_as_merged)
         self.event_dispatcher.subscribe("HISTORY_FORMAT_ITEM", self.format_selected_item)
-        self.event_dispatcher.subscribe("HISTORY_UNDO_FORMAT", self.undo_last_format)
         self.event_dispatcher.subscribe("HISTORY_SEARCH", self.handle_search_history)
+        self.event_dispatcher.subscribe("HISTORY_CREATE_QUICK_TASK", self.handle_create_quick_task)
+        self.event_dispatcher.subscribe("HISTORY_ITEM_EDITED", self.handle_history_item_edited)
+        self.event_dispatcher.subscribe("REQUEST_UNDO_LAST_ACTION", self.undo_manager.undo)
+        self.event_dispatcher.subscribe("REQUEST_REDO_LAST_ACTION", self.undo_manager.redo)
+
+    def handle_history_item_edited(self, data):
+        try:
+            selected_indices = self.app.gui.history_component.listbox.curselection()
+            if not selected_indices:
+                return
+            
+            selected_index = selected_indices[0]
+            new_text = data['new_text']
+            original_text = data['original_text']
+
+            command = UpdateHistoryCommand(
+                monitor=self.app.monitor,
+                index=selected_index,
+                original_text=original_text,
+                new_text=new_text
+            )
+            self.undo_manager.execute_command(command)
+            logger.info(f"Executed update command for history item at index {selected_index}.")
+
+        except IndexError:
+            logger.warning("Could not update history item: No item selected.")
+        except Exception as e:
+            log_and_show_error("Error", f"Failed to update history item: {e}", exc_info=True)
+
+    def handle_create_quick_task(self, selected_indices):
+        if not selected_indices:
+            return
+        
+        tasks = []
+        for index in selected_indices:
+            content, _ = self.app.monitor.get_history()[index]
+            tasks.append(content)
+
+        if tasks:
+            from src.gui.quick_task_dialog import QuickTaskDialog
+            dialog = QuickTaskDialog(self.app.master, self.app, tasks)
 
     def handle_copy_selected_history(self, selected_indices):
         if not selected_indices:
             return
-        selected_index = selected_indices[0]
-        self.event_dispatcher.dispatch("REQUEST_COPY_HISTORY_ITEM", selected_index)
+        try:
+            history_data = self.app.monitor.get_history()
+            selected_item_content = history_data[selected_indices[0]][0]
+            self.app.master.clipboard_clear()
+            self.app.master.clipboard_append(selected_item_content)
+            logger.info(f"Copied from history: {selected_item_content[:50]}...")
+        except IndexError:
+            pass
 
     def handle_clear_all_history(self):
-        self.event_dispatcher.dispatch("REQUEST_CLEAR_ALL_HISTORY")
+        self.app.monitor.clear_history()
+        self.app.gui.update_clipboard_display("", [])
+        logger.info("All history cleared.")
 
     def handle_delete_selected_history(self, selected_indices):
         if not selected_indices:
-            print("No history item selected for deletion.")
+            logger.warning("No history item selected for deletion.")
             return
-        indices_to_delete = sorted(list(selected_indices), reverse=True)
-        self.event_dispatcher.dispatch("REQUEST_DELETE_HISTORY_ITEMS", indices_to_delete)
+        try:
+            indices_to_delete = sorted(list(selected_indices), reverse=True)
+            for index in indices_to_delete:
+                self.app.monitor.delete_history_item(index)
+            logger.info(f"Deleted {len(indices_to_delete)} selected history item(s).")
+        except Exception as e:
+            logger.error(f"Error deleting selected history: {e}")
 
     def handle_delete_all_unpinned_history(self):
-        self.event_dispatcher.dispatch("REQUEST_DELETE_ALL_UNPINNED_HISTORY")
+        if messagebox.askyesno(
+            "確認 (Confirm)",
+            "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
+            parent=self.app.master
+        ):
+            self.app.monitor.delete_all_unpinned_history()
+            messagebox.showinfo("完了", "ピン留めされていない履歴をすべて削除しました。", parent=self.app.master)
+        else:
+            messagebox.showinfo("キャンセル", "操作をキャンセルしました。", parent=self.app.master)
 
     def handle_pin_unpin_history(self, selected_index):
         if selected_index is None:
-            print("No history item selected for pin/unpin.")
+            logger.warning("No history item selected for pin/unpin.")
             return
-        self.event_dispatcher.dispatch("REQUEST_PIN_UNPIN_HISTORY_ITEM", selected_index)
+        try:
+            history_list = self.app.monitor.get_history()
+            if self.app.history_sort_ascending:
+                history_list = history_list[::-1]
+
+            item_tuple = history_list[selected_index]
+            content, is_pinned = item_tuple
+
+            if is_pinned:
+                self.app.monitor.unpin_item(item_tuple)
+                logger.info(f"Unpinned: {content[:50]}...")
+            else:
+                self.app.monitor.pin_item(item_tuple)
+                logger.info(f"Pinned: {content[:50]}...")
+        except IndexError:
+            logger.error("No history item selected for pin/unpin.")
+        except Exception as e:
+            logger.error(f"Error pinning/unpinning history: {e}")
 
     def handle_copy_selected_as_merged(self, selected_indices):
         if not selected_indices:
-            print("No history items selected for merging.")
+            logger.warning("No history items selected for merging.")
             return
-        self.event_dispatcher.dispatch("REQUEST_COPY_MERGED_HISTORY_ITEMS", selected_indices)
+        try:
+            merged_content_parts = []
+            history_data = self.app.monitor.get_history()
+            for index in selected_indices:
+                if 0 <= index < len(history_data):
+                    merged_content_parts.append(history_data[index][0])
+            if merged_content_parts:
+                merged_content = "\n".join(merged_content_parts)
+                self.app.master.clipboard_clear()
+                self.app.master.clipboard_append(merged_content)
+                logger.info(f"Copied merged content: {merged_content[:50]}...")
+            else:
+                logger.warning("No valid history items selected for merging.")
+        except Exception as e:
+            logger.error(f"Error merging and copying selected history: {e}")
 
     def format_selected_item(self):
-        """Opens a dialog to choose a plugin and applies it to the selected history item."""
         try:
-            selected_indices = self.app.gui.history_listbox.curselection()
+            selected_indices = self.app.gui.history_component.listbox.curselection()
             if not selected_indices:
                 return
 
-            selected_index = selected_indices[0]
-
             from src.gui.format_dialog import FormatDialog
             
-            dialog = FormatDialog(self.app.master, self.app.plugin_manager, self.app.settings_manager)
+            dialog = self.app.create_toplevel(FormatDialog, self.app.settings_manager)
             selected_plugin = dialog.selected_plugin
 
             if selected_plugin:
-                # Call the generic apply_plugin_to_selected_item with the chosen plugin
                 self.apply_plugin_to_selected_item(selected_plugin)
 
         except IndexError:
-            print("No item selected for formatting.")
+            log_and_show_error("エラー", "フォーマット対象の項目が選択されていません。", exc_info=True)
         except Exception as e:
-            print(f"Error during formatting: {e}")
+            log_and_show_error("エラー", f"フォーマット中に予期せぬエラーが発生しました。\n\n{e}", exc_info=True)
 
     def apply_plugin_to_selected_item(self, plugin_instance):
-        """Applies a specific plugin to the selected history item."""
         try:
-            selected_indices = self.app.gui.history_listbox.curselection()
+            selected_indices = self.app.gui.history_component.listbox.curselection()
             if not selected_indices:
                 return
 
@@ -88,62 +182,25 @@ class HistoryEventHandlers:
                 processed_text = plugin_instance.process(original_text)
 
                 if processed_text != original_text:
-                    self.app.last_formatted_info = {
-                        'index': selected_index,
-                        'original_text': original_text,
-                        'processed_text': processed_text
-                    }
-                    
-                    self.app.monitor.update_history_item(selected_index, processed_text)
-                    
-                    # Manually update the top display
-                    self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
-                    self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
-                    self.app.gui.clipboard_text_widget.insert(tk.END, processed_text)
-                    self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
-
-                    self.app.gui.enable_undo_button()
-                    print(f"Formatted item at index {selected_index} with {plugin_instance.name}")
+                    command = UpdateHistoryCommand(
+                        monitor=self.app.monitor,
+                        index=selected_index,
+                        original_text=original_text,
+                        new_text=processed_text
+                    )
+                    self.undo_manager.execute_command(command)
+                    logger.info(f"Executed format command for item at index {selected_index} with {plugin_instance.name}")
                 else:
-                    print(f"Plugin '{plugin_instance.name}' made no changes.")
-                    self.app.last_formatted_info = None
-                    self.app.gui.disable_undo_button()
+                    logger.warning(f"Plugin '{plugin_instance.name}' made no changes.")
 
         except IndexError:
-            print("No item selected for formatting.")
+            log_and_show_error("エラー", "フォーマット対象の項目が選択されていません。", exc_info=True)
         except Exception as e:
-            print(f"Error during formatting: {e}")
-
-    def undo_last_format(self):
-        """Reverts the last formatting operation."""
-        if not hasattr(self.app, 'last_formatted_info') or not self.app.last_formatted_info:
-            print("No format operation to undo.")
-            return
-
-        try:
-            info = self.app.last_formatted_info
-            index = info['index']
-            original_text = info['original_text']
-            
-            current_text, _ = self.app.gui.history_data[index]
-            if current_text == info['processed_text']:
-                self.app.monitor.update_history_item(index, original_text)
-
-                # Manually update the top display
-                self.app.gui.clipboard_text_widget.config(state=tk.NORMAL)
-                self.app.gui.clipboard_text_widget.delete(1.0, tk.END)
-                self.app.gui.clipboard_text_widget.insert(tk.END, original_text)
-                self.app.gui.clipboard_text_widget.config(state=tk.DISABLED)
-
-                print(f"Undo format for item at index {index}")
-            else:
-                print("Cannot undo: The item has been modified since formatting.")
-
-        except Exception as e:
-            print(f"Error during undo: {e}")
-        finally:
-            self.app.last_formatted_info = None
-            self.app.gui.disable_undo_button()
+            log_and_show_error("エラー", f"プラグインの適用中にエラーが発生しました。\n\n{e}", exc_info=True)
 
     def handle_search_history(self, search_query):
-        self.event_dispatcher.dispatch("REQUEST_SEARCH_HISTORY", search_query)
+        if search_query:
+            filtered_history = self.app.monitor.get_filtered_history(search_query)
+            self.app.gui.update_clipboard_display(self.app.monitor.last_clipboard_data, filtered_history)
+        else:
+            self.app.gui.update_clipboard_display(self.app.monitor.last_clipboard_data, self.app.monitor.get_history())

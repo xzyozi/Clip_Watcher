@@ -1,15 +1,23 @@
-from src.event_dispatcher import EventDispatcher
+from __future__ import annotations
+import os
+import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.core.event_dispatcher import EventDispatcher
+    from src.core.settings_manager import SettingsManager
+
 
 class SettingsEventHandlers:
-    def __init__(self, event_dispatcher: EventDispatcher):
+    def __init__(self, event_dispatcher: "EventDispatcher", settings_manager: "SettingsManager"):
         self.event_dispatcher = event_dispatcher
+        self.settings_manager = settings_manager
+        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
 
-        # Subscribe to events
-        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_always_on_top)
-        self.event_dispatcher.subscribe("SETTINGS_SET_THEME", self.handle_set_theme)
+    def handle_set_always_on_top(self, value: bool):
+        self.settings_manager.set_setting("always_on_top", value)
+        self.settings_manager.save_settings()
 
-    def handle_always_on_top(self, always_on_top):
-        self.event_dispatcher.dispatch("REQUEST_ALWAYS_ON_TOP", always_on_top)
-
-    def handle_set_theme(self, theme_name):
-        self.event_dispatcher.dispatch("REQUEST_SET_THEME", theme_name)
+    def handle_set_theme(self, theme_name: str):
+        self.settings_manager.set_setting("theme", theme_name)
+        self.settings_manager.save_settings()

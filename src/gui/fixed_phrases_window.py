@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import logging
 from pathlib import Path
-from src.exceptions import PhraseError
+from src.core.exceptions import PhraseError
 from src.gui.components.phrase_list_component import PhraseListComponent
 from src.gui.components.phrase_edit_component import PhraseEditComponent
 
@@ -36,11 +36,14 @@ class FixedPhrasesFrame(BaseFrameGUI):
                 self.app
             )
             self.edit_component.pack(fill=tk.X)
+
+            # 編集コンポーネントをリストコンポーネントに設定
+            self.list_component.set_edit_component(self.edit_component)
             
             self.logger.info("定型文管理フレームを初期化しました")
             
         except Exception as e:
-            self.logger.error(f"定型文管理フレームの初期化中にエラー: {str(e)}", exc_info=True)
+            self.log_and_show_error("エラー",f"定型文管理フレームの初期化中にエラー: {str(e)}", exc_info=True)
             raise
 
     # 他のメソッドはすべてPhraseListComponentとPhraseEditComponentに移動しました

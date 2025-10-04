@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 import logging
-from src.exceptions import PhraseError
+from src.core.exceptions import PhraseError
+from src.gui import context_menu
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +14,14 @@ class PhraseListComponent(BaseFrameGUI):
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
+        self.edit_component = None  # Will be set later
         self._create_widgets()
         self._populate_listbox()
+        self._bind_events()
+
+    def set_edit_component(self, edit_component):
+        self.edit_component = edit_component
+        self._bind_context_menu()
 
     def _create_widgets(self):
         # リストボックスの作成
@@ -28,9 +35,15 @@ class PhraseListComponent(BaseFrameGUI):
         # リストボックスとスクロールバーの連携
         self.phrase_listbox.config(yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.phrase_listbox.yview)
-        
+
+    def _bind_events(self):
         # ダブルクリックでコピー機能を設定
         self.phrase_listbox.bind('<Double-Button-1>', lambda e: self._copy_selected_phrase())
+
+    def _bind_context_menu(self):
+        if self.edit_component:
+            phrase_context_menu = context_menu.PhraseListContextMenu(self.master, self, self.edit_component)
+            self.phrase_listbox.bind("<Button-3>", phrase_context_menu.show)
 
     def _populate_listbox(self):
         """リストボックスに定型文を表示"""
@@ -57,11 +70,9 @@ class PhraseListComponent(BaseFrameGUI):
             self.logger.warning("定型文が選択されていません")
             messagebox.showwarning("警告", "定型文を選択してください。", parent=self)
         except PhraseError as e:
-            self.logger.error(f"定型文コピーエラー: {str(e)}")
-            messagebox.showerror("エラー", str(e), parent=self)
+            self.log_and_show_error("エラー",f"定型文コピーエラー: {str(e)}")
         except Exception as e:
-            self.logger.error(f"予期せぬエラー: {str(e)}", exc_info=True)
-            messagebox.showerror("エラー", f"コピー中にエラーが発生しました: {str(e)}", parent=self)
+            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def get_selected_phrase(self):
         """選択された定型文を返す"""
