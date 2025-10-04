@@ -27,9 +27,12 @@ class ThemeManager:
         
         # Apply to the widget itself
         try:
-            widget.config(bg=theme["bg"])
+            widget.config(bg=theme["bg"], fg=theme["fg"])
         except tk.TclError:
-            pass # Ignore errors for widgets that don't support -bg
+            try:
+                widget.config(bg=theme["bg"])
+            except tk.TclError:
+                pass # Ignore errors for widgets that don't support -bg
 
         # Special handling for ttk widgets
         style = ttk.Style(widget)
