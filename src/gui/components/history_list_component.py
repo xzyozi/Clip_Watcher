@@ -23,7 +23,8 @@ class HistoryListComponent(tk.Frame):
         self.listbox.bind("<<ListboxSelect>>", self._on_history_select)
         self.listbox.bind("<Double-Button-1>", lambda e: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.listbox.curselection()))
         from src.gui import context_menu
-        self.listbox.bind("<Button-3>", lambda e: context_menu.show_history_context_menu(e, self.app))
+        history_context_menu = context_menu.HistoryContextMenu(self.master, self.app)
+        self.listbox.bind("<Button-3>", history_context_menu.show)
 
     def _on_history_select(self, event):
         # This event is now handled by the parent (main_gui) to update the text widget

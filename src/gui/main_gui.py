@@ -41,7 +41,8 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.DISABLED)
-        self.clipboard_text_widget.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.clipboard_text_widget))
+        text_context_menu = context_menu.TextWidgetContextMenu(self.master, self.clipboard_text_widget)
+        self.clipboard_text_widget.bind("<Button-3>", text_context_menu.show)
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
@@ -54,7 +55,8 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.search_entry = tk.Entry(self.search_frame)
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X)
         self.search_entry.bind("<KeyRelease>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_SEARCH", self.search_entry.get()))
-        self.search_entry.bind("<Button-3>", lambda event: context_menu.show_text_widget_context_menu(event, self.search_entry))
+        search_context_menu = context_menu.TextWidgetContextMenu(self.master, self.search_entry)
+        self.search_entry.bind("<Button-3>", search_context_menu.show)
 
         history_container_frame = tk.LabelFrame(clipboard_tab_frame, text="Clipboard History", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y)

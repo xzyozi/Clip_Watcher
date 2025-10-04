@@ -36,6 +36,9 @@ class FixedPhrasesFrame(BaseFrameGUI):
                 self.app
             )
             self.edit_component.pack(fill=tk.X)
+
+            # 編集コンポーネントをリストコンポーネントに設定
+            self.list_component.set_edit_component(self.edit_component)
             
             self.logger.info("定型文管理フレームを初期化しました")
             
