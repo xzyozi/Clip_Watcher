@@ -24,22 +24,22 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.notebook.add(clipboard_tab_frame, text="Clipboard")
 
         # Create a PanedWindow to make frames resizable
-        paned_window = tk.PanedWindow(clipboard_tab_frame, orient=tk.VERTICAL)
+        paned_window = tk.PanedWindow(clipboard_tab_frame, orient=tk.VERTICAL, sashrelief=tk.RAISED, bg=THEMES[self.app.theme_manager.get_current_theme()]["frame_bg"])
         paned_window.pack(fill=tk.BOTH, expand=True)
 
-        self.current_clipboard_frame = tk.LabelFrame(paned_window, text="Current Clipboard Content", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        self.current_clipboard_frame = ttk.LabelFrame(paned_window, text="Current Clipboard Content")
         paned_window.add(self.current_clipboard_frame, height=100) # Initial height
 
-        self.redo_button = tk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
+        self.redo_button = ttk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
         self.redo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
 
-        self.undo_button = tk.Button(self.current_clipboard_frame, text="⟲", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
+        self.undo_button = ttk.Button(self.current_clipboard_frame, text="⟲", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
         self.undo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
 
-        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5)
+        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT)
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.clipboard_text_scrollbar = tk.Scrollbar(self.current_clipboard_frame, orient="vertical", command=self.clipboard_text_widget.yview)
+        self.clipboard_text_scrollbar = ttk.Scrollbar(self.current_clipboard_frame, orient="vertical", command=self.clipboard_text_widget.yview)
         self.clipboard_text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.clipboard_text_widget.config(yscrollcommand=self.clipboard_text_scrollbar.set)
 
@@ -51,39 +51,39 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
         # Create a frame for the history section
-        history_area_frame = tk.Frame(paned_window)
+        history_area_frame = ttk.Frame(paned_window)
         paned_window.add(history_area_frame)
 
-        self.search_frame = tk.Frame(history_area_frame, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
-        self.search_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        self.search_frame = ttk.Frame(history_area_frame)
+        self.search_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        self.search_label = tk.Label(self.search_frame, text="検索 (Search):")
+        self.search_label = ttk.Label(self.search_frame, text="検索 (Search):")
         self.search_label.pack(side=tk.LEFT)
 
-        self.search_entry = tk.Entry(self.search_frame)
+        self.search_entry = ttk.Entry(self.search_frame)
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X)
         self.search_entry.bind("<KeyRelease>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_SEARCH", self.search_entry.get()))
         search_context_menu = context_menu.TextWidgetContextMenu(self.master, self.search_entry)
         self.search_entry.bind("<Button-3>", search_context_menu.show)
 
-        history_container_frame = tk.LabelFrame(history_area_frame, text="Clipboard History", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
-        history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y)
+        history_container_frame = ttk.LabelFrame(history_area_frame, text="Clipboard History")
+        history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
         self.history_component = HistoryListComponent(history_container_frame, self.app)
         self.history_component.pack(fill=tk.BOTH, expand=True)
 
-        self.control_frame = tk.Frame(history_area_frame)
+        self.control_frame = ttk.Frame(history_area_frame)
         self.control_frame.pack(pady=config.FRAME_PADDING)
 
-        self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection()))
+        self.copy_history_button = ttk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection()))
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.sort_button = tk.Button(self.control_frame, text="Sort: Desc", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
+        self.sort_button = ttk.Button(self.control_frame, text="Sort: Desc", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
         self.sort_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.format_button = tk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
+        self.format_button = ttk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.quit_button = tk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
+        self.quit_button = ttk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
         self.quit_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
 
         fixed_phrases_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)

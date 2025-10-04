@@ -84,6 +84,11 @@ class ThemeManager:
                  widget.config(bg=theme["bg"])
             elif isinstance(widget, (tk.Text, tk.Listbox)):
                 widget.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
+            elif isinstance(widget, (tk.Button, tk.Checkbutton, tk.Radiobutton)):
+                widget.config(bg=theme["button_bg"], fg=theme["button_fg"], activebackground=theme["select_bg"], activeforeground=theme["select_fg"], selectcolor=theme["frame_bg"])
+            elif isinstance(widget, tk.Label):
+                widget.config(bg=theme["bg"], fg=theme["label_fg"])
+
         except (tk.TclError, AttributeError):
             pass # Ignore errors for widgets that don't support these properties
 

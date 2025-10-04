@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog
 import logging
 from src.core.exceptions import PhraseError
 
@@ -19,23 +19,23 @@ class PhraseEditComponent(BaseFrameGUI):
         self._create_widgets()
 
     def _create_widgets(self):
-        button_frame = tk.Frame(self)
+        button_frame = ttk.Frame(self)
         button_frame.pack(pady=5)
 
         # コピーボタン
-        self.copy_button = tk.Button(button_frame, text="コピー (Copy)", command=self._copy_phrase)
+        self.copy_button = ttk.Button(button_frame, text="コピー (Copy)", command=self._copy_phrase)
         self.copy_button.pack(side=tk.LEFT, padx=5)
 
         # 追加ボタン
-        self.add_button = tk.Button(button_frame, text="追加 (Add)", command=self._add_phrase)
+        self.add_button = ttk.Button(button_frame, text="追加 (Add)", command=self._add_phrase)
         self.add_button.pack(side=tk.LEFT, padx=5)
 
         # 編集ボタン
-        self.edit_button = tk.Button(button_frame, text="編集 (Edit)", command=self._edit_phrase)
+        self.edit_button = ttk.Button(button_frame, text="編集 (Edit)", command=self._edit_phrase)
         self.edit_button.pack(side=tk.LEFT, padx=5)
 
         # 削除ボタン
-        self.delete_button = tk.Button(button_frame, text="削除 (Delete)", command=self._delete_phrase)
+        self.delete_button = ttk.Button(button_frame, text="削除 (Delete)", command=self._delete_phrase)
         self.delete_button.pack(side=tk.LEFT, padx=5)
 
     def _copy_phrase(self):
