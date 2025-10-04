@@ -23,8 +23,12 @@ class ClipWatcherGUI(BaseFrameGUI):
         clipboard_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(clipboard_tab_frame, text="Clipboard")
 
-        self.current_clipboard_frame = tk.LabelFrame(clipboard_tab_frame, text="Current Clipboard Content", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
-        self.current_clipboard_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        # Create a PanedWindow to make frames resizable
+        paned_window = tk.PanedWindow(clipboard_tab_frame, orient=tk.VERTICAL)
+        paned_window.pack(fill=tk.BOTH, expand=True)
+
+        self.current_clipboard_frame = tk.LabelFrame(paned_window, text="Current Clipboard Content", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        paned_window.add(self.current_clipboard_frame, height=100) # Initial height
 
         self.redo_button = tk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
         self.redo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
@@ -46,7 +50,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
-        self.search_frame = tk.Frame(clipboard_tab_frame, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        # Create a frame for the history section
+        history_area_frame = tk.Frame(paned_window)
+        paned_window.add(history_area_frame)
+
+        self.search_frame = tk.Frame(history_area_frame, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         self.search_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         self.search_label = tk.Label(self.search_frame, text="検索 (Search):")
@@ -58,12 +66,12 @@ class ClipWatcherGUI(BaseFrameGUI):
         search_context_menu = context_menu.TextWidgetContextMenu(self.master, self.search_entry)
         self.search_entry.bind("<Button-3>", search_context_menu.show)
 
-        history_container_frame = tk.LabelFrame(clipboard_tab_frame, text="Clipboard History", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        history_container_frame = tk.LabelFrame(history_area_frame, text="Clipboard History", padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
         history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y)
         self.history_component = HistoryListComponent(history_container_frame, self.app)
         self.history_component.pack(fill=tk.BOTH, expand=True)
 
-        self.control_frame = tk.Frame(clipboard_tab_frame)
+        self.control_frame = tk.Frame(history_area_frame)
         self.control_frame.pack(pady=config.FRAME_PADDING)
 
         self.copy_history_button = tk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection()))
