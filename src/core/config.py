@@ -41,6 +41,7 @@ THEMES = {
 
         # Special colors
         "pinned_bg": "#FFF9C4",        # Background for pinned items in the history
+        "highlight_bg": "#EEEEEE",
 
         # Menu colors
         "menu_bg": "#FFFFFF",         # Background for menus
@@ -50,36 +51,37 @@ THEMES = {
     },
     "dark": {
         # General colors
-        "bg": "#282A36",              # Main window background (Dracula theme)
-        "fg": "#F8F8F2",              # Default foreground/text color (off-white)
+        "bg": "#2E2E2E",              # Main window background
+        "fg": "#E0E0E0",              # Default foreground/text color
 
         # Selection colors
-        "select_bg": "#44475A",        # Background color for selected items
-        "select_fg": "#F8F8F2",        # Foreground color for selected items
+        "select_bg": "#4A4A4A",        # Background color for selected items
+        "select_fg": "#FFFFFF",        # Foreground color for selected items
 
         # Frame & Label colors
-        "frame_bg": "#21222C",         # Background for frames and group boxes
-        "label_fg": "#BD93F9",         # Labels and secondary text (light purple)
+        "frame_bg": "#242424",         # Background for frames and group boxes
+        "label_fg": "#BDBDBD",         # Labels and secondary text
 
         # Entry widgets (Text, Entry, Spinbox)
-        "entry_bg": "#343746",         # Background for text entry widgets
-        "entry_fg": "#F8F8F2",         # Text color for entry widgets
+        "entry_bg": "#3A3A3A",         # Background for text entry widgets
+        "entry_fg": "#E0E0E0",         # Text color for entry widgets
 
         # Button colors
-        "button_bg": "#44475A",        # Background for buttons
-        "button_fg": "#F8F8F2",        # Text color for buttons
+        "button_bg": "#4A4A4A",        # Background for buttons
+        "button_fg": "#FFFFFF",        # Text color for buttons
 
         # Listbox/Treeview colors
-        "listbox_bg": "#282A36",       # Background for lists and trees
-        "listbox_fg": "#F8F8F2",       # Text color for lists and trees
+        "listbox_bg": "#2E2E2E",       # Background for lists and trees
+        "listbox_fg": "#E0E0E0",       # Text color for lists and trees
 
         # Special colors
-        "pinned_bg": "#6272A4",        # Background for pinned items (a muted blue)
+        "pinned_bg": "#555555",        # Background for pinned items
+        "highlight_bg": "#3C3C3C",
 
         # Menu colors
-        "menu_bg": "#21222C",         # Background for menus
-        "menu_fg": "#F8F8F2",         # Text color for menus
-        "active_menu_bg": "#44475A",   # Background for active/hovered menu items
-        "active_menu_fg": "#BD93F9",   # Text color for active/hovered menu items (light purple)
+        "menu_bg": "#242424",         # Background for menus
+        "menu_fg": "#E0E0E0",         # Text color for menus
+        "active_menu_bg": "#4A4A4A",   # Background for active/hovered menu items
+        "active_menu_fg": "#FFFFFF",   # Text color for active/hovered menu items
     }
 }
