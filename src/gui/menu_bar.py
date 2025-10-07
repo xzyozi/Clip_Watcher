@@ -39,9 +39,9 @@ def create_menu_bar(master, app_instance):
     app_instance.theme_var = tk.StringVar(value=app_instance.settings_manager.get_setting("theme"))
     theme_menu = tk.Menu(view_menu, tearoff=0)
     theme_menu.add_radiobutton(label="ライト (Light)", variable=app_instance.theme_var, value="light",
-                               command=lambda: app_instance.settings_handlers.handle_set_theme("light"))
+                               command=lambda: app_instance.settings_handlers.handle_set_theme("light", save=False))
     theme_menu.add_radiobutton(label="ダーク (Dark)", variable=app_instance.theme_var, value="dark",
-                               command=lambda: app_instance.settings_handlers.handle_set_theme("dark"))
+                               command=lambda: app_instance.settings_handlers.handle_set_theme("dark", save=False))
     # "Follow System" is more complex, will just logger.info for now
     theme_menu.add_radiobutton(label="システム設定に合わせる (Follow System)", variable=app_instance.theme_var, value="system",
                                command=lambda: logger.info("Follow System theme clicked (not yet implemented)"))
