@@ -36,12 +36,13 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.undo_button = ttk.Button(self.current_clipboard_frame, text="⟲", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), state=tk.DISABLED)
         self.undo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
 
-        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT)
+        self.clipboard_text_scrollbar = ttk.Scrollbar(self.current_clipboard_frame, orient="vertical")
+        self.clipboard_text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT, yscrollcommand=self.clipboard_text_scrollbar.set)
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.clipboard_text_scrollbar = ttk.Scrollbar(self.current_clipboard_frame, orient="vertical", command=self.clipboard_text_widget.yview)
-        self.clipboard_text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.clipboard_text_widget.config(yscrollcommand=self.clipboard_text_scrollbar.set)
+        self.clipboard_text_scrollbar.config(command=self.clipboard_text_widget.yview)
 
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.DISABLED)

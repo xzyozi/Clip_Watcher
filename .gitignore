@@ -1,4 +1,10 @@
 **/__pycache__/ 
-.gemini/styleguide.md
+.gemini/
 fixed_phrases.json
 .coverage
+
+# SOURCETEAIL
+Clip_Wathcer.srctrldb_tmp
+Clip_Wathcer.srctrlprj
+Clip_Wathcer.srctrldb
+Clip_Wathcer.srctrlbm

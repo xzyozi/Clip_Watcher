@@ -18,6 +18,9 @@ class SettingsEventHandlers:
         self.settings_manager.set_setting("always_on_top", value)
         self.settings_manager.save_settings()
 
-    def handle_set_theme(self, theme_name: str):
+    def handle_set_theme(self, theme_name: str, save: bool = True):
         self.settings_manager.set_setting("theme", theme_name)
-        self.settings_manager.save_settings()
+        if save:
+            self.settings_manager.save_settings()
+        else:
+            self.settings_manager.notify_listeners()
