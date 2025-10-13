@@ -12,6 +12,7 @@ from src.gui.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src.event_handlers import main_handlers
 from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.undo_manager import UndoManager
 from src.gui.theme_manager import ThemeManager
@@ -59,6 +60,7 @@ class Application(BaseApplication):
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+        self.event_dispatcher.subscribe("SHOW_SCHEDULE_HELPER_TOOL", lambda: main_handlers.handle_show_schedule_helper_tool(self))
         self.master.bind("<FocusIn>", self.on_focus_in)
 
     def on_focus_in(self, event=None):

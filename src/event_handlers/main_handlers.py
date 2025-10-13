@@ -41,3 +41,15 @@ def handle_manage_fixed_phrases(master, fixed_phrases_manager):
     fixed_phrases_window = FixedPhrasesManager(master, fixed_phrases_manager)
     fixed_phrases_window.grab_set()
     master.wait_window(fixed_phrases_window)
+
+
+def handle_show_schedule_helper_tool(app_instance):
+    """ Switch to the Schedule Helper Tool tab in the main notebook """
+    try:
+        # The tab index should be 2 (0: Clipboard, 1: Fixed Phrases, 2: Schedule Helper)
+        app_instance.gui.notebook.select(2)
+        logger.info("Switched to Schedule Helper Tool tab.")
+    except tk.TclError as e:
+        logger.error(f"Failed to switch to Schedule Helper Tool tab. It might not exist. {e}")
+    except Exception as e:
+        log_and_show_error("エラー", f"An unexpected error occurred while switching tabs: {e}")

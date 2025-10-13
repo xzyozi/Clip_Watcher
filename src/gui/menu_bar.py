@@ -57,6 +57,11 @@ def create_menu_bar(master, app_instance):
     
     menubar.add_cascade(label="表示 (View)", menu=view_menu)
 
+    # Tools Menu
+    tools_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
+    tools_menu.add_command(label="日程調整ツール (Schedule Helper)", command=lambda: app_instance.event_dispatcher.dispatch("SHOW_SCHEDULE_HELPER_TOOL"))
+    menubar.add_cascade(label="ツール (Tools)", menu=tools_menu)
+
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     help_menu.add_command(label="使い方 (How to Use)", command=event_handlers.handle_how_to_use)

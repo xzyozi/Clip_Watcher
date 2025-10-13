@@ -5,6 +5,7 @@ from src.core import config
 from src.core.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
+from src.gui.components.schedule_helper_component import ScheduleHelperComponent
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
@@ -91,6 +92,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.notebook.add(fixed_phrases_tab_frame, text="Fixed Phrases")
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
+
+        schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.notebook.add(schedule_helper_tab_frame, text="日程調整ツール")
+        self.schedule_helper_frame = ScheduleHelperComponent(schedule_helper_tab_frame, self.app)
+        self.schedule_helper_frame.pack(fill=tk.BOTH, expand=True)
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_font_settings_changed)
