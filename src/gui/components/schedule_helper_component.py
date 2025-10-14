@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import calendar
 from datetime import datetime
 import logging
@@ -56,6 +56,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.month_year_label = ttk.Label(nav_frame, text="", width=18, anchor="center")
         self.month_year_label.pack(side=tk.LEFT, padx=5)
         ttk.Button(nav_frame, text=">", command=self._next_month, width=3).pack(side=tk.LEFT)
+        ttk.Button(nav_frame, text="Today", command=self._go_to_today).pack(side=tk.LEFT, padx=10)
 
         self.calendar_frame = ttk.Frame(calendar_part_frame)
         self.calendar_frame.pack(pady=5)
@@ -86,9 +87,10 @@ class ScheduleHelperComponent(BaseFrameGUI):
         editor_frame = ttk.LabelFrame(main_paned_window, text="Generated Text")
         main_paned_window.add(editor_frame)
 
-        # Add a clear button
-        clear_button = ttk.Button(editor_frame, text="Clear", command=self._clear_text)
-        clear_button.pack(side=tk.TOP, anchor=tk.NE, padx=5, pady=2)
+        button_bar_frame = ttk.Frame(editor_frame)
+        button_bar_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
+        ttk.Button(button_bar_frame, text="Copy to Clipboard", command=self._copy_to_clipboard).pack(side=tk.RIGHT)
+        ttk.Button(button_bar_frame, text="Clear", command=self._clear_text).pack(side=tk.RIGHT, padx=5)
 
         self.text_scrollbar = ttk.Scrollbar(editor_frame, orient="vertical")
         self.text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -125,10 +127,15 @@ class ScheduleHelperComponent(BaseFrameGUI):
                 if self.current_year == self.today.year and self.current_month == self.today.month and day == self.today.day:
                     btn.configure(style="Today.TButton")
                 
-                # Check if this date is in the selected list
                 is_selected = any(d.year == self.current_year and d.month == self.current_month and d.day == day for d in self.selected_dates)
                 if is_selected:
                     btn.configure(style="Selected.TButton")
+
+    def _go_to_today(self):
+        self.current_year = self.today.year
+        self.current_month = self.today.month
+        self._update_calendar()
+        self.logger.info("Calendar moved to today's month.")
 
     def _prev_month(self):
         self.current_month -= 1
@@ -146,7 +153,6 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
     def _select_date(self, day):
         new_date = datetime(self.current_year, self.current_month, day)
-        # Toggle selection
         found = False
         for d in self.selected_dates:
             if d.year == new_date.year and d.month == new_date.month and d.day == new_date.day:
@@ -166,6 +172,20 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.text_widget.delete(1.0, tk.END)
         self._update_calendar()
         self.logger.info("Cleared all selected dates and text.")
+
+    def _copy_to_clipboard(self):
+        content = self.text_widget.get("1.0", "end-1c")
+        if not content:
+            self.logger.info("Nothing to copy.")
+            return
+        try:
+            self.master.clipboard_clear()
+            self.master.clipboard_append(content)
+            self.logger.info("Copied generated text to clipboard.")
+            messagebox.showinfo("Copied", "テキストをクリップボードにコピーしました。", parent=self)
+        except tk.TclError:
+            self.logger.error("Failed to copy text to clipboard.")
+            messagebox.showerror("Error", "クリップボードへのコピーに失敗しました。", parent=self)
 
     def _update_text_widget(self, event=None):
         try:
