@@ -42,6 +42,7 @@ class Application(BaseApplication):
         self.theme_manager = theme_manager
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
+        self.calendar_visible_var = tk.BooleanVar(value=True)
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
@@ -60,7 +61,7 @@ class Application(BaseApplication):
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
-        self.event_dispatcher.subscribe("SHOW_SCHEDULE_HELPER_TOOL", lambda: main_handlers.handle_show_schedule_helper_tool(self))
+        
         self.master.bind("<FocusIn>", self.on_focus_in)
 
     def on_focus_in(self, event=None):

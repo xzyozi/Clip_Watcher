@@ -24,12 +24,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         clipboard_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(clipboard_tab_frame, text="Clipboard")
 
-        # Create a PanedWindow to make frames resizable
         paned_window = tk.PanedWindow(clipboard_tab_frame, orient=tk.VERTICAL, sashrelief=tk.RAISED, bg=THEMES[self.app.theme_manager.get_current_theme()]["frame_bg"])
         paned_window.pack(fill=tk.BOTH, expand=True)
 
         self.current_clipboard_frame = ttk.LabelFrame(paned_window, text="Current Clipboard Content")
-        paned_window.add(self.current_clipboard_frame, height=100) # Initial height
+        paned_window.add(self.current_clipboard_frame, height=100)
 
         self.redo_button = ttk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
         self.redo_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
@@ -52,7 +51,6 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
-        # Create a frame for the history section
         history_area_frame = ttk.Frame(paned_window)
         paned_window.add(history_area_frame)
 
@@ -93,14 +91,27 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
-        schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.notebook.add(schedule_helper_tab_frame, text="日程調整ツール")
-        self.schedule_helper_frame = ScheduleHelperComponent(schedule_helper_tab_frame, self.app)
+        self.schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.notebook.add(self.schedule_helper_tab_frame, text="Calender")
+        self.schedule_helper_frame = ScheduleHelperComponent(self.schedule_helper_tab_frame, self.app)
         self.schedule_helper_frame.pack(fill=tk.BOTH, expand=True)
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_font_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
+
+    def toggle_calendar_tab(self, visible_var):
+        """Toggles the visibility of the Calender tab based on a tk.BooleanVar."""
+        try:
+            tab_exists = self.notebook.index(self.schedule_helper_tab_frame) is not None
+        except tk.TclError:
+            tab_exists = False
+
+        if visible_var.get() and not tab_exists:
+            self.notebook.add(self.schedule_helper_tab_frame, text="Calender")
+            self.notebook.select(self.schedule_helper_tab_frame)
+        elif not visible_var.get() and tab_exists:
+            self.notebook.forget(self.schedule_helper_tab_frame)
 
     def on_font_settings_changed(self, settings):
         self.apply_font_settings(
