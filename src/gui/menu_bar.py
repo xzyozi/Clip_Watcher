@@ -57,6 +57,15 @@ def create_menu_bar(master, app_instance):
     
     menubar.add_cascade(label="表示 (View)", menu=view_menu)
 
+    # Tools Menu
+    tools_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
+    tools_menu.add_checkbutton(
+        label="カレンダー表示 (Show Calender)", 
+        variable=app_instance.calendar_visible_var, 
+        command=lambda: app_instance.gui.toggle_calendar_tab(app_instance.calendar_visible_var)
+    )
+    menubar.add_cascade(label="ツール (Tools)", menu=tools_menu)
+
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
     help_menu.add_command(label="使い方 (How to Use)", command=event_handlers.handle_how_to_use)

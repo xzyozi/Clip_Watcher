@@ -12,6 +12,7 @@ from src.gui.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src.event_handlers import main_handlers
 from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.undo_manager import UndoManager
 from src.gui.theme_manager import ThemeManager
@@ -41,6 +42,7 @@ class Application(BaseApplication):
         self.theme_manager = theme_manager
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
+        self.calendar_visible_var = tk.BooleanVar(value=True)
         
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
@@ -59,6 +61,7 @@ class Application(BaseApplication):
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+        
         self.master.bind("<FocusIn>", self.on_focus_in)
 
     def on_focus_in(self, event=None):
