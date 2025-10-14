@@ -31,6 +31,13 @@ class ThemeManager:
         style.configure('TLabelFrame', background=theme["frame_bg"], foreground=theme["label_fg"])
         style.configure('TButton', background=theme["button_bg"], foreground=theme["button_fg"])
         style.map('TButton', background=[('active', theme["button_bg"])])
+
+        # Custom button styles for calendar
+        style.configure('Today.TButton', background=theme.get("highlight_bg", theme["button_bg"]), foreground=theme["button_fg"])
+        style.map('Today.TButton', background=[('active', theme.get("highlight_bg", theme["button_bg"]))])
+        style.configure('Selected.TButton', background=theme["select_bg"], foreground=theme["select_fg"])
+        style.map('Selected.TButton', background=[('active', theme["select_bg"])])
+
         style.configure('TCheckbutton', background=theme["frame_bg"], foreground=theme["label_fg"])
         style.configure('TRadiobutton', background=theme["frame_bg"], foreground=theme["label_fg"])
         style.configure('TEntry', fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"], insertbackground=theme["fg"])
