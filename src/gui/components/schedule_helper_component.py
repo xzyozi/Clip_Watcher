@@ -19,10 +19,10 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.today = datetime.now()
         self.current_year = self.today.year
         self.current_month = self.today.month
-        self.selected_date = self.today
+        self.selected_dates = []
 
         self.hour_var = tk.StringVar(value=f"{self.today.hour:02d}")
-        self.minute_var = tk.StringVar(value=f"{self.today.minute:02d}")
+        self.minute_var = tk.StringVar(value="00")
 
         self.date_formats = [
             "%Y-%m-%d",
@@ -38,7 +38,6 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         self._create_widgets()
         self._update_calendar()
-        self._update_text_widget()
 
     def _create_widgets(self):
         main_paned_window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RAISED)
@@ -47,7 +46,6 @@ class ScheduleHelperComponent(BaseFrameGUI):
         controls_frame = ttk.Frame(main_paned_window, padding=5)
         main_paned_window.add(controls_frame, height=320)
 
-        # Top part of controls (Calendar)
         calendar_part_frame = ttk.Frame(controls_frame)
         calendar_part_frame.pack(fill=tk.X)
 
@@ -62,19 +60,22 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.calendar_frame = ttk.Frame(calendar_part_frame)
         self.calendar_frame.pack(pady=5)
 
-        # Bottom part of controls (Time and Format)
         time_format_frame = ttk.Frame(controls_frame)
         time_format_frame.pack(fill=tk.X, pady=10)
 
-        # Time selection
         time_frame = ttk.LabelFrame(time_format_frame, text="Time")
         time_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
 
-        ttk.Spinbox(time_frame, from_=0, to=23, wrap=True, textvariable=self.hour_var, width=4, command=self._update_text_widget).pack(side=tk.LEFT, padx=5, pady=5)
+        hour_values = [f"{h:02d}" for h in range(24)]
+        minute_values = ["00", "15", "30", "45"]
+        hour_combo = ttk.Combobox(time_frame, textvariable=self.hour_var, values=hour_values, width=4)
+        hour_combo.pack(side=tk.LEFT, padx=5, pady=5)
+        hour_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
         ttk.Label(time_frame, text=":").pack(side=tk.LEFT)
-        ttk.Spinbox(time_frame, from_=0, to=59, wrap=True, textvariable=self.minute_var, width=4, command=self._update_text_widget).pack(side=tk.LEFT, padx=5, pady=5)
+        minute_combo = ttk.Combobox(time_frame, textvariable=self.minute_var, values=minute_values, width=4)
+        minute_combo.pack(side=tk.LEFT, padx=5, pady=5)
+        minute_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
 
-        # Format selection
         format_frame = ttk.LabelFrame(time_format_frame, text="Format")
         format_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
 
@@ -84,6 +85,10 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         editor_frame = ttk.LabelFrame(main_paned_window, text="Generated Text")
         main_paned_window.add(editor_frame)
+
+        # Add a clear button
+        clear_button = ttk.Button(editor_frame, text="Clear", command=self._clear_text)
+        clear_button.pack(side=tk.TOP, anchor=tk.NE, padx=5, pady=2)
 
         self.text_scrollbar = ttk.Scrollbar(editor_frame, orient="vertical")
         self.text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -119,7 +124,10 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
                 if self.current_year == self.today.year and self.current_month == self.today.month and day == self.today.day:
                     btn.configure(style="Today.TButton")
-                if self.current_year == self.selected_date.year and self.current_month == self.selected_date.month and day == self.selected_date.day:
+                
+                # Check if this date is in the selected list
+                is_selected = any(d.year == self.current_year and d.month == self.current_month and d.day == day for d in self.selected_dates)
+                if is_selected:
                     btn.configure(style="Selected.TButton")
 
     def _prev_month(self):
@@ -137,29 +145,50 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self._update_calendar()
 
     def _select_date(self, day):
-        self.selected_date = datetime(self.current_year, self.current_month, day)
+        new_date = datetime(self.current_year, self.current_month, day)
+        # Toggle selection
+        found = False
+        for d in self.selected_dates:
+            if d.year == new_date.year and d.month == new_date.month and d.day == new_date.day:
+                self.selected_dates.remove(d)
+                found = True
+                break
+        if not found:
+            self.selected_dates.append(new_date)
+        
+        self.selected_dates.sort()
         self._update_calendar()
         self._update_text_widget()
-        self.logger.info(f"Date selected: {self.selected_date.strftime('%Y-%m-%d')}")
+        self.logger.info(f"Selected dates: {len(self.selected_dates)}")
+
+    def _clear_text(self):
+        self.selected_dates.clear()
+        self.text_widget.delete(1.0, tk.END)
+        self._update_calendar()
+        self.logger.info("Cleared all selected dates and text.")
 
     def _update_text_widget(self, event=None):
         try:
             hour = int(self.hour_var.get())
             minute = int(self.minute_var.get())
-            self.selected_date = self.selected_date.replace(hour=hour, minute=minute)
-            
             format_str = self.format_var.get()
-            
-            # Handle Japanese day of the week
-            if "%a" in format_str:
-                weekdays = ["月", "火", "水", "木", "金", "土", "日"]
-                day_of_week = weekdays[self.selected_date.weekday()]
-                temp_format = format_str.replace("%a", "__DAY_OF_WEEK__")
-                formatted_text = self.selected_date.strftime(temp_format).replace("__DAY_OF_WEEK__", day_of_week)
-            else:
-                formatted_text = self.selected_date.strftime(format_str)
 
             self.text_widget.delete(1.0, tk.END)
-            self.text_widget.insert(tk.END, formatted_text)
+            
+            output_lines = []
+            for date in self.selected_dates:
+                full_date = date.replace(hour=hour, minute=minute)
+                
+                if "%a" in format_str:
+                    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+                    day_of_week = weekdays[full_date.weekday()]
+                    temp_format = format_str.replace("%a", "__DAY_OF_WEEK__")
+                    formatted_text = full_date.strftime(temp_format).replace("__DAY_OF_WEEK__", day_of_week)
+                else:
+                    formatted_text = full_date.strftime(format_str)
+                output_lines.append(formatted_text)
+
+            self.text_widget.insert(tk.END, "\n".join(output_lines))
+
         except (ValueError, TypeError) as e:
             self.logger.error(f"Error updating text widget: {e}")
