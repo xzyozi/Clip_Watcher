@@ -45,7 +45,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_scrollbar.config(command=self.clipboard_text_widget.yview)
 
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
-        self.clipboard_text_widget.config(state=tk.DISABLED)
+        self.clipboard_text_widget.config(state=tk.NORMAL)
         text_context_menu = context_menu.TextWidgetContextMenu(self.master, self.clipboard_text_widget)
         self.clipboard_text_widget.bind("<Button-3>", text_context_menu.show)
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
@@ -139,7 +139,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self.format_button.config(state=tk.DISABLED)
             self.clipboard_text_widget.insert(tk.END, self.app.monitor.last_clipboard_data)
-            self.clipboard_text_widget.config(state=tk.DISABLED)
+            self.clipboard_text_widget.config(state=tk.NORMAL)
 
     def apply_font_settings(self, clipboard_content_font_family, clipboard_content_font_size, history_font_family, history_font_size):
         clipboard_font = font.Font(family=clipboard_content_font_family, size=clipboard_content_font_size)
@@ -168,7 +168,7 @@ class ClipWatcherGUI(BaseFrameGUI):
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.clipboard_text_widget.insert(tk.END, current_content)
-            self.clipboard_text_widget.config(state=tk.DISABLED)
+            self.clipboard_text_widget.config(state=tk.NORMAL)
 
     def _on_text_widget_change(self, event):
         if self._debounce_job:
@@ -180,10 +180,15 @@ class ClipWatcherGUI(BaseFrameGUI):
 
     def _save_edited_text(self):
         selected_indices = self.history_component.listbox.curselection()
-        if not selected_indices:
-            return
-        selected_index = selected_indices[0]
         new_text = self.clipboard_text_widget.get("1.0", "end-1c")
+
+        if not selected_indices:
+            if new_text != self.app.monitor.last_clipboard_data:
+                self.master.clipboard_clear()
+                self.master.clipboard_append(new_text)
+            return
+
+        selected_index = selected_indices[0]
         if 0 <= selected_index < len(self.history_data):
             original_text, _ = self.history_data[selected_index]
             if new_text != original_text:
