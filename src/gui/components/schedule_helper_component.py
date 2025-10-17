@@ -16,6 +16,8 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing ScheduleHelperComponent.")
         
+        calendar.setfirstweekday(calendar.SUNDAY)
+
         self.today = datetime.now()
         self.current_year = self.today.year
         self.current_month = self.today.month
@@ -111,7 +113,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         self.month_year_label.config(text=f"{self.current_year} / {self.current_month:02d}")
 
-        days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        days = ["日", "月", "火", "水", "木", "金", "土"]
         for i, day in enumerate(days):
             ttk.Label(self.calendar_frame, text=day, width=5, anchor="center").grid(row=0, column=i, padx=2, pady=2)
 
