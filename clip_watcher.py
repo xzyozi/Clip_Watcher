@@ -50,7 +50,7 @@ class Application(BaseApplication):
         self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
-        self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
+        self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
         self.monitor.start()
@@ -63,6 +63,10 @@ class Application(BaseApplication):
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         
         self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def update_gui(self, current_content, history):
+        """Wrapper to pass sort order to the GUI."""
+        self.gui.update_clipboard_display(current_content, history, self.history_sort_ascending)
 
     def on_focus_in(self, event=None):
         self.reassert_topmost()
@@ -93,15 +97,17 @@ class Application(BaseApplication):
 
             try:
                 if startup_enabled:
-                    script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
+                    # Use __file__ to get the absolute path of the script.
+                    # This is more robust than relying on the current working directory.
+                    script_path = os.path.abspath(__file__)
+                    script_content = f'@echo off\nstart "" "{sys.executable}" "{script_path}"'
                     with open(startup_script_path, "w") as f:
                         f.write(script_content)
                 else:
                     if os.path.exists(startup_script_path):
                         os.remove(startup_script_path)
             except Exception as e:
-                # Handle potential errors, e.g., permissions
-                print(f"Failed to manage startup script: {e}")
+                self.show_error_message("Startup Error", f"Failed to manage startup script: {e}")
 
     def on_toggle_history_sort(self):
         """Toggles the history sort order and refreshes the GUI."""
@@ -112,7 +118,7 @@ class Application(BaseApplication):
         else:
             self.gui.sort_button.config(text="Sort: Desc")
 
-        self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
 
     def open_settings_window(self):
@@ -122,7 +128,7 @@ class Application(BaseApplication):
         toplevel_window = ToplevelClass(self.master, self, *args, **kwargs)
         if self.settings_manager.get_setting("always_on_top", False):
             toplevel_window.attributes("-topmost", True)
-        toplevel_window.grab_set()
+        toplevel_window.transient(self.master)
         return toplevel_window
 
     def show_error_message(self, title, message):
@@ -135,6 +141,7 @@ class Application(BaseApplication):
         self.stop_monitor()
         self.monitor.save_history_to_file()
         self.master.destroy()
+
 
 if __name__ == "__main__":
     try:
