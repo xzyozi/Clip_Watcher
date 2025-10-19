@@ -93,15 +93,17 @@ class Application(BaseApplication):
 
             try:
                 if startup_enabled:
-                    script_content = f'@echo off\nstart "" "{sys.executable}" "{os.path.abspath("clip_watcher.py")}"'
+                    # Use __file__ to get the absolute path of the script.
+                    # This is more robust than relying on the current working directory.
+                    script_path = os.path.abspath(__file__)
+                    script_content = f'@echo off\nstart "" "{sys.executable}" "{script_path}"'
                     with open(startup_script_path, "w") as f:
                         f.write(script_content)
                 else:
                     if os.path.exists(startup_script_path):
                         os.remove(startup_script_path)
             except Exception as e:
-                # Handle potential errors, e.g., permissions
-                print(f"Failed to manage startup script: {e}")
+                self.show_error_message("Startup Error", f"Failed to manage startup script: {e}")
 
     def on_toggle_history_sort(self):
         """Toggles the history sort order and refreshes the GUI."""
@@ -112,7 +114,7 @@ class Application(BaseApplication):
         else:
             self.gui.sort_button.config(text="Sort: Desc")
 
-        self.gui.update_clipboard_display(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
 
     def open_settings_window(self):
@@ -122,7 +124,7 @@ class Application(BaseApplication):
         toplevel_window = ToplevelClass(self.master, self, *args, **kwargs)
         if self.settings_manager.get_setting("always_on_top", False):
             toplevel_window.attributes("-topmost", True)
-        toplevel_window.grab_set()
+        toplevel_window.transient(self.master)
         return toplevel_window
 
     def show_error_message(self, title, message):
