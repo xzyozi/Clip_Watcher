@@ -50,7 +50,7 @@ class Application(BaseApplication):
         self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
-        self.monitor.set_gui_update_callback(self.gui.update_clipboard_display)
+        self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
         self.monitor.start()
@@ -63,6 +63,10 @@ class Application(BaseApplication):
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         
         self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def update_gui(self, current_content, history):
+        """Wrapper to pass sort order to the GUI."""
+        self.gui.update_clipboard_display(current_content, history, self.history_sort_ascending)
 
     def on_focus_in(self, event=None):
         self.reassert_topmost()
@@ -137,6 +141,7 @@ class Application(BaseApplication):
         self.stop_monitor()
         self.monitor.save_history_to_file()
         self.master.destroy()
+
 
 if __name__ == "__main__":
     try:
