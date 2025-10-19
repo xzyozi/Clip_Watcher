@@ -147,7 +147,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_widget.config(font=clipboard_font)
         self.history_component.apply_font(history_font)
 
-    def update_clipboard_display(self, current_content, history):
+    def update_clipboard_display(self, current_content, history, sort_ascending=False):
+        if sort_ascending:
+            pinned = [item for item in history if item[1]]
+            unpinned = [item for item in history if not item[1]]
+            pinned.reverse()
+            unpinned.reverse()
+            history = pinned + unpinned
+
         self.history_data = history
         search_query = self.search_entry.get() if hasattr(self, 'search_entry') else ""
         theme_name = self.app.theme_manager.get_current_theme()
