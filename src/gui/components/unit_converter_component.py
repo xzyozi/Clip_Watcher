@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
 import logging
+from datetime import datetime
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
 class UnitConverterComponent(BaseFrameGUI):
     """
-    A GUI component for converting units.
+    A GUI component for converting units, including time.
     """
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
@@ -33,6 +34,10 @@ class UnitConverterComponent(BaseFrameGUI):
                 "Celsius": "celsius",
                 "Fahrenheit": "fahrenheit",
                 "Kelvin": "kelvin"
+            },
+            "Time": {
+                "Unix Timestamp": "unix",
+                "Datetime String": "datetime"
             }
         }
 
@@ -93,32 +98,36 @@ class UnitConverterComponent(BaseFrameGUI):
         self._convert()
 
     def _convert(self, event=None):
-        try:
-            value = float(self.input_var.get())
-        except ValueError:
-            self.output_var.set("Result:")
-            return
-
         category = self.category_var.get()
         from_unit = self.from_unit_var.get()
         to_unit = self.to_unit_var.get()
+        input_str = self.input_var.get()
 
-        if not from_unit or not to_unit:
+        if not from_unit or not to_unit or not input_str:
+            self.output_var.set("Result:")
             return
 
-        # Temperature conversion is special
+        if category == "Time":
+            self._convert_time(input_str, from_unit, to_unit)
+            return
+
+        try:
+            value = float(input_str)
+        except ValueError:
+            self.output_var.set("Result: Invalid number")
+            return
+
         if category == "Temperature":
             result = self._convert_temperature(value, from_unit, to_unit)
+            self.output_var.set(f"Result: {result:.4f}")
         else: # Length and Weight
             base_value = value * self.conversions[category][from_unit]
             result = base_value / self.conversions[category][to_unit]
-        
-        self.output_var.set(f"Result: {result:.4f}")
+            self.output_var.set(f"Result: {result:.4f}")
 
     def _convert_temperature(self, value, from_unit, to_unit):
         if from_unit == to_unit:
             return value
-
         # Convert to Celsius first
         if from_unit == "Fahrenheit":
             celsius = (value - 32) * 5/9
@@ -126,7 +135,6 @@ class UnitConverterComponent(BaseFrameGUI):
             celsius = value - 273.15
         else: # from_unit is Celsius
             celsius = value
-
         # Convert from Celsius to target unit
         if to_unit == "Fahrenheit":
             return (celsius * 9/5) + 32
@@ -134,3 +142,43 @@ class UnitConverterComponent(BaseFrameGUI):
             return celsius + 273.15
         else: # to_unit is Celsius
             return celsius
+
+    def _convert_time(self, input_str, from_unit, to_unit):
+        if from_unit == to_unit:
+            self.output_var.set(f"Result: {input_str}")
+            return
+
+        try:
+            if from_unit == "Unix Timestamp":
+                # From Timestamp to Datetime
+                ts = float(input_str)
+                dt_obj = datetime.fromtimestamp(ts)
+                result = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                self.output_var.set(f"Result: {result}")
+            elif from_unit == "Datetime String":
+                # From Datetime to Timestamp
+                # Try a few common formats
+                dt_obj = None
+                formats_to_try = [
+                    '%Y-%m-%d %H:%M:%S',
+                    '%Y-%m-%d %H:%M',
+                    '%Y-%m-%d',
+                    '%Y/%m/%d %H:%M:%S',
+                    '%Y/%m/%d %H:%M',
+                    '%Y/%m/%d',
+                ]
+                for fmt in formats_to_try:
+                    try:
+                        dt_obj = datetime.strptime(input_str, fmt)
+                        break
+                    except ValueError:
+                        continue
+                
+                if dt_obj is None:
+                    raise ValueError("Invalid datetime format")
+
+                result = dt_obj.timestamp()
+                self.output_var.set(f"Result: {result}")
+        except (ValueError, TypeError) as e:
+            self.output_var.set(f"Result: Error")
+            self.logger.error(f"Time conversion error: {e}")
