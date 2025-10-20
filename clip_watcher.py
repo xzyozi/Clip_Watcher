@@ -152,13 +152,18 @@ if __name__ == "__main__":
         
         logger.info("アプリケーションを開始します")
         
+        # Get the absolute path of the directory where the script is located
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        SETTINGS_FILE_PATH = os.path.join(BASE_DIR, 'settings.json')
+        FIXED_PHRASES_FILE_PATH = os.path.join(BASE_DIR, 'fixed_phrases.json')
+        
         root = tk.Tk()
     
         builder = ApplicationBuilder()
         app = builder.with_event_dispatcher()\
-                     .with_settings()\
+                     .with_settings(SETTINGS_FILE_PATH)\
                      .with_theme_manager(root)\
-                     .with_fixed_phrases_manager()\
+                     .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
                      .with_plugin_manager()\
                      .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
                      .build(root)
