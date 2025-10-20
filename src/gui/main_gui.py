@@ -6,6 +6,8 @@ from src.core.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
 from src.gui.components.schedule_helper_component import ScheduleHelperComponent
+from src.gui.components.hash_calculator_component import HashCalculatorComponent
+from src.gui.components.unit_converter_component import UnitConverterComponent
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
@@ -91,27 +93,47 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Create tab components but don't add them to the notebook yet
         self.schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.notebook.add(self.schedule_helper_tab_frame, text="Calender")
         self.schedule_helper_frame = ScheduleHelperComponent(self.schedule_helper_tab_frame, self.app)
         self.schedule_helper_frame.pack(fill=tk.BOTH, expand=True)
 
+        self.hash_calculator_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.hash_calculator_frame = HashCalculatorComponent(self.hash_calculator_tab_frame, self.app)
+        self.hash_calculator_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.unit_converter_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.unit_converter_frame = UnitConverterComponent(self.unit_converter_tab_frame, self.app)
+        self.unit_converter_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.tabs = {
+            "show_calendar_tab": (self.schedule_helper_tab_frame, "Calender"),
+            "show_hash_calculator_tab": (self.hash_calculator_tab_frame, "Hash Calculator"),
+            "show_unit_converter_tab": (self.unit_converter_tab_frame, "Unit Converter"),
+        }
+
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
-        self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_font_settings_changed)
+        self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
 
-    def toggle_calendar_tab(self, visible_var):
-        """Toggles the visibility of the Calender tab based on a tk.BooleanVar."""
-        try:
-            tab_exists = self.notebook.index(self.schedule_helper_tab_frame) is not None
-        except tk.TclError:
-            tab_exists = False
+        self.on_settings_changed(self.app.settings_manager.settings)
 
-        if visible_var.get() and not tab_exists:
-            self.notebook.add(self.schedule_helper_tab_frame, text="Calender")
-            self.notebook.select(self.schedule_helper_tab_frame)
-        elif not visible_var.get() and tab_exists:
-            self.notebook.forget(self.schedule_helper_tab_frame)
+    def on_settings_changed(self, settings):
+        self.on_font_settings_changed(settings)
+        self._update_tab_visibility(settings)
+
+    def _update_tab_visibility(self, settings):
+        for setting_key, (tab_frame, tab_text) in self.tabs.items():
+            is_visible = settings.get(setting_key, False)
+            try:
+                tab_exists = self.notebook.index(tab_frame) is not None
+            except tk.TclError:
+                tab_exists = False
+
+            if is_visible and not tab_exists:
+                self.notebook.add(tab_frame, text=tab_text)
+            elif not is_visible and tab_exists:
+                self.notebook.forget(tab_frame)
 
     def on_font_settings_changed(self, settings):
         self.apply_font_settings(

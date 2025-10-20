@@ -33,6 +33,10 @@ class SettingsWindow(BaseToplevelGUI):
         self.history_font_family_var = tk.StringVar(value=self.settings_manager.get_setting("history_font_family"))
         self.history_font_size_var = tk.IntVar(value=self.settings_manager.get_setting("history_font_size"))
 
+        self.show_calendar_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_calendar_tab"))
+        self.show_hash_calculator_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_hash_calculator_tab"))
+        self.show_unit_converter_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_unit_converter_tab"))
+
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
@@ -74,6 +78,18 @@ class SettingsWindow(BaseToplevelGUI):
 
         startup_on_boot_check = ttk.Checkbutton(startup_frame, text="Start with Windows", variable=self.startup_on_boot_var)
         startup_on_boot_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        tabs_frame = ttk.LabelFrame(general_frame, text="Tabs", padding=config.FRAME_PADDING)
+        tabs_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+
+        calendar_tab_check = ttk.Checkbutton(tabs_frame, text="Show Calendar Tab", variable=self.show_calendar_tab_var)
+        calendar_tab_check.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        hash_calculator_tab_check = ttk.Checkbutton(tabs_frame, text="Show Hash Calculator Tab", variable=self.show_hash_calculator_tab_var)
+        hash_calculator_tab_check.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        unit_converter_tab_check = ttk.Checkbutton(tabs_frame, text="Show Unit Converter Tab", variable=self.show_unit_converter_tab_var)
+        unit_converter_tab_check.grid(row=2, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         # History Settings
         history_options_frame = ttk.LabelFrame(history_frame, text="History Options", padding=config.FRAME_PADDING)
@@ -194,6 +210,9 @@ class SettingsWindow(BaseToplevelGUI):
         self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
         self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
         self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
+        self.settings_manager.set_setting("show_calendar_tab", self.show_calendar_tab_var.get())
+        self.settings_manager.set_setting("show_hash_calculator_tab", self.show_hash_calculator_tab_var.get())
+        self.settings_manager.set_setting("show_unit_converter_tab", self.show_unit_converter_tab_var.get())
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
 
     def _apply_only(self):
@@ -219,6 +238,9 @@ class SettingsWindow(BaseToplevelGUI):
         self.clipboard_content_font_size_var.set(self.settings_manager.get_setting("clipboard_content_font_size"))
         self.history_font_family_var.set(self.settings_manager.get_setting("history_font_family"))
         self.history_font_size_var.set(self.settings_manager.get_setting("history_font_size"))
+        self.show_calendar_tab_var.set(self.settings_manager.get_setting("show_calendar_tab"))
+        self.show_hash_calculator_tab_var.set(self.settings_manager.get_setting("show_hash_calculator_tab"))
+        self.show_unit_converter_tab_var.set(self.settings_manager.get_setting("show_unit_converter_tab"))
         
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
         self.excluded_apps_listbox.delete(0, tk.END)

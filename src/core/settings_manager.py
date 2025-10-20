@@ -34,7 +34,10 @@ class SettingsManager:
             "clipboard_content_font_family": "TkDefaultFont",
             "clipboard_content_font_size": 10,
             "history_font_family": "TkDefaultFont",
-            "history_font_size": 10
+            "history_font_size": 10,
+            "show_calendar_tab": True,
+            "show_hash_calculator_tab": False,
+            "show_unit_converter_tab": False
         }
 
     def save_settings(self):
