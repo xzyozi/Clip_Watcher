@@ -7,7 +7,7 @@ from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
 from src.gui.components.schedule_helper_component import ScheduleHelperComponent
 from src.gui.components.hash_calculator_component import HashCalculatorComponent
-# from src.gui.components.unit_converter_component import UnitConverterComponent
+from src.gui.components.unit_converter_component import UnitConverterComponent
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
@@ -100,7 +100,7 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         unit_converter_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(unit_converter_tab_frame, text="Unit Converter")
-        # self.unit_converter_frame = UnitConverterComponent(unit_converter_tab_frame, self.app)
+        self.unit_converter_frame = UnitConverterComponent(unit_converter_tab_frame, self.app)
         self.unit_converter_frame.pack(fill=tk.BOTH, expand=True)
 
         self.schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
