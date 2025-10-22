@@ -3,6 +3,7 @@ from tkinter import messagebox, filedialog
 import os
 import sys
 import traceback
+import socket
 from src.core.clipboard_monitor import ClipboardMonitor
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui import menu_bar
@@ -145,6 +146,17 @@ class Application(BaseApplication):
 
 if __name__ == "__main__":
     try:
+        # --- Single Instance Check (Standard Library Method) ---
+        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            # Bind to a specific port. If this fails, another instance is running.
+            lock_socket.bind(("127.0.0.1", 61957))
+        except OSError:
+            # Address already in use, so another instance is running.
+            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
+            sys.exit(0)
+        # --- End Single Instance Check ---
+
         from src.utils.logging_config import setup_logging
         from src.core.application_builder import ApplicationBuilder
 
