@@ -108,9 +108,14 @@ class MainApplication(BaseApplication):
 
     def create_toplevel(self, ToplevelClass, *args, **kwargs):
         toplevel_window = ToplevelClass(self.master, self, *args, **kwargs)
-        if self.settings_manager.get_setting("always_on_top", False):
-            toplevel_window.attributes("-topmost", True)
-        toplevel_window.transient(self.master)
+        
+        # ToplevelClass might have a wait_window(), so the window could be destroyed
+        # by the time we get here. Check if it still exists.
+        if toplevel_window.winfo_exists():
+            if self.settings_manager.get_setting("always_on_top", False):
+                toplevel_window.attributes("-topmost", True)
+            toplevel_window.transient(self.master)
+            
         return toplevel_window
 
     def show_error_message(self, title, message):
