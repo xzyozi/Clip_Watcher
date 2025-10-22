@@ -189,3 +189,6 @@ if __name__ == "__main__":
         else:
             print(f"アプリケーション起動エラー: {str(e)}")
         traceback.print_exc()
+    finally:
+        if lock_socket:
+            lock_socket.close()
