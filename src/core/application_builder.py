@@ -9,6 +9,7 @@ from .event_dispatcher import EventDispatcher
 from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
+from src.core.app_main import MainApplication
 
 if TYPE_CHECKING:
     from .base_application import BaseApplication
@@ -91,12 +92,10 @@ class ApplicationBuilder:
             log_and_show_error("エラー", f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
 
-    def build(self, master: tk.Tk) -> 'BaseApplication':
+    def build(self, master: tk.Tk) -> 'MainApplication':
         """アプリケーションのビルド"""
         if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
-        
-        from clip_watcher import Application as MainApplication
         
         try:
             app = MainApplication(

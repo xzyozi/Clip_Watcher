@@ -11,7 +11,7 @@ from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
 
-class Application(BaseApplication):
+class MainApplication(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
