@@ -47,6 +47,7 @@ if __name__ == "__main__":
                      .with_theme_manager(root)\
                      .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
                      .with_plugin_manager()\
+                     .with_tool_manager()\
                      .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
                      .build(root)
                

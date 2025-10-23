@@ -16,7 +16,7 @@ from src.gui.components.unit_converter_component import UnitConverterComponent
 from src.gui.components.schedule_helper_component import ScheduleHelperComponent
 
 class MainApplication(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -26,19 +26,18 @@ class MainApplication(BaseApplication):
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
+        self.tool_manager = tool_manager # Use the passed tool_manager
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
-        
-        
-        self.tool_manager = ToolManager()
 
-        # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
         self.file_handlers = FileEventHandlers(self, event_dispatcher)
         self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
         self._register_tools()
+        self.gui.create_tool_tabs() # Add this line
+        
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
@@ -55,9 +54,9 @@ class MainApplication(BaseApplication):
 
     def _register_tools(self):
         # Register tools that can be opened as tabs in the main GUI
-        self.tool_manager.register_tool("Calendar", self.gui.show_calendar_tab)
-        self.tool_manager.register_tool("Hash Calculator", self.gui.show_hash_calculator_tab)
-        self.tool_manager.register_tool("Unit Converter", self.gui.show_unit_converter_tab)
+        self.tool_manager.register_tool("Calendar", lambda: self.gui.show_tool_tab("Calendar"))
+        self.tool_manager.register_tool("Hash Calculator", lambda: self.gui.show_tool_tab("Hash Calculator"))
+        self.tool_manager.register_tool("Unit Converter", lambda: self.gui.show_tool_tab("Unit Converter"))
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""
