@@ -11,9 +11,8 @@ from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
 from src.core.tool_manager import ToolManager
-from src.gui.components.hash_calculator_component import HashCalculatorComponent
-from src.gui.components.unit_converter_component import UnitConverterComponent
-from src.gui.components.schedule_helper_component import ScheduleHelperComponent
+from src.core.tool_config import TOOL_COMPONENTS
+
 
 class MainApplication(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager):
@@ -53,10 +52,10 @@ class MainApplication(BaseApplication):
         self.master.bind("<FocusIn>", self.on_focus_in)
 
     def _register_tools(self):
-        # Register tools that can be opened as tabs in the main GUI
-        self.tool_manager.register_tool("Calendar", lambda: self.gui.toggle_tool_tab("Calendar"))
-        self.tool_manager.register_tool("Hash Calculator", lambda: self.gui.toggle_tool_tab("Hash Calculator"))
-        self.tool_manager.register_tool("Unit Converter", lambda: self.gui.toggle_tool_tab("Unit Converter"))
+        """Register tools from the tool configuration."""
+        for tool_config in TOOL_COMPONENTS:
+            tool_name = tool_config["name"]
+            self.tool_manager.register_tool(tool_name, lambda name=tool_name: self.gui.toggle_tool_tab(name))
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""
@@ -140,3 +139,4 @@ class MainApplication(BaseApplication):
         self.stop_monitor()
         self.monitor.save_history_to_file()
         self.master.destroy()
+
