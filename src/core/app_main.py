@@ -10,6 +10,10 @@ from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
+from src.core.tool_manager import ToolManager
+from src.gui.components.hash_calculator_component import HashCalculatorComponent
+from src.gui.components.unit_converter_component import UnitConverterComponent
+from src.gui.components.schedule_helper_component import ScheduleHelperComponent
 
 class MainApplication(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager):
@@ -24,14 +28,17 @@ class MainApplication(BaseApplication):
         self.theme_manager = theme_manager
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
-        self.calendar_visible_var = tk.BooleanVar(value=True)
         
+        
+        self.tool_manager = ToolManager()
+
         # Initialize event handlers first
         self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
         self.file_handlers = FileEventHandlers(self, event_dispatcher)
         self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
+        self._register_tools()
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
@@ -45,6 +52,12 @@ class MainApplication(BaseApplication):
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         
         self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def _register_tools(self):
+        # Register tools that can be opened as tabs in the main GUI
+        self.tool_manager.register_tool("Calendar", self.gui.show_calendar_tab)
+        self.tool_manager.register_tool("Hash Calculator", self.gui.show_hash_calculator_tab)
+        self.tool_manager.register_tool("Unit Converter", self.gui.show_unit_converter_tab)
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""

@@ -33,29 +33,43 @@ class SettingsWindow(BaseToplevelGUI):
         self.history_font_family_var = tk.StringVar(value=self.settings_manager.get_setting("history_font_family"))
         self.history_font_size_var = tk.IntVar(value=self.settings_manager.get_setting("history_font_size"))
 
-        self.show_calendar_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_calendar_tab"))
-        self.show_hash_calculator_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_hash_calculator_tab"))
-        self.show_unit_converter_tab_var = tk.BooleanVar(value=self.settings_manager.get_setting("show_unit_converter_tab"))
+        self.tool_tab_vars = {}
+        for tool_name in self.app_instance.tool_manager.get_all_tool_names():
+            setting_name = f"show_{tool_name.lower().replace(' ', '_')}_tab"
+            self.tool_tab_vars[tool_name] = tk.BooleanVar(value=self.settings_manager.get_setting(setting_name))
+
+        self.settings_tab_names = ["General", "History", "Notifications", "Font", "Excluded Apps", "Modules"]
+        self.settings_tab_vars = {}
+        for tab_name in self.settings_tab_names:
+            setting_name = f"show_{tab_name.lower().replace(' ', '_')}_settings_tab"
+            self.settings_tab_vars[tab_name] = tk.BooleanVar(value=self.settings_manager.get_setting(setting_name))
 
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
 
         self._create_widgets()
 
     def _create_widgets(self):
-        notebook = ttk.Notebook(self)
-        notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
 
-        general_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
-        history_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
-        notification_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
-        font_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
-        excluded_apps_frame = ttk.Frame(notebook, padding=config.FRAME_PADDING)
+        self.tab_frames = {}
 
-        notebook.add(general_frame, text="General")
-        notebook.add(history_frame, text="History")
-        notebook.add(notification_frame, text="Notifications")
-        notebook.add(font_frame, text="Font")
-        notebook.add(excluded_apps_frame, text="Excluded Apps")
+        general_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        history_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        notification_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        font_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        excluded_apps_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        modules_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+
+        self.tab_frames["General"] = general_frame
+        self.tab_frames["History"] = history_frame
+        self.tab_frames["Notifications"] = notification_frame
+        self.tab_frames["Font"] = font_frame
+        self.tab_frames["Excluded Apps"] = excluded_apps_frame
+        self.tab_frames["Modules"] = modules_frame
+
+        for tab_name, tab_frame in self.tab_frames.items():
+            self.notebook.add(tab_frame, text=tab_name)
 
         # Populate General Settings tab
         appearance_frame = ttk.LabelFrame(general_frame, text="Appearance", padding=config.FRAME_PADDING)
@@ -79,17 +93,21 @@ class SettingsWindow(BaseToplevelGUI):
         startup_on_boot_check = ttk.Checkbutton(startup_frame, text="Start with Windows", variable=self.startup_on_boot_var)
         startup_on_boot_check.grid(row=0, column=0, columnspan=2, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        tabs_frame = ttk.LabelFrame(general_frame, text="Tabs", padding=config.FRAME_PADDING)
-        tabs_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+        # Populate Modules Settings tab
+        main_window_tabs_frame = ttk.LabelFrame(modules_frame, text="Main Window Tabs", padding=config.FRAME_PADDING)
+        main_window_tabs_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        calendar_tab_check = ttk.Checkbutton(tabs_frame, text="Show Calendar Tab", variable=self.show_calendar_tab_var)
-        calendar_tab_check.grid(row=0, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        for i, (tool_name, var) in enumerate(self.tool_tab_vars.items()):
+            check = ttk.Checkbutton(main_window_tabs_frame, text=f"Show {tool_name} Tab", variable=var)
+            check.grid(row=i, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
-        hash_calculator_tab_check = ttk.Checkbutton(tabs_frame, text="Show Hash Calculator Tab", variable=self.show_hash_calculator_tab_var)
-        hash_calculator_tab_check.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        settings_window_tabs_frame = ttk.LabelFrame(modules_frame, text="Settings Window Tabs", padding=config.FRAME_PADDING)
+        settings_window_tabs_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        unit_converter_tab_check = ttk.Checkbutton(tabs_frame, text="Show Unit Converter Tab", variable=self.show_unit_converter_tab_var)
-        unit_converter_tab_check.grid(row=2, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        for i, (tab_name, var) in enumerate(self.settings_tab_vars.items()):
+            check = ttk.Checkbutton(settings_window_tabs_frame, text=f"Show {tab_name} Tab", variable=var)
+            check.grid(row=i, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
 
         # History Settings
         history_options_frame = ttk.LabelFrame(history_frame, text="History Options", padding=config.FRAME_PADDING)
@@ -210,9 +228,15 @@ class SettingsWindow(BaseToplevelGUI):
         self.settings_manager.set_setting("clipboard_content_font_size", self.clipboard_content_font_size_var.get())
         self.settings_manager.set_setting("history_font_family", self.history_font_family_var.get())
         self.settings_manager.set_setting("history_font_size", self.history_font_size_var.get())
-        self.settings_manager.set_setting("show_calendar_tab", self.show_calendar_tab_var.get())
-        self.settings_manager.set_setting("show_hash_calculator_tab", self.show_hash_calculator_tab_var.get())
-        self.settings_manager.set_setting("show_unit_converter_tab", self.show_unit_converter_tab_var.get())
+        
+        for tool_name, var in self.tool_tab_vars.items():
+            setting_name = f"show_{tool_name.lower().replace(' ', '_')}_tab"
+            self.settings_manager.set_setting(setting_name, var.get())
+
+        for tab_name, var in self.settings_tab_vars.items():
+            setting_name = f"show_{tab_name.lower().replace(' ', '_')}_settings_tab"
+            self.settings_manager.set_setting(setting_name, var.get())
+
         self.settings_manager.set_setting("excluded_apps", self.excluded_apps_list)
 
     def _apply_only(self):
@@ -238,14 +262,29 @@ class SettingsWindow(BaseToplevelGUI):
         self.clipboard_content_font_size_var.set(self.settings_manager.get_setting("clipboard_content_font_size"))
         self.history_font_family_var.set(self.settings_manager.get_setting("history_font_family"))
         self.history_font_size_var.set(self.settings_manager.get_setting("history_font_size"))
-        self.show_calendar_tab_var.set(self.settings_manager.get_setting("show_calendar_tab"))
-        self.show_hash_calculator_tab_var.set(self.settings_manager.get_setting("show_hash_calculator_tab"))
-        self.show_unit_converter_tab_var.set(self.settings_manager.get_setting("show_unit_converter_tab"))
         
+        for tool_name, var in self.tool_tab_vars.items():
+            setting_name = f"show_{tool_name.lower().replace(' ', '_')}_tab"
+            var.set(self.settings_manager.get_setting(setting_name))
+
+        for tab_name, var in self.settings_tab_vars.items():
+            setting_name = f"show_{tab_name.lower().replace(' ', '_')}_settings_tab"
+            var.set(self.settings_manager.get_setting(setting_name))
+
         self.excluded_apps_list = list(self.settings_manager.get_setting("excluded_apps"))
         self.excluded_apps_listbox.delete(0, tk.END)
         for app in self.excluded_apps_list:
             self.excluded_apps_listbox.insert(tk.END, app)
+
+        # Update visible tabs
+        for tab_name, tab_frame in self.tab_frames.items():
+            if self.settings_tab_vars[tab_name].get():
+                if not tab_frame.winfo_ismapped():
+                    self.notebook.add(tab_frame, text=tab_name)
+            else:
+                if tab_frame.winfo_ismapped():
+                    self.notebook.hide(tab_frame)
+
 
     def _add_excluded_app(self):
         new_app = simpledialog.askstring("Add Excluded App", "Enter the executable name (e.g., keepass.exe):", parent=self)

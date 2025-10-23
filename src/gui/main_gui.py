@@ -93,30 +93,59 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Create tab components but don't add them to the notebook yet
-        self.schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.schedule_helper_frame = ScheduleHelperComponent(self.schedule_helper_tab_frame, self.app)
-        self.schedule_helper_frame.pack(fill=tk.BOTH, expand=True)
+        self.tool_frames = {}
+        self.tool_components = {}
+        self.tabs = {}
 
-        self.hash_calculator_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.hash_calculator_frame = HashCalculatorComponent(self.hash_calculator_tab_frame, self.app)
-        self.hash_calculator_frame.pack(fill=tk.BOTH, expand=True)
+        # Dynamically create tab components for registered tools
+        for tool_name in self.app.tool_manager.get_all_tool_names():
+            # Only create tabs for specific tools as requested by the user
+            if tool_name in ["Schedule Helper", "Hash Calculator", "Unit Converter"]:
+                tool_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+                self.tool_frames[tool_name] = tool_frame
+                
+                component = None
+                if tool_name == "Schedule Helper":
+                    component = ScheduleHelperComponent(tool_frame, self.app)
+                elif tool_name == "Hash Calculator":
+                    component = HashCalculatorComponent(tool_frame, self.app)
+                elif tool_name == "Unit Converter":
+                    component = UnitConverterComponent(tool_frame, self.app)
+                # Add more tool components here as needed
 
-        self.unit_converter_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.unit_converter_frame = UnitConverterComponent(self.unit_converter_tab_frame, self.app)
-        self.unit_converter_frame.pack(fill=tk.BOTH, expand=True)
-
-        self.tabs = {
-            "show_calendar_tab": (self.schedule_helper_tab_frame, "Calender"),
-            "show_hash_calculator_tab": (self.hash_calculator_tab_frame, "Hash Calculator"),
-            "show_unit_converter_tab": (self.unit_converter_tab_frame, "Unit Converter"),
-        }
+                if component:
+                    self.tool_components[tool_name] = component
+                    component.pack(fill=tk.BOTH, expand=True)
+                    setting_key = f"show_{tool_name.lower().replace(' ', '_')}_tab"
+                    self.tabs[setting_key] = (tool_frame, tool_name)
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
 
         self.on_settings_changed(self.app.settings_manager.settings)
+
+    def show_calendar_tab(self):
+        self._show_tool_tab("Calendar")
+
+    def show_hash_calculator_tab(self):
+        self._show_tool_tab("Hash Calculator")
+
+    def show_unit_converter_tab(self):
+        self._show_tool_tab("Unit Converter")
+
+    def _show_tool_tab(self, tool_name):
+        setting_key = f"show_{tool_name.lower().replace(' ', '_')}_tab"
+        if setting_key in self.tabs:
+            tab_frame, _ = self.tabs[setting_key]
+            # Ensure the tab is added if not already
+            try:
+                self.notebook.index(tab_frame)
+            except tk.TclError:
+                self.notebook.add(tab_frame, text=tool_name)
+            self.notebook.select(tab_frame)
+        else:
+            print(f"Tool tab '{tool_name}' not found or not configured.")
 
     def on_settings_changed(self, settings):
         self.on_font_settings_changed(settings)
