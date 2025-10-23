@@ -127,16 +127,19 @@ class ClipWatcherGUI(BaseFrameGUI):
         # After creating tabs, update their visibility based on settings
         self._update_tab_visibility(self.app.settings_manager.settings)
 
-    def show_tool_tab(self, tool_name):
+    def toggle_tool_tab(self, tool_name):
+        """Toggles the visibility of a tool tab."""
         setting_key = f"show_{tool_name.lower().replace(' ', '_')}_tab"
         if setting_key in self.tabs:
-            tab_frame, _ = self.tabs[setting_key]
-            # Ensure the tab is added if not already
+            tab_frame, tab_text = self.tabs[setting_key]
             try:
-                self.notebook.index(tab_frame)
+                # Check if the tab exists and is visible
+                tab_id = self.notebook.index(tab_frame)
+                self.notebook.forget(tab_id)
             except tk.TclError:
-                self.notebook.add(tab_frame, text=tool_name)
-            self.notebook.select(tab_frame)
+                # Tab doesn't exist, so add it
+                self.notebook.add(tab_frame, text=tab_text)
+                self.notebook.select(tab_frame)
         else:
             print(f"Tool tab '{tool_name}' not found or not configured.")
 

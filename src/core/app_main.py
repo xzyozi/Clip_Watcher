@@ -54,9 +54,9 @@ class MainApplication(BaseApplication):
 
     def _register_tools(self):
         # Register tools that can be opened as tabs in the main GUI
-        self.tool_manager.register_tool("Calendar", lambda: self.gui.show_tool_tab("Calendar"))
-        self.tool_manager.register_tool("Hash Calculator", lambda: self.gui.show_tool_tab("Hash Calculator"))
-        self.tool_manager.register_tool("Unit Converter", lambda: self.gui.show_tool_tab("Unit Converter"))
+        self.tool_manager.register_tool("Calendar", lambda: self.gui.toggle_tool_tab("Calendar"))
+        self.tool_manager.register_tool("Hash Calculator", lambda: self.gui.toggle_tool_tab("Hash Calculator"))
+        self.tool_manager.register_tool("Unit Converter", lambda: self.gui.toggle_tool_tab("Unit Converter"))
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""
