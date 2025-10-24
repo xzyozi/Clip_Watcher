@@ -104,9 +104,9 @@ class SettingsWindow(BaseToplevelGUI):
         settings_window_tabs_frame = ttk.LabelFrame(modules_frame, text="Settings Window Tabs", padding=config.FRAME_PADDING)
         settings_window_tabs_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        for i, (tab_name, var) in enumerate(self.settings_tab_vars.items()):
-            check = ttk.Checkbutton(settings_window_tabs_frame, text=f"Show {tab_name} Tab", variable=var)
-            check.grid(row=i, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        # for i, (tab_name, var) in enumerate(self.settings_tab_vars.items()):
+        #     check = ttk.Checkbutton(settings_window_tabs_frame, text=f"Show {tab_name} Tab", variable=var)
+        #     check.grid(row=i, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
 
         # History Settings
