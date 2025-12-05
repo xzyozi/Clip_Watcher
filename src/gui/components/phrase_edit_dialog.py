@@ -54,11 +54,19 @@ class PhraseEditDialog(BaseToplevelGUI):
             messagebox.showerror("エラー (Error)", "内容は必須です。\n(Content cannot be empty.)", parent=self)
             return
 
-        # 編集モードで内容が変更された場合、古い内容を削除
-        if self.original_phrase and self.original_phrase != new_phrase:
-            self.phrase_manager.remove_phrase(self.original_phrase)
-
-        # 新しい内容を追加（マネージャー側でキーと値が同じとして扱われる）
-        self.phrase_manager.add_phrase(new_phrase)
-        self.result = True # 成功フラグ
-        self.destroy()
+        try:
+            if self.original_phrase:  # Edit mode
+                if self.original_phrase != new_phrase:
+                    if not self.phrase_manager.update_phrase(self.original_phrase, new_phrase):
+                        messagebox.showerror("エラー (Error)", "その内容は既に存在するか、更新に失敗しました。\n(The content may already exist or the update failed.)", parent=self)
+                        return
+            else:  # Add mode
+                if not self.phrase_manager.add_phrase(new_phrase):
+                    messagebox.showerror("エラー (Error)", "その内容は既に存在します。\n(The content already exists.)", parent=self)
+                    return
+            
+            self.result = True
+            self.destroy()
+        except Exception as e:
+            messagebox.showerror("エラー (Error)", f"予期せぬエラーが発生しました: {e}", parent=self)
+            self.destroy()

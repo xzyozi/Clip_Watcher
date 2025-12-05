@@ -1,11 +1,10 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox
 import logging
+
 from src.core.exceptions import PhraseError
-
-logger = logging.getLogger(__name__)
-
 from src.gui.base_frame_gui import BaseFrameGUI
+from src.gui.components.phrase_edit_dialog import PhraseEditDialog
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,6 @@ class PhraseEditComponent(BaseFrameGUI):
     def __init__(self, master, list_component, app_instance):
         super().__init__(master, app_instance)
         self.list_component = list_component
-        self.logger = logging.getLogger(__name__)
         self._create_widgets()
 
     def _create_widgets(self):
@@ -45,24 +43,17 @@ class PhraseEditComponent(BaseFrameGUI):
     def _add_phrase(self):
         """新しい定型文を追加"""
         try:
-            new_phrase = simpledialog.askstring("定型文の追加", "新しい定型文を入力してください:", parent=self)
-            if not new_phrase:  # ユーザーがキャンセルした場合
-                return
+            dialog = PhraseEditDialog(
+                self,
+                app_instance=self.app,
+                phrase_manager=self.app.fixed_phrases_manager
+            )
+            if dialog.result:
+                logger.info("新しい定型文を追加しました。")
+                self.list_component.refresh()
 
-            if not new_phrase.strip():
-                raise PhraseError("空の定型文は追加できません")
-
-            if self.app.fixed_phrases_manager.add_phrase(new_phrase):
-                self.logger.info(f"新しい定型文を追加しました: {new_phrase[:20]}...")
-                self.list_component.refresh()  # リストを更新
-            else:
-                raise PhraseError("その定型文は既に存在します")
-
-        except PhraseError as e:
-            self.logger.warning(f"定型文追加エラー: {str(e)}")
-            messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
-            self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
+            self.log_and_show_error("エラー", f"予期せぬエラー: {str(e)}", exc_info=True)
 
     def _edit_phrase(self):
         """選択された定型文を編集"""
@@ -71,22 +62,19 @@ class PhraseEditComponent(BaseFrameGUI):
             if not old_phrase:
                 raise PhraseError("編集する定型文を選択してください")
 
-            edited_phrase = simpledialog.askstring(
-                "定型文の編集", 
-                "定型文を編集してください:", 
-                initialvalue=old_phrase,
-                parent=self
+            dialog = PhraseEditDialog(
+                self,
+                app_instance=self.app,
+                phrase_manager=self.app.fixed_phrases_manager,
+                phrase_key=old_phrase
             )
             
-            if edited_phrase:
-                if self.app.fixed_phrases_manager.update_phrase(old_phrase, edited_phrase):
-                    self.logger.info(f"定型文を更新しました: {edited_phrase[:20]}...")
-                    self.list_component.refresh()
-                else:
-                    raise PhraseError("更新に失敗しました")
+            if dialog.result:
+                logger.info(f"定型文を更新しました。")
+                self.list_component.refresh()
 
         except PhraseError as e:
-            self.logger.warning(f"定型文編集エラー: {str(e)}")
+            logger.warning(f"定型文編集エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
             self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
@@ -100,13 +88,13 @@ class PhraseEditComponent(BaseFrameGUI):
 
             if messagebox.askyesno("確認", f"'{phrase_to_delete}' を削除しますか？", parent=self):
                 if self.app.fixed_phrases_manager.delete_phrase(phrase_to_delete):
-                    self.logger.info(f"定型文を削除しました: {phrase_to_delete[:20]}...")
+                    logger.info(f"定型文を削除しました: {phrase_to_delete[:20]}...")
                     self.list_component.refresh()
                 else:
                     raise PhraseError("削除に失敗しました")
 
         except PhraseError as e:
-            self.logger.warning(f"定型文削除エラー: {str(e)}")
+            logger.warning(f"定型文削除エラー: {str(e)}")
             messagebox.showwarning("警告", str(e), parent=self)
         except Exception as e:
             self.log_and_show_error("エラー",f"予期せぬエラー: {str(e)}", exc_info=True)
