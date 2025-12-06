@@ -43,9 +43,10 @@ class ContextMenuMixin:
         except tk.TclError:
             pass # Nothing to paste
 
-        self.context_menu.entryconfig(self.translator('cut'), state=tk.NORMAL if has_selection else tk.DISABLED)
-        self.context_menu.entryconfig(self.translator('copy'), state=tk.NORMAL if has_selection else tk.DISABLED)
-        self.context_menu.entryconfig(self.translator('paste'), state=tk.NORMAL if can_paste else tk.DISABLED)
+        # Use integer indices to configure menu items, which is language-independent
+        self.context_menu.entryconfig(0, state=tk.NORMAL if has_selection else tk.DISABLED) # 0: Cut
+        self.context_menu.entryconfig(1, state=tk.NORMAL if has_selection else tk.DISABLED) # 1: Copy
+        self.context_menu.entryconfig(2, state=tk.NORMAL if can_paste else tk.DISABLED)      # 2: Paste
 
         self.context_menu.tk_popup(event.x_root, event.y_root)
 
