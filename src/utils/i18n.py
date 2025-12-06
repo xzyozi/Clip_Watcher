@@ -49,6 +49,7 @@ class Translator:
         if new_lang != self.current_lang:
             self.current_lang = new_lang
             logger.info(f"Language changed to: {self.current_lang}")
+            self.settings_manager.event_dispatcher.dispatch("LANGUAGE_CHANGED")
 
     def translate(self, key):
         """

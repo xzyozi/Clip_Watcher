@@ -25,7 +25,7 @@ class MainApplication(BaseApplication):
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
-        self.tool_manager = tool_manager # Use the passed tool_manager
+        self.tool_manager = tool_manager
         self.translator = translator
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
@@ -36,21 +36,28 @@ class MainApplication(BaseApplication):
         
         self.gui = ClipWatcherGUI(master, self)
         self._register_tools()
-        self.gui.create_tool_tabs() # Add this line
-        
+        self.gui.create_tool_tabs()
+
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
         self.monitor.start()
 
-        self.menubar = menu_bar.create_menu_bar(master, self)
-        master.config(menu=self.menubar)
-        self.theme_manager.set_menubar(self.menubar)
+        self._rebuild_menu()
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+        self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
         
         self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def _rebuild_menu(self):
+        """Destroys and recreates the main menu bar, usually for language changes."""
+        if hasattr(self, 'menubar') and self.menubar:
+            self.menubar.destroy()
+        self.menubar = menu_bar.create_menu_bar(self.master, self)
+        self.master.config(menu=self.menubar)
+        self.theme_manager.set_menubar(self.menubar)
 
     def _register_tools(self):
         """Register tools from the tool configuration."""
