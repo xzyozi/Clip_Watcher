@@ -20,6 +20,7 @@ class SettingsWindow(BaseToplevelGUI):
 
         # Variables for settings
         self.theme_var = tk.StringVar(value=self.settings_manager.get_setting("theme"))
+        self.language_var = tk.StringVar(value=self.settings_manager.get_setting("language"))
         self.history_limit_var = tk.IntVar(value=self.settings_manager.get_setting("history_limit"))
         self.always_on_top_var = tk.BooleanVar(value=self.settings_manager.get_setting("always_on_top"))
         self.startup_on_boot_var = tk.BooleanVar(value=self.settings_manager.get_setting("startup_on_boot"))
@@ -80,6 +81,12 @@ class SettingsWindow(BaseToplevelGUI):
         theme_options = ["light", "dark"]
         theme_menu = ttk.OptionMenu(appearance_frame, self.theme_var, self.theme_var.get(), *theme_options)
         theme_menu.grid(row=0, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+
+        language_label = ttk.Label(appearance_frame, text="Language:")
+        language_label.grid(row=1, column=0, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
+        language_options = ["en", "ja"]
+        language_menu = ttk.OptionMenu(appearance_frame, self.language_var, self.language_var.get(), *language_options)
+        language_menu.grid(row=1, column=1, sticky=tk.W, padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
 
         window_behavior_frame = ttk.LabelFrame(general_frame, text="Window Behavior", padding=config.FRAME_PADDING)
         window_behavior_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
@@ -217,6 +224,7 @@ class SettingsWindow(BaseToplevelGUI):
 
     def _save_settings_logic(self):
         self.settings_manager.set_setting("theme", self.theme_var.get())
+        self.settings_manager.set_setting("language", self.language_var.get())
         self.settings_manager.set_setting("history_limit", self.history_limit_var.get())
         self.settings_manager.set_setting("always_on_top", self.always_on_top_var.get())
         self.settings_manager.set_setting("startup_on_boot", self.startup_on_boot_var.get())
@@ -251,6 +259,7 @@ class SettingsWindow(BaseToplevelGUI):
 
     def _update_ui_from_settings(self):
         self.theme_var.set(self.settings_manager.get_setting("theme"))
+        self.language_var.set(self.settings_manager.get_setting("language"))
         self.history_limit_var.set(self.settings_manager.get_setting("history_limit"))
         self.always_on_top_var.set(self.settings_manager.get_setting("always_on_top"))
         self.startup_on_boot_var.set(self.settings_manager.get_setting("startup_on_boot"))
