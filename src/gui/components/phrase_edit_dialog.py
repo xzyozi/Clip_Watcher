@@ -1,72 +1,87 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
-from ..custom_widgets import CustomEntry, CustomText
-from ..base_toplevel_gui import BaseToplevelGUI
+from tkinter import ttk, messagebox
+from src.gui.base_toplevel_gui import BaseToplevelGUI
+from src.gui.custom_widgets import CustomText
 
 class PhraseEditDialog(BaseToplevelGUI):
     """
-    定型文の追加または編集を行うためのダイアログ。
-    CustomEntryとCustomTextを使用し、右クリックメニューをサポートします。
+    A dialog for adding or editing a fixed phrase.
     """
-    def __init__(self, master, app_instance, phrase_manager, phrase_key=None):
-        super().__init__(master, app_instance)
+    def __init__(self, master, app_instance, phrase_manager, phrase_key=None, **kwargs):
+        super().__init__(master, app_instance, **kwargs)
         self.transient(master)
         self.grab_set()
 
         self.phrase_manager = phrase_manager
-        self.original_phrase = phrase_key # The key is the phrase itself
-        self.result = None
+        self.old_phrase = phrase_key
+        self.result = False # Success status
 
-        if phrase_key:
-            self.title("定型文の編集 (Edit Phrase)")
+        if self.old_phrase:
+            self.title("定型文の編集")
         else:
-            self.title("新しい定型文の追加 (Add New Phrase)")
+            self.title("定型文の追加")
+            
+        self.geometry("450x250")
 
-        # --- Widgets ---
+        self._create_widgets()
+        
+        master.wait_window(self)
 
-        # Value Text
-        tk.Label(self, text="内容 (Content):").grid(row=0, column=0, padx=10, pady=5, sticky="nw")
-        self.value_text = CustomText(self, width=50, height=10)
-        self.value_text.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
-        if self.original_phrase:
-            self.value_text.insert("1.0", self.original_phrase)
+    def _create_widgets(self):
+        container = ttk.Frame(self, padding=10)
+        container.pack(fill=tk.BOTH, expand=True)
+        container.grid_columnconfigure(0, weight=1)
+        container.grid_rowconfigure(1, weight=1)
 
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        # Content
+        content_label = ttk.Label(container, text="内容 (Content):")
+        content_label.grid(row=0, column=0, pady=(0, 5), sticky="nw")
+        
+        text_frame = ttk.Frame(container)
+        text_frame.grid(row=1, column=0, sticky="nsew")
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
+
+        self.content_text = CustomText(text_frame, height=8)
+        self.content_text.grid(row=0, column=0, sticky="nsew")
+        if self.old_phrase:
+            self.content_text.insert("1.0", self.old_phrase)
+
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=self.content_text.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.content_text.config(yscrollcommand=scrollbar.set)
 
         # Buttons
-        buttons_container = ttk.Frame(self)
-        buttons_container.grid(row=1, column=1, pady=10, sticky="e")
+        button_frame = ttk.Frame(container)
+        button_frame.grid(row=2, column=0, pady=(10, 0), sticky="e")
 
-        save_button = ttk.Button(buttons_container, text="保存 (Save)", command=self.save_phrase)
-        save_button.pack(side="left", padx=5)
+        save_button = ttk.Button(button_frame, text="保存 (Save)", command=self._on_save)
+        save_button.pack(side=tk.RIGHT, padx=(5, 0))
 
-        cancel_button = ttk.Button(buttons_container, text="キャンセル (Cancel)", command=self.destroy)
-        cancel_button.pack(side="left")
+        cancel_button = ttk.Button(button_frame, text="キャンセル (Cancel)", command=self.destroy)
+        cancel_button.pack(side=tk.RIGHT)
 
-        self.protocol("WM_DELETE_WINDOW", self.destroy)
-        self.wait_window(self)
-
-    def save_phrase(self):
-        new_phrase = self.value_text.get("1.0", tk.END).strip()
-
+    def _on_save(self):
+        new_phrase = self.content_text.get("1.0", tk.END).strip()
         if not new_phrase:
-            messagebox.showerror("エラー (Error)", "内容は必須です。\n(Content cannot be empty.)", parent=self)
+            messagebox.showwarning("入力エラー", "内容を入力してください。", parent=self)
             return
 
         try:
-            if self.original_phrase:  # Edit mode
-                if self.original_phrase != new_phrase:
-                    if not self.phrase_manager.update_phrase(self.original_phrase, new_phrase):
-                        messagebox.showerror("エラー (Error)", "その内容は既に存在するか、更新に失敗しました。\n(The content may already exist or the update failed.)", parent=self)
+            if self.old_phrase: # Editing existing phrase
+                if self.old_phrase != new_phrase:
+                    success = self.phrase_manager.update_phrase(self.old_phrase, new_phrase)
+                    if not success:
+                        messagebox.showerror("エラー", "定型文の更新に失敗しました。\n同じ内容が既に存在する可能性があります。", parent=self)
                         return
-            else:  # Add mode
-                if not self.phrase_manager.add_phrase(new_phrase):
-                    messagebox.showerror("エラー (Error)", "その内容は既に存在します。\n(The content already exists.)", parent=self)
+            else: # Adding new phrase
+                success = self.phrase_manager.add_phrase(new_phrase)
+                if not success:
+                    messagebox.showerror("エラー", "定型文の追加に失敗しました。\n同じ内容が既に存在する可能性があります。", parent=self)
                     return
             
             self.result = True
             self.destroy()
+
         except Exception as e:
-            messagebox.showerror("エラー (Error)", f"予期せぬエラーが発生しました: {e}", parent=self)
-            self.destroy()
+            messagebox.showerror("エラー", f"保存中にエラーが発生しました: {e}", parent=self)
