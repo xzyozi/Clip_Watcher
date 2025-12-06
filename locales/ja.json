@@ -13,5 +13,18 @@
     "unpin": "ピン解除",
     "add": "追加",
     "edit": "編集",
-    "delete": "削除"
+    "delete": "削除",
+
+    "app_title": "ClipWatcher",
+    "clipboard_tab": "クリップボード",
+    "current_clipboard_content_label": "現在のクリップボード",
+    "waiting_for_clipboard_content": "クリップボードのコンテンツを待っています...",
+    "search_label": "検索:",
+    "clipboard_history_label": "クリップボード履歴",
+    "copy_selected_button": "選択項目をコピー",
+    "sort_desc_button": "ソート: 降順",
+    "sort_asc_button": "ソート: 昇順",
+    "format_button": "フォーマット",
+    "quit_button": "終了",
+    "fixed_phrases_tab": "定型文"
 }

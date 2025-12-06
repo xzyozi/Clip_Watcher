@@ -108,9 +108,9 @@ class MainApplication(BaseApplication):
         self.history_sort_ascending = not self.history_sort_ascending
         
         if self.history_sort_ascending:
-            self.gui.sort_button.config(text="Sort: Asc")
+            self.gui.sort_button.config(text=self.translator("sort_asc_button"))
         else:
-            self.gui.sort_button.config(text="Sort: Desc")
+            self.gui.sort_button.config(text=self.translator("sort_desc_button"))
 
         self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")

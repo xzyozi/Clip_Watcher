@@ -13,5 +13,18 @@
     "unpin": "Unpin",
     "add": "Add",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+
+    "app_title": "ClipWatcher",
+    "clipboard_tab": "Clipboard",
+    "current_clipboard_content_label": "Current Clipboard Content",
+    "waiting_for_clipboard_content": "Waiting for clipboard content...",
+    "search_label": "Search:",
+    "clipboard_history_label": "Clipboard History",
+    "copy_selected_button": "Copy Selected",
+    "sort_desc_button": "Sort: Desc",
+    "sort_asc_button": "Sort: Asc",
+    "format_button": "Format",
+    "quit_button": "Quit",
+    "fixed_phrases_tab": "Fixed Phrases"
 }
