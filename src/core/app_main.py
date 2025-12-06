@@ -15,7 +15,7 @@ from src.core.tool_config import TOOL_COMPONENTS
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator):
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -26,6 +26,7 @@ class MainApplication(BaseApplication):
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
         self.tool_manager = tool_manager # Use the passed tool_manager
+        self.translator = translator
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
 

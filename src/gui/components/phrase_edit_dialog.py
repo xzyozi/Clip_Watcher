@@ -42,7 +42,7 @@ class PhraseEditDialog(BaseToplevelGUI):
         text_frame.grid_rowconfigure(0, weight=1)
         text_frame.grid_columnconfigure(0, weight=1)
 
-        self.content_text = CustomText(text_frame, height=8)
+        self.content_text = CustomText(text_frame, height=8, app=self.app)
         self.content_text.grid(row=0, column=0, sticky="nsew")
         if self.old_phrase:
             self.content_text.insert("1.0", self.old_phrase)

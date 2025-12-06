@@ -26,6 +26,7 @@ class SettingsManager:
     def _get_default_settings(self):
         return {
             "theme": "light",
+            "language": "en", # Add language setting, 'en' or 'ja'
             "history_limit": 50,
             "always_on_top": False,
             "excluded_apps": ["keepass.exe", "bitwarden.exe"],

@@ -42,7 +42,7 @@ class PhraseListComponent(BaseFrameGUI):
 
     def _bind_context_menu(self):
         if self.edit_component:
-            phrase_context_menu = context_menu.PhraseListContextMenu(self.master, self, self.edit_component)
+            phrase_context_menu = context_menu.PhraseListContextMenu(self.master, self.app, self, self.edit_component)
             self.phrase_listbox.bind("<Button-3>", phrase_context_menu.show)
 
     def _populate_listbox(self):

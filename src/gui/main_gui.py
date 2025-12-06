@@ -6,6 +6,7 @@ from src.core.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
 from src.core.tool_config import TOOL_COMPONENTS
+from src.gui.custom_widgets import CustomText, CustomEntry
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
@@ -39,15 +40,13 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_scrollbar = ttk.Scrollbar(self.current_clipboard_frame, orient="vertical")
         self.clipboard_text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT, yscrollcommand=self.clipboard_text_scrollbar.set)
+        self.clipboard_text_widget = CustomText(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT, yscrollcommand=self.clipboard_text_scrollbar.set, app=self.app)
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.clipboard_text_scrollbar.config(command=self.clipboard_text_widget.yview)
 
         self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.NORMAL)
-        text_context_menu = context_menu.TextWidgetContextMenu(self.master, self.clipboard_text_widget)
-        self.clipboard_text_widget.bind("<Button-3>", text_context_menu.show)
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
@@ -60,11 +59,9 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.search_label = ttk.Label(self.search_frame, text="検索 (Search):")
         self.search_label.pack(side=tk.LEFT)
 
-        self.search_entry = ttk.Entry(self.search_frame)
+        self.search_entry = CustomEntry(self.search_frame, app=self.app)
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X)
         self.search_entry.bind("<KeyRelease>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_SEARCH", self.search_entry.get()))
-        search_context_menu = context_menu.TextWidgetContextMenu(self.master, self.search_entry)
-        self.search_entry.bind("<Button-3>", search_context_menu.show)
 
         history_container_frame = ttk.LabelFrame(history_area_frame, text="Clipboard History")
         history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)

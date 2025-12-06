@@ -1,0 +1,17 @@
+{
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "select_all": "Select All",
+    "copy_selected": "Copy Selected",
+    "open_as_quick_task": "Open as Quick Task",
+    "format": "Format",
+    "delete_selected": "Delete Selected",
+    "undo": "Undo",
+    "pin_unpin": "Pin/Unpin",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete"
+}

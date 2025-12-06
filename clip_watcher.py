@@ -44,6 +44,7 @@ if __name__ == "__main__":
         builder = ApplicationBuilder()
         app = builder.with_event_dispatcher()\
                      .with_settings(SETTINGS_FILE_PATH)\
+                     .with_translator()\
                      .with_theme_manager(root)\
                      .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
                      .with_plugin_manager()\
