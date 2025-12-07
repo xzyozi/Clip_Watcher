@@ -8,11 +8,18 @@ class BaseContextMenu(ABC):
         self.app = app
         self.translator = app.translator
         self.build_menu()
+        # Rebuild the menu if the language changes
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
 
     @abstractmethod
     def build_menu(self):
         """Build the menu items. Must be implemented by subclasses."""
         pass
+
+    def _rebuild_menu(self, *args):
+        """Clears and rebuilds the menu, typically for language changes."""
+        self.menu.delete(0, tk.END)
+        self.build_menu()
 
     def show(self, event):
         """Show the context menu at the event's position."""
@@ -28,7 +35,13 @@ class HistoryContextMenu(BaseContextMenu):
         super().__init__(master, app_instance)
 
     def build_menu(self):
-        # This menu is dynamic, so it's built in _build_dynamic_menu
+        # This menu is dynamic, its content is built just before showing.
+        # So, we don't need to pre-build it here or rebuild on language change.
+        # The _build_dynamic_menu method is called in show() and uses the translator.
+        pass
+
+    def _rebuild_menu(self, *args):
+        # This menu is built dynamically in show(), so no action is needed here.
         pass
 
     def _get_listbox(self):
@@ -75,10 +88,13 @@ class HistoryContextMenu(BaseContextMenu):
         pin_unpin_label = self.translator("pin_unpin")
         pin_unpin_state = "disabled"
         if has_selection:
-            item_tuple = self.app.monitor.get_history()[selected_index]
-            is_pinned = item_tuple[1]
-            pin_unpin_label = self.translator("unpin") if is_pinned else self.translator("pin")
-            pin_unpin_state = "normal"
+            # Ensure history data is available before accessing
+            history_data = self.app.monitor.get_history()
+            if selected_index < len(history_data):
+                item_tuple = history_data[selected_index]
+                is_pinned = item_tuple[1]
+                pin_unpin_label = self.translator("unpin") if is_pinned else self.translator("pin")
+                pin_unpin_state = "normal"
 
         self.menu.add_command(label=pin_unpin_label,
                                  command=lambda: self.app.event_dispatcher.dispatch("HISTORY_PIN_UNPIN", selected_index),

@@ -9,6 +9,7 @@ class ContextMenuMixin:
         app = kwargs.pop('app', None)
         if not app or not hasattr(app, 'translator'):
             raise ValueError("ContextMenuMixin requires an 'app' instance with a 'translator' attribute passed during initialization.")
+        self.app = app
         self.translator = app.translator
 
         super().__init__(*args, **kwargs)
@@ -17,6 +18,13 @@ class ContextMenuMixin:
         self._build_menu()
 
         self.bind("<Button-3>", self.show_context_menu)
+        # Rebuild the menu if the language changes
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
+
+    def _rebuild_menu(self, *args):
+        """Clears and rebuilds the menu, typically for language changes."""
+        self.context_menu.delete(0, tk.END)
+        self._build_menu()
 
     def _build_menu(self):
         """Builds the menu with translated labels."""
