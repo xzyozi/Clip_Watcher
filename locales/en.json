@@ -52,5 +52,7 @@
     "tools_menu": "Tools",
     "help_menu": "Help",
     "how_to_use_menu_item": "How to Use",
-    "about_menu_item": "About"
+    "about_menu_item": "About",
+    "days_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "weekdays_full": ["Mon", "Tue", "Wed", "Thu", "Fri", "Satur", "Sun"]
 }

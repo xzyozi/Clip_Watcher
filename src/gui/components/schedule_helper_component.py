@@ -10,7 +10,7 @@ from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):
     """
-    A GUI component to help create date and time related text.
+    日付と時刻に関連するテキストの作成を支援するGUIコンポーネント。
     """
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
@@ -36,6 +36,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
             "%Y/%m/%d %H:%M",
             "%Y年%m月%d日 %H:%M",
             "%Y年%m月%d日(%a) %H:%M",
+            "%Y年%m月%d日(%a) %H:%M～",
         ]
         self.format_var = tk.StringVar(value=self.date_formats[7])
 
@@ -111,7 +112,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         self.month_year_label.config(text=f"{self.current_year} / {self.current_month:02d}")
 
-        days = ["日", "月", "火", "水", "木", "金", "土"]
+        days = self.app.translator("days_short")
         for i, day in enumerate(days):
             ttk.Label(self.calendar_frame, text=day, width=5, anchor="center").grid(row=0, column=i, padx=2, pady=2)
 
@@ -200,7 +201,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
                 full_date = date.replace(hour=hour, minute=minute)
                 
                 if "%a" in format_str:
-                    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+                    weekdays = self.app.translator("weekdays_full")
                     day_of_week = weekdays[full_date.weekday()]
                     temp_format = format_str.replace("%a", "__DAY_OF_WEEK__")
                     formatted_text = full_date.strftime(temp_format).replace("__DAY_OF_WEEK__", day_of_week)

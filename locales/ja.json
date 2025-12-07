@@ -52,5 +52,7 @@
     "tools_menu": "ツール",
     "help_menu": "ヘルプ",
     "how_to_use_menu_item": "使い方",
-    "about_menu_item": "バージョン情報"
+    "about_menu_item": "バージョン情報",
+    "days_short": ["日", "月", "火", "水", "木", "金", "土"],
+    "weekdays_full": ["月", "火", "水", "木", "金", "土", "日"]
 }
