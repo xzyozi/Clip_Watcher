@@ -26,6 +26,7 @@ class SettingsManager:
     def _get_default_settings(self):
         return {
             "theme": "light",
+            "language": "en", # Add language setting, 'en' or 'ja'
             "history_limit": 50,
             "always_on_top": False,
             "excluded_apps": ["keepass.exe", "bitwarden.exe"],
@@ -35,9 +36,15 @@ class SettingsManager:
             "clipboard_content_font_size": 10,
             "history_font_family": "TkDefaultFont",
             "history_font_size": 10,
-            "show_calendar_tab": True,
-            "show_hash_calculator_tab": False,
-            "show_unit_converter_tab": False
+            "show_calendar_tab": True, # This is for main window tabs
+            "show_hash_calculator_tab": False, # This is for main window tabs
+            "show_unit_converter_tab": False, # This is for main window tabs
+            "show_general_settings_tab": True,
+            "show_history_settings_tab": True,
+            "show_notifications_settings_tab": True,
+            "show_font_settings_tab": True,
+            "show_excluded_apps_settings_tab": True,
+            "show_modules_settings_tab": True
         }
 
     def save_settings(self):

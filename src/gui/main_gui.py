@@ -5,31 +5,29 @@ from src.core import config
 from src.core.config import THEMES
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
-from src.gui.components.schedule_helper_component import ScheduleHelperComponent
-from src.gui.components.hash_calculator_component import HashCalculatorComponent
-from src.gui.components.unit_converter_component import UnitConverterComponent
+from src.core.tool_config import TOOL_COMPONENTS
+from src.gui.custom_widgets import CustomText, CustomEntry
 
 from src.gui.base_frame_gui import BaseFrameGUI
 
 class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
-        master.title("ClipWatcher")
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
-
+        
         self.history_data = []
         self._debounce_job = None
 
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
 
-        clipboard_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.notebook.add(clipboard_tab_frame, text="Clipboard")
+        self.clipboard_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.notebook.add(self.clipboard_tab_frame, text="") # Text set in _update_widget_text
 
-        paned_window = tk.PanedWindow(clipboard_tab_frame, orient=tk.VERTICAL, sashrelief=tk.RAISED, bg=THEMES[self.app.theme_manager.get_current_theme()]["frame_bg"])
+        paned_window = tk.PanedWindow(self.clipboard_tab_frame, orient=tk.VERTICAL, sashrelief=tk.RAISED, bg=THEMES[self.app.theme_manager.get_current_theme()]["frame_bg"])
         paned_window.pack(fill=tk.BOTH, expand=True)
 
-        self.current_clipboard_frame = ttk.LabelFrame(paned_window, text="Current Clipboard Content")
+        self.current_clipboard_frame = ttk.LabelFrame(paned_window, text="") # Text set in _update_widget_text
         paned_window.add(self.current_clipboard_frame, height=100)
 
         self.redo_button = ttk.Button(self.current_clipboard_frame, text="⟳", command=lambda: self.app.event_dispatcher.dispatch("REQUEST_REDO_LAST_ACTION"), state=tk.DISABLED)
@@ -41,15 +39,12 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_scrollbar = ttk.Scrollbar(self.current_clipboard_frame, orient="vertical")
         self.clipboard_text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.clipboard_text_widget = tk.Text(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT, yscrollcommand=self.clipboard_text_scrollbar.set)
+        self.clipboard_text_widget = CustomText(self.current_clipboard_frame, wrap=tk.WORD, height=5, relief=tk.FLAT, yscrollcommand=self.clipboard_text_scrollbar.set, app=self.app)
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.clipboard_text_scrollbar.config(command=self.clipboard_text_widget.yview)
 
-        self.clipboard_text_widget.insert(tk.END, "Waiting for clipboard content...")
         self.clipboard_text_widget.config(state=tk.NORMAL)
-        text_context_menu = context_menu.TextWidgetContextMenu(self.master, self.clipboard_text_widget)
-        self.clipboard_text_widget.bind("<Button-3>", text_context_menu.show)
         self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
         self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
 
@@ -59,68 +54,117 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.search_frame = ttk.Frame(history_area_frame)
         self.search_frame.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
 
-        self.search_label = ttk.Label(self.search_frame, text="検索 (Search):")
+        self.search_label = ttk.Label(self.search_frame, text="") # Text set in _update_widget_text
         self.search_label.pack(side=tk.LEFT)
 
-        self.search_entry = ttk.Entry(self.search_frame)
+        self.search_entry = CustomEntry(self.search_frame, app=self.app)
         self.search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X)
         self.search_entry.bind("<KeyRelease>", lambda event: self.app.event_dispatcher.dispatch("HISTORY_SEARCH", self.search_entry.get()))
-        search_context_menu = context_menu.TextWidgetContextMenu(self.master, self.search_entry)
-        self.search_entry.bind("<Button-3>", search_context_menu.show)
 
-        history_container_frame = ttk.LabelFrame(history_area_frame, text="Clipboard History")
-        history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
-        self.history_component = HistoryListComponent(history_container_frame, self.app)
+        self.history_container_frame = ttk.LabelFrame(history_area_frame, text="") # Text set in _update_widget_text
+        self.history_container_frame.pack(fill=tk.BOTH, expand=True, pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X)
+        self.history_component = HistoryListComponent(self.history_container_frame, self.app)
         self.history_component.pack(fill=tk.BOTH, expand=True)
 
         self.control_frame = ttk.Frame(history_area_frame)
         self.control_frame.pack(pady=config.FRAME_PADDING)
 
-        self.copy_history_button = ttk.Button(self.control_frame, text="Copy Selected", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection()))
+        self.copy_history_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection()))
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.sort_button = ttk.Button(self.control_frame, text="Sort: Desc", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
+        self.sort_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT"))
         self.sort_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.format_button = ttk.Button(self.control_frame, text="Format", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
+        self.format_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_FORMAT_ITEM"), state=tk.DISABLED)
         self.format_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
-        self.quit_button = ttk.Button(self.control_frame, text="Quit", command=self.app.file_handlers.handle_quit)
+        self.quit_button = ttk.Button(self.control_frame, text="", command=self.app.file_handlers.handle_quit)
         self.quit_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
 
-        fixed_phrases_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.notebook.add(fixed_phrases_tab_frame, text="Fixed Phrases")
-        self.fixed_phrases_frame = FixedPhrasesFrame(fixed_phrases_tab_frame, self.app)
+        self.fixed_phrases_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.notebook.add(self.fixed_phrases_tab_frame, text="") # Text set in _update_widget_text
+        self.fixed_phrases_frame = FixedPhrasesFrame(self.fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Create tab components but don't add them to the notebook yet
-        self.schedule_helper_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.schedule_helper_frame = ScheduleHelperComponent(self.schedule_helper_tab_frame, self.app)
-        self.schedule_helper_frame.pack(fill=tk.BOTH, expand=True)
-
-        self.hash_calculator_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.hash_calculator_frame = HashCalculatorComponent(self.hash_calculator_tab_frame, self.app)
-        self.hash_calculator_frame.pack(fill=tk.BOTH, expand=True)
-
-        self.unit_converter_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.unit_converter_frame = UnitConverterComponent(self.unit_converter_tab_frame, self.app)
-        self.unit_converter_frame.pack(fill=tk.BOTH, expand=True)
-
-        self.tabs = {
-            "show_calendar_tab": (self.schedule_helper_tab_frame, "Calender"),
-            "show_hash_calculator_tab": (self.hash_calculator_tab_frame, "Hash Calculator"),
-            "show_unit_converter_tab": (self.unit_converter_tab_frame, "Unit Converter"),
-        }
+        self.tool_frames = {}
+        self.tool_components = {}
+        self.tabs = {}
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
 
         self.on_settings_changed(self.app.settings_manager.settings)
+        self._update_widget_text() # Initial text setup
+
+    def _update_widget_text(self):
+        """Updates all translatable text widgets."""
+        translator = self.app.translator
+        self.master.title(translator("app_title"))
+        self.notebook.tab(self.clipboard_tab_frame, text=translator("clipboard_tab"))
+        self.current_clipboard_frame.config(text=translator("current_clipboard_content_label"))
+        
+        # Set initial text only if the widget is empty
+        if not self.clipboard_text_widget.get("1.0", "end-1c"):
+            self.clipboard_text_widget.insert(tk.END, translator("waiting_for_clipboard_content"))
+
+        self.search_label.config(text=translator("search_label"))
+        self.history_container_frame.config(text=translator("clipboard_history_label"))
+        self.copy_history_button.config(text=translator("copy_selected_button"))
+        
+        # Update sort button text based on current state
+        sort_key = "sort_asc_button" if self.app.history_sort_ascending else "sort_desc_button"
+        self.sort_button.config(text=translator(sort_key))
+
+        self.format_button.config(text=translator("format_button"))
+        self.quit_button.config(text=translator("quit_button"))
+        self.notebook.tab(self.fixed_phrases_tab_frame, text=translator("fixed_phrases_tab"))
+
+        # Update tool tabs
+        self._update_tab_visibility(self.app.settings_manager.settings)
+
+    def create_tool_tabs(self):
+        """Dynamically create tab components for registered tools."""
+        for tool_config in TOOL_COMPONENTS:
+            tool_name = tool_config["name"]
+            component_class = tool_config["component"]
+            setting_key = tool_config["setting_key"]
+
+            tool_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+            self.tool_frames[tool_name] = tool_frame
+
+            component = component_class(tool_frame, self.app)
+            self.tool_components[tool_name] = component
+            component.pack(fill=tk.BOTH, expand=True)
+
+            self.tabs[setting_key] = (tool_frame, tool_name)
+
+        # After creating tabs, update their visibility based on settings
+        self._update_tab_visibility(self.app.settings_manager.settings)
+
+    def toggle_tool_tab(self, tool_name):
+        """Toggles the visibility of a tool tab."""
+        for tool_config in TOOL_COMPONENTS:
+            if tool_config["name"] == tool_name:
+                setting_key = tool_config["setting_key"]
+                if setting_key in self.tabs:
+                    tab_frame, tab_text = self.tabs[setting_key]
+                    try:
+                        # Check if the tab exists and is visible
+                        tab_id = self.notebook.index(tab_frame)
+                        self.notebook.forget(tab_id)
+                    except tk.TclError:
+                        # Tab doesn't exist, so add it
+                        self.notebook.add(tab_frame, text=tab_text)
+                        self.notebook.select(tab_frame)
+                else:
+                    print(f"Tool tab '{tool_name}' not found or not configured.")
+                break
 
     def on_settings_changed(self, settings):
         self.on_font_settings_changed(settings)
         self._update_tab_visibility(settings)
+        self._update_widget_text() # Re-translate UI on language change
 
     def _update_tab_visibility(self, settings):
         for setting_key, (tab_frame, tab_text) in self.tabs.items():

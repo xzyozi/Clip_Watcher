@@ -6,6 +6,7 @@ import logging
 
 from src.gui.base_frame_gui import BaseFrameGUI
 from src.gui import context_menu
+from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):
     """
@@ -97,13 +98,10 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.text_scrollbar = ttk.Scrollbar(editor_frame, orient="vertical")
         self.text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.text_widget = tk.Text(editor_frame, wrap=tk.WORD, relief=tk.FLAT, yscrollcommand=self.text_scrollbar.set)
+        self.text_widget = CustomText(editor_frame, wrap=tk.WORD, relief=tk.FLAT, yscrollcommand=self.text_scrollbar.set, app=self.app)
         self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.text_scrollbar.config(command=self.text_widget.yview)
-
-        text_context_menu = context_menu.TextWidgetContextMenu(self.master, self.text_widget)
-        self.text_widget.bind("<Button-3>", text_context_menu.show)
 
         self.logger.info("ScheduleHelperComponent widgets created.")
 

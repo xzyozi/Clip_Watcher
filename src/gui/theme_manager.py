@@ -102,5 +102,10 @@ class ThemeManager:
         for child in widget.winfo_children():
             self.apply_theme_to_widget_tree(child, theme)
 
+    def apply_theme_to_toplevel(self, toplevel_window):
+        """Applies the current theme to a Toplevel window and its children."""
+        theme = THEMES[self.current_theme]
+        self.apply_theme_to_widget_tree(toplevel_window, theme)
+
     def get_current_theme(self):
         return self.current_theme

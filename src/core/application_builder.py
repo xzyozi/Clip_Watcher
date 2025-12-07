@@ -6,9 +6,12 @@ from .fixed_phrases_manager import FixedPhrasesManager
 from .exceptions import ConfigError
 from .plugin_manager import PluginManager
 from .event_dispatcher import EventDispatcher
+from .tool_manager import ToolManager
 from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
+from src.core.app_main import MainApplication
+from src.utils.i18n import Translator
 
 if TYPE_CHECKING:
     from .base_application import BaseApplication
@@ -25,6 +28,8 @@ class ApplicationBuilder:
         self.plugin_manager: Optional[PluginManager] = None
         self.event_dispatcher: Optional[EventDispatcher] = None
         self.theme_manager: Optional[ThemeManager] = None
+        self.tool_manager: Optional[ToolManager] = None
+        self.translator: Optional[Translator] = None
         
     def with_event_dispatcher(self) -> 'ApplicationBuilder':
         """イベントディスパッチャの初期化"""
@@ -47,6 +52,18 @@ class ApplicationBuilder:
         except Exception as e:
             log_and_show_error(f"設定マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}")
+
+    def with_translator(self) -> 'ApplicationBuilder':
+        """翻訳サービスの初期化"""
+        if not self.settings_manager:
+            raise ConfigError("設定マネージャーが初期化されていません")
+        try:
+            self.translator = Translator(self.settings_manager)
+            logger.info("翻訳サービスを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error("エラー", f"翻訳サービスの初期化に失敗: {str(e)}")
+            raise ConfigError(f"翻訳サービスの初期化に失敗しました: {str(e)}")
 
     def with_theme_manager(self, root: tk.Tk) -> 'ApplicationBuilder':
         """テーママネージャーの初期化"""
@@ -91,12 +108,20 @@ class ApplicationBuilder:
             log_and_show_error("エラー", f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
 
-    def build(self, master: tk.Tk) -> 'BaseApplication':
+    def with_tool_manager(self) -> 'ApplicationBuilder':
+        """ツールマネージャーの初期化"""
+        try:
+            self.tool_manager = ToolManager()
+            logger.info("ツールマネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error("エラー", f"ツールマネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"ツールマネージャーの初期化に失敗しました: {str(e)}")
+
+    def build(self, master: tk.Tk) -> 'MainApplication':
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager]):
+        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.tool_manager, self.translator]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
-        
-        from clip_watcher import Application as MainApplication
         
         try:
             app = MainApplication(
@@ -106,7 +131,9 @@ class ApplicationBuilder:
                 fixed_phrases_manager=self.fixed_phrases_manager,
                 plugin_manager=self.plugin_manager,
                 event_dispatcher=self.event_dispatcher,
-                theme_manager=self.theme_manager
+                theme_manager=self.theme_manager,
+                tool_manager=self.tool_manager,
+                translator=self.translator
             )
             logger.info("アプリケーションのビルドが完了しました")
 

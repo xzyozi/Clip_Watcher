@@ -12,7 +12,6 @@ class FormatDialog(BaseToplevelGUI):
         self.settings_manager = settings_manager
 
         self.geometry("350x300") # Adjusted height for buttons
-        self.transient(master)
         self.grab_set()
 
         self._create_widgets()

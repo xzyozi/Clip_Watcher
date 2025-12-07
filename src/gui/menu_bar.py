@@ -5,71 +5,67 @@ import logging
 logger = logging.getLogger(__name__)
 
 def create_menu_bar(master, app_instance):
+    translator = app_instance.translator
     menubar = tk.Menu(master)
 
     # File Menu
     file_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
-    file_menu.add_command(label="設定 (Settings)...", command=app_instance.open_settings_window)
-    file_menu.add_command(label="履歴をエクスポート (Export History)...", command=app_instance.file_handlers.handle_export_history)
-    file_menu.add_command(label="履歴をインポート (Import History)...", command=app_instance.file_handlers.handle_import_history)
+    file_menu.add_command(label=translator("settings_menu_item"), command=app_instance.open_settings_window)
+    file_menu.add_command(label=translator("export_history_menu_item"), command=app_instance.file_handlers.handle_export_history)
+    file_menu.add_command(label=translator("import_history_menu_item"), command=app_instance.file_handlers.handle_import_history)
     file_menu.add_separator()
-
-    file_menu.add_command(label="終了 (Exit)", command=app_instance.file_handlers.handle_quit)
-    menubar.add_cascade(label="ファイル (File)", menu=file_menu)
+    file_menu.add_command(label=translator("exit_menu_item"), command=app_instance.file_handlers.handle_quit)
+    menubar.add_cascade(label=translator("file_menu"), menu=file_menu)
 
     # Edit Menu
     edit_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
-    edit_menu.add_command(label="検索 (Find)...", command=lambda: logger.info("Find clicked"))
-    edit_menu.add_command(label="選択項目を結合してコピー (Copy Selected as Merged)", command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_listbox.curselection()))
+    edit_menu.add_command(label=translator("find_menu_item"), command=lambda: logger.info("Find clicked"))
+    edit_menu.add_command(label=translator("copy_merged_menu_item"), command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_component.listbox.curselection()))
     edit_menu.add_separator()
-    edit_menu.add_command(label="選択項目を削除 (Delete Selected)", command=app_instance.history_handlers.handle_delete_selected_history)
-    edit_menu.add_command(label="ピン留め以外をすべて削除 (Delete All Unpinned)", command=app_instance.history_handlers.handle_delete_all_unpinned_history)
-    edit_menu.add_command(label="すべての履歴を削除 (Clear All History)", command=app_instance.history_handlers.handle_clear_all_history)
-    menubar.add_cascade(label="編集 (Edit)", menu=edit_menu)
+    edit_menu.add_command(label=translator("delete_selected_menu_item"), command=app_instance.history_handlers.handle_delete_selected_history)
+    edit_menu.add_command(label=translator("delete_all_unpinned_menu_item"), command=app_instance.history_handlers.handle_delete_all_unpinned_history)
+    edit_menu.add_command(label=translator("clear_all_history_menu_item"), command=app_instance.history_handlers.handle_clear_all_history)
+    menubar.add_cascade(label=translator("edit_menu"), menu=edit_menu)
 
     # View Menu
     view_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
-    # Variable to hold the state of the "Always on Top" checkbutton
     app_instance.always_on_top_var = tk.BooleanVar(value=app_instance.settings_manager.get_setting("always_on_top"))
-    view_menu.add_checkbutton(label="常に手前に表示 (Always on Top)",
+    view_menu.add_checkbutton(label=translator("always_on_top_menu_item"),
                               command=lambda: app_instance.event_dispatcher.dispatch("SETTINGS_ALWAYS_ON_TOP", app_instance.always_on_top_var.get()),
                               variable=app_instance.always_on_top_var)
     
-    # Theme Menu
     app_instance.theme_var = tk.StringVar(value=app_instance.settings_manager.get_setting("theme"))
     theme_menu = tk.Menu(view_menu, tearoff=0)
-    theme_menu.add_radiobutton(label="ライト (Light)", variable=app_instance.theme_var, value="light",
+    theme_menu.add_radiobutton(label=translator("light_theme_menu_item"), variable=app_instance.theme_var, value="light",
                                command=lambda: app_instance.settings_handlers.handle_set_theme("light", save=False))
-    theme_menu.add_radiobutton(label="ダーク (Dark)", variable=app_instance.theme_var, value="dark",
+    theme_menu.add_radiobutton(label=translator("dark_theme_menu_item"), variable=app_instance.theme_var, value="dark",
                                command=lambda: app_instance.settings_handlers.handle_set_theme("dark", save=False))
-    # "Follow System" is more complex, will just logger.info for now
-    theme_menu.add_radiobutton(label="システム設定に合わせる (Follow System)", variable=app_instance.theme_var, value="system",
+    theme_menu.add_radiobutton(label=translator("system_theme_menu_item"), variable=app_instance.theme_var, value="system",
                                command=lambda: logger.info("Follow System theme clicked (not yet implemented)"))
-    view_menu.add_cascade(label="テーマ (Theme)", menu=theme_menu)
+    view_menu.add_cascade(label=translator("theme_menu"), menu=theme_menu)
     
     view_menu.add_separator()
     
     filter_menu = tk.Menu(view_menu, tearoff=0)
-    filter_menu.add_command(label="すべて表示 (Show All)", command=lambda: logger.info("Show All clicked"))
-    filter_menu.add_command(label="テキストのみ (Show Text Only)", command=lambda: logger.info("Show Text Only clicked"))
-    filter_menu.add_command(label="画像のみ (Show Images Only)", command=lambda: logger.info("Show Images Only clicked"))
-    view_menu.add_cascade(label="表示内容のフィルタ (Filter)", menu=filter_menu)
+    filter_menu.add_command(label=translator("show_all_menu_item"), command=lambda: logger.info("Show All clicked"))
+    filter_menu.add_command(label=translator("show_text_only_menu_item"), command=lambda: logger.info("Show Text Only clicked"))
+    filter_menu.add_command(label=translator("show_images_only_menu_item"), command=lambda: logger.info("Show Images Only clicked"))
+    view_menu.add_cascade(label=translator("filter_menu"), menu=filter_menu)
     
-    menubar.add_cascade(label="表示 (View)", menu=view_menu)
+    menubar.add_cascade(label=translator("view_menu"), menu=view_menu)
 
     # Tools Menu
-    tools_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
-    tools_menu.add_checkbutton(
-        label="カレンダー表示 (Show Calender)", 
-        variable=app_instance.calendar_visible_var, 
-        command=lambda: app_instance.gui.toggle_calendar_tab(app_instance.calendar_visible_var)
-    )
-    menubar.add_cascade(label="ツール (Tools)", menu=tools_menu)
+    tools_menu = tk.Menu(menubar, tearoff=0)
+    for tool_name in app_instance.tool_manager.get_all_tool_names():
+        tool_command = app_instance.tool_manager.get_tool_command(tool_name)
+        if tool_command:
+            tools_menu.add_command(label=tool_name, command=tool_command)
+    menubar.add_cascade(label=translator("tools_menu"), menu=tools_menu)
 
     # Help Menu
     help_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost)
-    help_menu.add_command(label="使い方 (How to Use)", command=event_handlers.handle_how_to_use)
-    help_menu.add_command(label="バージョン情報 (About)", command=event_handlers.handle_about)
-    menubar.add_cascade(label="ヘルプ (Help)", menu=help_menu, command=app_instance.open_settings_window)
+    help_menu.add_command(label=translator("how_to_use_menu_item"), command=event_handlers.handle_how_to_use)
+    help_menu.add_command(label=translator("about_menu_item"), command=event_handlers.handle_about)
+    menubar.add_cascade(label=translator("help_menu"), menu=help_menu)
 
     return menubar

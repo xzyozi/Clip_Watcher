@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from src.gui.fixed_phrases_window import FixedPhrasesFrame
 from src.core.fixed_phrases_manager import FixedPhrasesManager
+from src.core import config
 import logging
 
 from src.utils.error_handler import log_and_show_error
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 def handle_about():
     messagebox.showinfo(
         "バージョン情報 (About)",
-        "ClipWatcher\nバージョン: 0.1.0\n開発者: Gemini CLI Agent\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。"
+        f"ClipWatcher\nバージョン: {config.APP_VERSION}\n開発者: xx\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。"
     )
 
 def handle_how_to_use():
