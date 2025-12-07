@@ -13,6 +13,7 @@ from src.gui.base_frame_gui import BaseFrameGUI
 class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
+        master.geometry(config.MAIN_WINDOW_GEOMETRY)
         
         self.history_data = []
         self._debounce_job = None

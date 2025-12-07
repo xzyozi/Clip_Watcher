@@ -1,5 +1,5 @@
 # version of the application
-APP_VERSION = "0.1.1"
+APP_VERSION = "0.1.2"
 
 # Window sizes
 SETTINGS_WINDOW_GEOMETRY = "450x570"
