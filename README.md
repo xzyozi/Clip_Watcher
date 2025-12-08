@@ -15,24 +15,33 @@ ClipWatcherは、ユーザーのクリップボードを自動的に監視し、
 ## プロジェクト構造
 ```
 Clip_Watcher/
-├── clip_watcher.py       # メイン実行ファイル
-├── requirements.txt      # 依存ライブラリ
-├── README.md             # プロジェクト説明
-├── doc/                  # ドキュメント
-│   └──SPECIFICATION.md  # 詳細な仕様書
-└── src/
-    ├── __init__.py
-    ├── clipboard_monitor.py      # クリップボード監視ロジック
-    ├── fixed_phrases_manager.py # 定型文管理ロジック
-    ├── event_handlers/           # イベントハンドラ
-    │   ├── __init__.py
-    │   └── main_handlers.py
-    └── gui/                      # GUI関連
-        ├── __init__.py
-        ├── main_gui.py           # メインGUI
-        ├── menu_bar.py           # メニューバー
-        ├── context_menu.py       # コンテキストメニュー
-        └── fixed_phrases_window.py # 定型文管理ウィンドウ
+├── clip_watcher.py             # アプリケーションのエントリーポイント
+├── requirements.txt            # 依存ライブラリ
+├── settings.json               # 設定ファイル
+├── locales/                    # 国際化(i18n)用ロケールファイル
+│   ├── en.json
+│   └── ja.json
+├── src/
+│   ├── core/                   # コアロジック
+│   │   ├── app_main.py         # メインアプリケーションクラス
+│   │   ├── application_builder.py # アプリケーション構築クラス
+│   │   ├── clipboard_monitor.py  # クリップボード監視
+│   │   ├── settings_manager.py # 設定管理
+│   │   └── ...
+│   ├── gui/                    # GUI関連
+│   │   ├── main_gui.py         # メインウィンドウ
+│   │   ├── settings_window.py  # 設定ウィンドウ
+│   │   ├── menu_bar.py         # メニューバー
+│   │   ├── context_menu.py     # コンテキストメニュー
+│   │   └── components/         # 再利用可能なGUIコンポーネント
+│   ├── event_handlers/         # イベントハンドラ
+│   │   └── ...
+│   ├── plugins/                # プラグイン
+│   │   └── ...
+│   └── utils/                  # ユーティリティ
+│       ├── i18n.py             # 国際化(i18n)サービス
+│       └── ...
+└── doc/                        # ドキュメント
 ```
 
 ## 開発環境
