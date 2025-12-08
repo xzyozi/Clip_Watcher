@@ -4,7 +4,7 @@ from tkinter import ttk, simpledialog, filedialog, messagebox, font
 from src.core import config
 from src.gui import theme_manager
 
-from src.gui.base_toplevel_gui import BaseToplevelGUI
+from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.utils.error_handler import log_and_show_error
 
 class SettingsWindow(BaseToplevelGUI):

@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from src.gui.base_toplevel_gui import BaseToplevelGUI
+from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.gui.custom_widgets import CustomText
 
 class PhraseEditDialog(BaseToplevelGUI):

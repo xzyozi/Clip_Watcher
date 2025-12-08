@@ -3,12 +3,12 @@ from tkinter import ttk, font
 from src.gui import context_menu
 from src.core import config
 from src.core.config import THEMES
-from src.gui.fixed_phrases_window import FixedPhrasesFrame
+from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components.history_list_component import HistoryListComponent
 from src.core.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomText, CustomEntry
 
-from src.gui.base_frame_gui import BaseFrameGUI
+from src.gui.base.base_frame_gui import BaseFrameGUI
 
 class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master, app_instance):

@@ -8,7 +8,7 @@ from src.gui.components.phrase_edit_component import PhraseEditComponent
 
 logger = logging.getLogger(__name__)
 
-from src.gui.base_frame_gui import BaseFrameGUI
+from src.gui.base.base_frame_gui import BaseFrameGUI
 
 class FixedPhrasesFrame(BaseFrameGUI):
     """定型文管理フレーム"""

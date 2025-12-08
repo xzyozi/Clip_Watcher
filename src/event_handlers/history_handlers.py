@@ -62,7 +62,7 @@ class HistoryEventHandlers:
             tasks.append(content)
 
         if tasks:
-            from src.gui.quick_task_dialog import QuickTaskDialog
+            from src.gui.windows.quick_task_dialog import QuickTaskDialog
             dialog = QuickTaskDialog(self.app.master, self.app, tasks)
 
     def handle_copy_selected_history(self, selected_indices):
@@ -154,7 +154,7 @@ class HistoryEventHandlers:
             if not selected_indices:
                 return
 
-            from src.gui.format_dialog import FormatDialog
+            from src.gui.dialogs.format_dialog import FormatDialog
             
             dialog = self.app.create_toplevel(FormatDialog, self.app.settings_manager)
             selected_plugin = dialog.selected_plugin

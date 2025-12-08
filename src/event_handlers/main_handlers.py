@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from src.gui.fixed_phrases_window import FixedPhrasesFrame
+from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.core import config
 import logging
