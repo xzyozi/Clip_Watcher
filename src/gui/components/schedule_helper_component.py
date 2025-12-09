@@ -5,7 +5,7 @@ from datetime import datetime
 import logging
 
 from src.gui.base.base_frame_gui import BaseFrameGUI
-from src.gui import context_menu
+from src.gui.base import context_menu
 from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):

@@ -1,7 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 import tkinter as tk
 from .clipboard_monitor import ClipboardMonitor
-from .settings_manager import SettingsManager
+from .config.settings_manager import SettingsManager
 from .fixed_phrases_manager import FixedPhrasesManager
 from .exceptions import ConfigError
 from .plugin_manager import PluginManager

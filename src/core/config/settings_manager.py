@@ -1,6 +1,6 @@
 import json
 import os
-from .event_dispatcher import EventDispatcher
+from ..event_dispatcher import EventDispatcher
 
 from . import defaults
 

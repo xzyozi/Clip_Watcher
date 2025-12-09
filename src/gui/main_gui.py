@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, font
-from src.gui import context_menu
+from src.gui.base import context_menu
 from src.core.config import defaults as config
 from src.core.config.defaults import THEMES
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame

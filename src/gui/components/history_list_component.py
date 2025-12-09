@@ -22,7 +22,7 @@ class HistoryListComponent(tk.Frame):
     def _bind_events(self):
         self.listbox.bind("<<ListboxSelect>>", self._on_history_select)
         self.listbox.bind("<Double-Button-1>", lambda e: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.listbox.curselection()))
-        from src.gui import context_menu
+        from src.gui.base import context_menu
         history_context_menu = context_menu.HistoryContextMenu(self.master, self.app)
         self.listbox.bind("<Button-3>", history_context_menu.show)
 
