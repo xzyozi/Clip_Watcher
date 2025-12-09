@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.core.event_dispatcher import EventDispatcher
-    from src.core.settings_manager import SettingsManager
+    from src.core.config.settings_manager import SettingsManager
 
 
 class SettingsEventHandlers:

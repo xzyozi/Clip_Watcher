@@ -1,7 +1,7 @@
 import tkinter as tk
 import copy
 from tkinter import ttk, simpledialog, filedialog, messagebox, font
-from src.core import config
+from src.core.config import defaults as config
 from src.gui import theme_manager
 
 from src.gui.base.base_toplevel_gui import BaseToplevelGUI

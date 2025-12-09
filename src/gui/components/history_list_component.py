@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from src.core.config import THEMES
+from src.core.config.defaults import THEMES
 
 class HistoryListComponent(tk.Frame):
     def __init__(self, master, app_instance):

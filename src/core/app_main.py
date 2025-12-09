@@ -11,7 +11,7 @@ from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
 from src.core.tool_manager import ToolManager
-from src.core.tool_config import TOOL_COMPONENTS
+from src.core.config.tool_config import TOOL_COMPONENTS
 
 
 class MainApplication(BaseApplication):

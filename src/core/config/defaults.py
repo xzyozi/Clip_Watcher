@@ -15,6 +15,30 @@ HISTORY_LIMIT_MIN = 10
 HISTORY_LIMIT_MAX = 1000
 HISTORY_LIMIT_INCREMENT = 10
 
+# Default user settings dictionary
+DEFAULT_USER_SETTINGS = {
+    "theme": "light",
+    "language": "en", # 'en' or 'ja'
+    "history_limit": 50,
+    "always_on_top": False,
+    "excluded_apps": ["keepass.exe", "bitwarden.exe"],
+    "startup_on_boot": False,
+    "notification_sound_enabled": False,
+    "clipboard_content_font_family": "TkDefaultFont",
+    "clipboard_content_font_size": 10,
+    "history_font_family": "TkDefaultFont",
+    "history_font_size": 10,
+    "show_calendar_tab": True,
+    "show_hash_calculator_tab": False,
+    "show_unit_converter_tab": False,
+    "show_general_settings_tab": True,
+    "show_history_settings_tab": True,
+    "show_notifications_settings_tab": True,
+    "show_font_settings_tab": True,
+    "show_excluded_apps_settings_tab": True,
+    "show_modules_settings_tab": True
+}
+
 # Define themes
 THEMES = {
     "light": {

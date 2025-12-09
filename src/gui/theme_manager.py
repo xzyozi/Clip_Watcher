@@ -1,6 +1,6 @@
 from tkinter import ttk, Toplevel, Tk
 import tkinter as tk
-from src.core.config import THEMES
+from src.core.config.defaults import THEMES
 
 class ThemeManager:
     def __init__(self, root):
