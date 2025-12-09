@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import os
 import sys
+import socket
+import traceback
 from src.gui.main_gui import ClipWatcherGUI
 from src.core.base_application import BaseApplication
 from src.gui import menu_bar
@@ -12,6 +14,8 @@ from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
 from src.core.tool_manager import ToolManager
 from src.core.config.tool_config import TOOL_COMPONENTS
+from src.utils.logging_config import setup_logging
+from src.core.application_builder import ApplicationBuilder
 
 
 class MainApplication(BaseApplication):
@@ -187,3 +191,63 @@ class MainApplication(BaseApplication):
         self.stop_monitor()
         self.monitor.save_history_to_file()
         self.master.destroy()
+
+def start_app():
+    lock_socket = None
+    try:
+        # --- Single Instance Check ---
+        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            lock_socket.bind(("127.0.0.1", 61957))
+        except OSError:
+            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
+            sys.exit(0)
+
+        # --- Path Definitions ---
+        if sys.platform == "win32":
+            APP_DATA_DIR = os.path.join(os.environ['APPDATA'], 'ClipWatcher')
+        else:
+            APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
+        os.makedirs(APP_DATA_DIR, exist_ok=True)
+        
+        # Correctly determine BASE_DIR from the project root
+        # Assuming this file is at src/core/app_main.py, so we go up two levels.
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
+        SETTINGS_FILE_PATH = os.path.join(project_root, 'settings.json')
+        FIXED_PHRASES_FILE_PATH = os.path.join(project_root, 'fixed_phrases.json')
+
+        # --- Logging ---
+        logger = setup_logging()
+        logger.info("アプリケーションを開始します")
+
+        # --- Application Setup ---
+        root = tk.Tk()
+        
+        builder = ApplicationBuilder()
+        app = builder.with_event_dispatcher()\
+                     .with_settings(SETTINGS_FILE_PATH)\
+                     .with_translator()\
+                     .with_theme_manager(root)\
+                     .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
+                     .with_plugin_manager()\
+                     .with_tool_manager()\
+                     .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
+                     .build(root)
+               
+        logger.info("アプリケーションの初期化が完了しました")
+        
+        root.mainloop()
+
+    except Exception as e:
+        # Use a local logger variable to avoid UnboundLocalError
+        local_logger = locals().get('logger')
+        if local_logger:
+            local_logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
+        else:
+            print(f"アプリケーション起動エラー: {str(e)}")
+        traceback.print_exc()
+    finally:
+        if lock_socket:
+            lock_socket.close()
