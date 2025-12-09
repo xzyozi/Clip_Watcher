@@ -142,7 +142,7 @@ class MainApplication(BaseApplication):
                         # 見つからない場合はログを残すなどの対策（今回はwarningを表示）
                         print("Warning: Could not automatically find activate.bat")
                     
-                    # アクティベート後はPATHが通っているはずなので pythonw で起動
+                    # アクティベート後はPATHが通っているはずなので python で起動
                     # 万が一失敗したときのために start コマンドを使用
                     script_content += f'start "" python "{main_script_path}"'
 
