@@ -92,16 +92,56 @@ class MainApplication(BaseApplication):
         self._manage_startup(startup_enabled)
 
     def _manage_startup(self, startup_enabled):
+        """
+        Manages the startup .bat file.
+        Searches for the correct activate.bat related to the current python environment
+        or standard venv folders to ensure successful activation.
+        """
         if sys.platform == "win32":
             startup_folder = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
             startup_script_path = os.path.join(startup_folder, "ClipWatcher.bat")
 
             try:
                 if startup_enabled:
-                    # Use __file__ to get the absolute path of the script.
-                    # This is more robust than relying on the current working directory.
-                    script_path = os.path.abspath(__file__)
-                    script_content = f'@echo off\nstart "" "{sys.executable}" "{script_path}"'
+                    # 1. プロジェクトルート(main.pyがある場所)を算出
+                    current_dir = os.path.dirname(os.path.abspath(__file__))
+                    # src/core -> src -> root
+                    project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+                    main_script_path = os.path.join(project_root, "clip_watcher.py")
+
+                    # 2. activate.bat の場所を探索する
+                    # 優先度1: 現在実行中のPython (sys.executable) と同じ階層にある Scripts/activate.bat
+                    # (venv環境で実行していればこれが最も確実)
+                    current_python_dir = os.path.dirname(sys.executable)
+                    activate_candidates = [
+                        os.path.join(current_python_dir, "activate.bat"), # Scriptsフォルダの中にいる場合
+                        os.path.join(current_python_dir, "Scripts", "activate.bat"), # python.exeの親がルートの場合
+                        os.path.join(project_root, "venv", "Scripts", "activate.bat"), # 一般的な名前 venv
+                        os.path.join(project_root, ".venv", "Scripts", "activate.bat"), # 一般的な名前 .venv
+                        os.path.join(project_root, "env", "Scripts", "activate.bat") # 一般的な名前 env
+                    ]
+
+                    final_activate_path = None
+                    for path in activate_candidates:
+                        if os.path.exists(path):
+                            final_activate_path = path
+                            break
+                    
+                    # 3. バッチファイルの内容を作成
+                    script_content = '@echo off\n'
+                    script_content += f'cd "{project_root}"\n'
+
+                    if final_activate_path:
+                        # バッチファイル内でファイルの存在確認をしてからcallする（安全策）
+                        script_content += f'if exist "{final_activate_path}" call "{final_activate_path}"\n'
+                    else:
+                        # 見つからない場合はログを残すなどの対策（今回はwarningを表示）
+                        print("Warning: Could not automatically find activate.bat")
+                    
+                    # アクティベート後はPATHが通っているはずなので pythonw で起動
+                    # 万が一失敗したときのために start コマンドを使用
+                    script_content += f'start "" python "{main_script_path}"'
+
                     with open(startup_script_path, "w") as f:
                         f.write(script_content)
                 else:
@@ -147,4 +187,3 @@ class MainApplication(BaseApplication):
         self.stop_monitor()
         self.monitor.save_history_to_file()
         self.master.destroy()
-
