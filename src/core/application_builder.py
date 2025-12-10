@@ -141,6 +141,9 @@ class ApplicationBuilder:
             # Load settings and notify all components
             self.settings_manager.load_and_notify()
 
+            # Signal that the application is ready
+            app.on_ready()
+
             return app
         except Exception as e:
             log_and_show_error("エラー", f"アプリケーションのビルドに失敗: {str(e)}")

@@ -1,13 +1,15 @@
 from tkinter import filedialog, messagebox
+from .base_event_handler import BaseEventHandler
 
-class FileEventHandlers:
+class FileEventHandlers(BaseEventHandler):
     def __init__(self, app_instance, event_dispatcher):
         self.app = app_instance
-        self.event_dispatcher = event_dispatcher
+        super().__init__(event_dispatcher)
 
-        self.event_dispatcher.subscribe("FILE_QUIT", self.handle_quit)
-        self.event_dispatcher.subscribe("FILE_EXPORT_HISTORY", self.handle_export_history)
-        self.event_dispatcher.subscribe("FILE_IMPORT_HISTORY", self.handle_import_history)
+    def _register_handlers(self):
+        self.subscribe("FILE_QUIT", self.handle_quit)
+        self.subscribe("FILE_EXPORT_HISTORY", self.handle_export_history)
+        self.subscribe("FILE_IMPORT_HISTORY", self.handle_import_history)
 
     def handle_quit(self):
         self.app.on_closing()

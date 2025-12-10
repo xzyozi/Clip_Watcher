@@ -5,7 +5,7 @@ import sys
 import socket
 import traceback
 from src.gui.main_gui import ClipWatcherGUI
-from src.core.base_application import BaseApplication
+from src.core.base_application import BaseApplication, ApplicationState
 from src.gui import menu_bar
 from src.gui.windows.settings_window import SettingsWindow
 from src.event_handlers.history_handlers import HistoryEventHandlers
@@ -20,6 +20,7 @@ from src.core.application_builder import ApplicationBuilder
 
 class MainApplication(BaseApplication):
     def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator):
+        super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -45,8 +46,6 @@ class MainApplication(BaseApplication):
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
 
-        self.monitor.start()
-
         self._rebuild_menu()
 
         self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)
@@ -54,6 +53,24 @@ class MainApplication(BaseApplication):
         self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
         
         self.master.bind("<FocusIn>", self.on_focus_in)
+
+    def on_ready(self):
+        """Called when the application is fully initialized and ready to run."""
+        self._set_state(ApplicationState.READY)
+        self.monitor.start()
+        self._set_state(ApplicationState.RUNNING)
+
+    def shutdown(self):
+        """Performs a clean shutdown of the application."""
+        self.stop_monitor()
+        self.monitor.save_history_to_file()
+
+    def on_closing(self):
+        """Handles the main window closing event."""
+        self._set_state(ApplicationState.SHUTTING_DOWN)
+        self.shutdown()
+        self._set_state(ApplicationState.CLOSED)
+        self.master.destroy()
 
     def _rebuild_menu(self):
         """Destroys and recreates the main menu bar, usually for language changes."""
@@ -186,11 +203,6 @@ class MainApplication(BaseApplication):
 
     def stop_monitor(self):
         self.monitor.stop()
-
-    def on_closing(self):
-        self.stop_monitor()
-        self.monitor.save_history_to_file()
-        self.master.destroy()
 
 def start_app():
     lock_socket = None
