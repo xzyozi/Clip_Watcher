@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.core.event_dispatcher import EventDispatcher

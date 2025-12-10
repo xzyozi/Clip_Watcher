@@ -1,15 +1,62 @@
 import tkinter as tk
 from abc import ABC, abstractmethod
+from typing import Optional, NamedTuple
+from src.core.event_dispatcher import EventDispatcher
+from src.utils.i18n import Translator
+
+# --- State Management (as per review suggestion 2.2) ---
+
+class MenuState(NamedTuple):
+    """Represents the state of the history menu at a given moment."""
+    has_selection: bool
+    selected_indices: tuple[int, ...]
+    first_selected_index: Optional[int]
+    is_pinned: bool
+    can_undo: bool
+
+class HistoryMenuStateProvider:
+    """
+    Provides the state for the history context menu by decoupling state
+    calculation from the UI.
+    """
+    def __init__(self, app):
+        self.app = app
+
+    def get_menu_state(self, listbox: tk.Listbox) -> MenuState:
+        """Calculates and returns the current state of the menu."""
+        selected_indices = listbox.curselection()
+        has_selection = bool(selected_indices)
+        first_selected_index = selected_indices[0] if has_selection else None
+
+        is_pinned = False
+        if has_selection:
+            history_data = self.app.monitor.get_history()
+            if first_selected_index < len(history_data):
+                _, is_pinned = history_data[first_selected_index]
+
+        can_undo = self.app.undo_manager.can_undo()
+
+        return MenuState(
+            has_selection=has_selection,
+            selected_indices=selected_indices,
+            first_selected_index=first_selected_index,
+            is_pinned=is_pinned,
+            can_undo=can_undo,
+        )
+
+# --- Base Classes ---
 
 class BaseContextMenu(ABC):
     """Base class for context menus."""
-    def __init__(self, master, app):
+    def __init__(self, master, translator: Optional[Translator] = None, dispatcher: Optional[EventDispatcher] = None):
+        self.master = master
         self.menu = tk.Menu(master, tearoff=0)
-        self.app = app
-        self.translator = app.translator
+        self.translator = translator
+        self.dispatcher = dispatcher
         self.build_menu()
-        # Rebuild the menu if the language changes
-        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
+        
+        if self.dispatcher:
+            self.dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
 
     @abstractmethod
     def build_menu(self):
@@ -28,20 +75,22 @@ class BaseContextMenu(ABC):
         finally:
             self.menu.grab_release()
 
+# --- Concrete Implementations ---
+
 class HistoryContextMenu(BaseContextMenu):
-    """Context menu for the history listbox."""
+    """Context menu for the history listbox, with state management separated."""
     def __init__(self, master, app_instance):
-        self.listbox = None  # Defer initialization
-        super().__init__(master, app_instance)
+        self.app = app_instance
+        self.listbox = None
+        self.state_provider = HistoryMenuStateProvider(app_instance)
+        super().__init__(master, app_instance.translator, app_instance.event_dispatcher)
 
     def build_menu(self):
-        # This menu is dynamic, its content is built just before showing.
-        # So, we don't need to pre-build it here or rebuild on language change.
-        # The _build_dynamic_menu method is called in show() and uses the translator.
+        # Dynamic menu, built just before showing.
         pass
 
     def _rebuild_menu(self, *args):
-        # This menu is built dynamically in show(), so no action is needed here.
+        # Dynamic menu, no action needed here.
         pass
 
     def _get_listbox(self):
@@ -50,55 +99,46 @@ class HistoryContextMenu(BaseContextMenu):
         return self.listbox
 
     def _build_dynamic_menu(self):
+        """Builds the menu based on the current application state."""
         self.menu.delete(0, tk.END)
         listbox = self._get_listbox()
+        state = self.state_provider.get_menu_state(listbox)
+        self._add_menu_items(state)
 
-        has_selection = False
-        selected_index = None
-        try:
-            selected_index = listbox.curselection()[0]
-            has_selection = True
-        except IndexError:
-            pass
-
-        self.menu.add_command(label=self.translator("copy_selected"),
-                                 command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", listbox.curselection()))
-
-        self.menu.add_command(label=self.translator("open_as_quick_task"),
-                                 command=lambda: self.app.event_dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", listbox.curselection()),
-                                 state="normal" if has_selection else "disabled")
-
-        format_state = "normal" if has_selection else "disabled"
-        self.menu.add_command(label=self.translator("format"),
-                                 command=self.app.history_handlers.format_selected_item,
-                                 state=format_state)
-
-        self.menu.add_command(label=self.translator("delete_selected"),
-                                 command=lambda: self.app.event_dispatcher.dispatch("HISTORY_DELETE_SELECTED", listbox.curselection()))
-
+    def _add_menu_items(self, state: MenuState):
+        """Adds items to the menu based on the provided state."""
+        self.menu.add_command(
+            label=self.translator("copy_selected"),
+            command=lambda: self.dispatcher.dispatch("HISTORY_COPY_SELECTED", state.selected_indices)
+        )
+        self.menu.add_command(
+            label=self.translator("open_as_quick_task"),
+            command=lambda: self.dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", state.selected_indices),
+            state="normal" if state.has_selection else "disabled"
+        )
+        self.menu.add_command(
+            label=self.translator("format"),
+            command=self.app.history_handlers.format_selected_item,
+            state="normal" if state.has_selection else "disabled"
+        )
+        self.menu.add_command(
+            label=self.translator("delete_selected"),
+            command=lambda: self.dispatcher.dispatch("HISTORY_DELETE_SELECTED", state.selected_indices)
+        )
         self.menu.add_separator()
-
-        undo_state = "normal" if self.app.undo_manager.can_undo() else "disabled"
-        self.menu.add_command(label=self.translator("undo"),
-                                 command=lambda: self.app.event_dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"),
-                                 state=undo_state)
-
+        self.menu.add_command(
+            label=self.translator("undo"),
+            command=lambda: self.dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"),
+            state="normal" if state.can_undo else "disabled"
+        )
         self.menu.add_separator()
-
-        pin_unpin_label = self.translator("pin_unpin")
-        pin_unpin_state = "disabled"
-        if has_selection:
-            # Ensure history data is available before accessing
-            history_data = self.app.monitor.get_history()
-            if selected_index < len(history_data):
-                item_tuple = history_data[selected_index]
-                is_pinned = item_tuple[1]
-                pin_unpin_label = self.translator("unpin") if is_pinned else self.translator("pin")
-                pin_unpin_state = "normal"
-
-        self.menu.add_command(label=pin_unpin_label,
-                                 command=lambda: self.app.event_dispatcher.dispatch("HISTORY_PIN_UNPIN", selected_index),
-                                 state=pin_unpin_state)
+        
+        pin_unpin_label = self.translator("unpin") if state.is_pinned else self.translator("pin")
+        self.menu.add_command(
+            label=pin_unpin_label,
+            command=lambda: self.dispatcher.dispatch("HISTORY_PIN_UNPIN", state.first_selected_index),
+            state="normal" if state.has_selection else "disabled"
+        )
 
     def show(self, event):
         listbox = self._get_listbox()
@@ -120,7 +160,7 @@ class PhraseListContextMenu(BaseContextMenu):
     def __init__(self, master, app, phrase_list_component, phrase_edit_component):
         self.list_component = phrase_list_component
         self.edit_component = phrase_edit_component
-        super().__init__(master, app)
+        super().__init__(master, app.translator, app.event_dispatcher)
 
     def build_menu(self):
         self.menu.add_command(label=self.translator("copy"), command=self.edit_component._copy_phrase)
