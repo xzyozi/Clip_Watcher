@@ -16,7 +16,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
         
         self.history_data = []
-        self._debounce_job = None
+        self.is_user_editing = False # Flag to prevent UI updates during editing
 
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(pady=config.BUTTON_PADDING_Y, padx=config.BUTTON_PADDING_X, fill=tk.BOTH, expand=True)
@@ -45,8 +45,9 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.clipboard_text_scrollbar.config(command=self.clipboard_text_widget.yview)
 
         self.clipboard_text_widget.config(state=tk.NORMAL)
-        self.clipboard_text_widget.bind("<KeyRelease>", self._on_text_widget_change)
-        self.clipboard_text_widget.bind("<FocusOut>", self._on_text_widget_change)
+        # Bind focus events to control editing state
+        self.clipboard_text_widget.bind("<FocusIn>", self.start_editing)
+        self.clipboard_text_widget.bind("<FocusOut>", self.finish_editing)
 
         history_area_frame = ttk.Frame(paned_window)
         paned_window.add(history_area_frame)
@@ -96,6 +97,29 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.on_settings_changed(self.app.settings_manager.settings)
         self._update_widget_text() # Initial text setup
+
+    def start_editing(self, event):
+        """User starts editing the text area."""
+        self.is_user_editing = True
+
+    def finish_editing(self, event):
+        """User finishes editing, update clipboard if content has changed."""
+        if not self.is_user_editing:
+            return
+
+        self.is_user_editing = False
+        edited_text = self.clipboard_text_widget.get("1.0", "end-1c")
+
+        try:
+            # Get current clipboard content to avoid unnecessary updates
+            current_clipboard = self.master.clipboard_get()
+        except tk.TclError:
+            current_clipboard = ""
+
+        # If text has changed, update the system clipboard, which will trigger the monitor
+        if edited_text != current_clipboard:
+            self.master.clipboard_clear()
+            self.master.clipboard_append(edited_text)
 
     def _update_widget_text(self):
         """Updates all translatable text widgets."""
@@ -214,6 +238,10 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.history_component.apply_font(history_font)
 
     def update_clipboard_display(self, current_content, history, sort_ascending=False):
+        # If user is editing the text widget, do not update it.
+        if self.is_user_editing:
+            return
+
         if sort_ascending:
             pinned = [item for item in history if item[1]]
             unpinned = [item for item in history if not item[1]]
@@ -242,27 +270,3 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self.clipboard_text_widget.insert(tk.END, current_content)
             self.clipboard_text_widget.config(state=tk.NORMAL)
-
-    def _on_text_widget_change(self, event):
-        if self._debounce_job:
-            self.master.after_cancel(self._debounce_job)
-        if str(event.type) == 'FocusOut':
-            self._save_edited_text()
-        else:
-            self._debounce_job = self.master.after(500, self._save_edited_text)
-
-    def _save_edited_text(self):
-        selected_indices = self.history_component.listbox.curselection()
-        new_text = self.clipboard_text_widget.get("1.0", "end-1c")
-
-        if not selected_indices:
-            if new_text != self.app.monitor.last_clipboard_data:
-                self.master.clipboard_clear()
-                self.master.clipboard_append(new_text)
-            return
-
-        selected_index = selected_indices[0]
-        if 0 <= selected_index < len(self.history_data):
-            original_text, _ = self.history_data[selected_index]
-            if new_text != original_text:
-                self.app.event_dispatcher.dispatch("HISTORY_ITEM_EDITED", {'new_text': new_text, 'original_text': original_text})
