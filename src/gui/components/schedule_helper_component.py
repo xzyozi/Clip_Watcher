@@ -75,7 +75,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
         main_paned_window.pack(fill=tk.BOTH, expand=True)
 
         controls_frame = ttk.Frame(main_paned_window, padding=5)
-        main_paned_window.add(controls_frame, height=320)
+        main_paned_window.add(controls_frame, height=360)
 
         calendar_part_frame = ttk.Frame(controls_frame)
         calendar_part_frame.pack(fill=tk.X)
