@@ -10,14 +10,12 @@ from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):
     """
-    日付と時刻に関連するテキストの作成を支援するGUIコンポーネント。
+    A GUI component to help create texts related to dates and times.
     """
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing ScheduleHelperComponent.")
-        
-        calendar.setfirstweekday(calendar.SUNDAY)
 
         self.today = datetime.now()
         self.current_year = self.today.year
@@ -41,7 +39,36 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.format_var = tk.StringVar(value=self.date_formats[7])
 
         self._create_widgets()
+        
+        # Subscribe to language changes and apply initial settings
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
+        self._apply_locale_settings()
+
+    def _apply_locale_settings(self, *args):
+        """Applies locale-specific settings like the first day of the week and updates UI."""
+        self.logger.info("Applying locale settings to calendar.")
+        
+        # Get the first day of the week from translation, with a fallback
+        key = "calendar_first_weekday"
+        first_day_str = self.app.translator(key)
+        if first_day_str == key:  # Key not found, use default
+            first_day_str = "monday"
+            
+        day_map = {
+            "monday": calendar.MONDAY,
+            "tuesday": calendar.TUESDAY,
+            "wednesday": calendar.WEDNESDAY,
+            "thursday": calendar.THURSDAY,
+            "friday": calendar.FRIDAY,
+            "saturday": calendar.SATURDAY,
+            "sunday": calendar.SUNDAY
+        }
+        first_day = day_map.get(first_day_str.lower(), calendar.MONDAY)
+        calendar.setfirstweekday(first_day)
+        
+        # Redraw the calendar and update the text widget to reflect changes
         self._update_calendar()
+        self._update_text_widget()
 
     def _create_widgets(self):
         main_paned_window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RAISED)

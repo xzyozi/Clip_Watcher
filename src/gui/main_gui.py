@@ -172,14 +172,15 @@ class ClipWatcherGUI(BaseFrameGUI):
             if tool_config["name"] == tool_name:
                 setting_key = tool_config["setting_key"]
                 if setting_key in self.tabs:
-                    tab_frame, tab_text = self.tabs[setting_key]
+                    tab_frame, tab_text_key = self.tabs[setting_key]
+                    translated_text = self.app.translator(tab_text_key)
                     try:
                         # Check if the tab exists and is visible
                         tab_id = self.notebook.index(tab_frame)
                         self.notebook.forget(tab_id)
                     except tk.TclError:
                         # Tab doesn't exist, so add it
-                        self.notebook.add(tab_frame, text=tab_text)
+                        self.notebook.add(tab_frame, text=translated_text)
                         self.notebook.select(tab_frame)
                 else:
                     print(f"Tool tab '{tool_name}' not found or not configured.")
@@ -191,16 +192,27 @@ class ClipWatcherGUI(BaseFrameGUI):
         self._update_widget_text() # Re-translate UI on language change
 
     def _update_tab_visibility(self, settings):
-        for setting_key, (tab_frame, tab_text) in self.tabs.items():
+        """
+        Updates the visibility and text of tool tabs based on settings.
+        This method is called on initial load and when settings change.
+        """
+        translator = self.app.translator
+        for setting_key, (tab_frame, tab_text_key) in self.tabs.items():
             is_visible = settings.get(setting_key, False)
+            translated_text = translator(tab_text_key)
+            
             try:
                 tab_exists = self.notebook.index(tab_frame) is not None
             except tk.TclError:
                 tab_exists = False
 
-            if is_visible and not tab_exists:
-                self.notebook.add(tab_frame, text=tab_text)
-            elif not is_visible and tab_exists:
+            if is_visible:
+                if not tab_exists:
+                    self.notebook.add(tab_frame, text=translated_text)
+                else:
+                    # If tab already exists, just update its text
+                    self.notebook.tab(tab_frame, text=translated_text)
+            elif tab_exists:
                 self.notebook.forget(tab_frame)
 
     def on_font_settings_changed(self, settings):
