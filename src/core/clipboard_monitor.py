@@ -64,6 +64,50 @@ class ClipboardMonitor:
     def set_gui_update_callback(self, callback):
         self.update_callback = callback
 
+    def update_clipboard(self, text: str):
+        """Programmatically updates the system clipboard and treats it as a new entry."""
+        if not text:
+            return
+
+        # Avoid adding a duplicate entry if the text is identical to the most recent history item.
+        if self.history and text == self.history[0][0]:
+            return
+
+        try:
+            # Update the system clipboard first
+            self.tk_root.clipboard_clear()
+            self.tk_root.clipboard_append(text)
+            self.tk_root.update()
+        except Exception as e:
+            logging.error(f"プログラムによるクリップボードの更新に失敗しました: {e}", exc_info=True)
+            return # If clipboard update fails, don't modify history
+
+        # Now, directly update the history, mimicking the logic in _check_clipboard
+        self.last_clipboard_data = text
+        
+        existing_item_index = -1
+        for i, (content, is_pinned) in enumerate(self.history):
+            if content == text:
+                existing_item_index = i
+                break
+
+        if existing_item_index != -1:
+            # Item exists, move it to the top
+            content_to_move, is_pinned_status = self.history.pop(existing_item_index)
+            self.history.insert(0, (content_to_move, is_pinned_status))
+        else:
+            # New item, add it to the top
+            self.history.insert(0, (text, False))
+            # Trim history if over limit
+            if len(self.history) > self.history_limit:
+                # Find the last unpinned item to remove
+                unpinned_indices = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
+                if unpinned_indices:
+                    del self.history[unpinned_indices[-1]]
+        
+        # Trigger a GUI update to show the new history
+        self._trigger_gui_update()
+
     def _monitor_clipboard(self):
         logging.info("クリップボード監視を開始します")
         while self._running:
@@ -150,16 +194,16 @@ class ClipboardMonitor:
         except Exception as e:
             logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
 
-    def update_history_item(self, index: int, new_text: str):
-        """Updates the text of a history item at a given index."""
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_update = current_display_history[index]
-            for i, (content, is_pinned) in enumerate(self.history):
-                if content == item_to_update[0] and is_pinned == item_to_update[1]:
-                    self.history[i] = (new_text, is_pinned)
-                    self._trigger_gui_update()
-                    return
+    def update_history_item(self, old_text: str, new_text: str):
+        """Updates a history item by finding it by its content."""
+        for i, (content, is_pinned) in enumerate(self.history):
+            if content == old_text:
+                self.history[i] = (new_text, is_pinned)
+                # If the updated item was the most recent one, update last_clipboard_data as well
+                if self.last_clipboard_data == old_text:
+                    self.last_clipboard_data = new_text
+                self._trigger_gui_update()
+                return
 
     def _trigger_gui_update(self):
         if self.update_callback:

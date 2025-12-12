@@ -103,23 +103,40 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.is_user_editing = True
 
     def finish_editing(self, event):
-        """User finishes editing, update clipboard if content has changed."""
+        """
+        Handles the end of a user's editing session in the text widget.
+        If a history item was selected, it performs an undoable in-place update.
+        Otherwise, it treats the edit as a new clipboard entry.
+        """
         if not self.is_user_editing:
             return
 
         self.is_user_editing = False
         edited_text = self.clipboard_text_widget.get("1.0", "end-1c")
 
-        try:
-            # Get current clipboard content to avoid unnecessary updates
-            current_clipboard = self.master.clipboard_get()
-        except tk.TclError:
-            current_clipboard = ""
+        if not edited_text:
+            return
 
-        # If text has changed, update the system clipboard, which will trigger the monitor
-        if edited_text != current_clipboard:
-            self.master.clipboard_clear()
-            self.master.clipboard_append(edited_text)
+        selected_indices = self.history_component.listbox.curselection()
+
+        if selected_indices:
+            # A history item is selected, so perform an in-place, undoable edit.
+            index = selected_indices[0]
+            
+            if 0 <= index < len(self.history_data):
+                original_text, _ = self.history_data[index]
+
+                if edited_text != original_text:
+                    from src.core.commands import UpdateHistoryCommand
+                    command = UpdateHistoryCommand(
+                        monitor=self.app.monitor,
+                        original_text=original_text,
+                        new_text=edited_text
+                    )
+                    self.app.undo_manager.execute_command(command)
+        else:
+            # No history item is selected, so treat this as a new entry.
+            self.app.monitor.update_clipboard(edited_text)
 
     def _update_widget_text(self):
         """Updates all translatable text widgets."""
