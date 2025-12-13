@@ -102,11 +102,9 @@ class ScheduleHelperComponent(BaseFrameGUI):
         minute_values = ["00", "15", "30", "45"]
         hour_combo = ttk.Combobox(time_frame, textvariable=self.hour_var, values=hour_values, width=4)
         hour_combo.pack(side=tk.LEFT, padx=5, pady=5)
-        hour_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
         ttk.Label(time_frame, text=":").pack(side=tk.LEFT)
         minute_combo = ttk.Combobox(time_frame, textvariable=self.minute_var, values=minute_values, width=4)
         minute_combo.pack(side=tk.LEFT, padx=5, pady=5)
-        minute_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
 
         format_frame = ttk.LabelFrame(time_format_frame, text="Format")
         format_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
@@ -180,15 +178,25 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self._update_calendar()
 
     def _select_date(self, day):
-        new_date = datetime(self.current_year, self.current_month, day)
-        found = False
+        try:
+            hour = int(self.hour_var.get())
+            minute = int(self.minute_var.get())
+        except ValueError:
+            hour, minute = self.today.hour, self.today.minute
+
+        new_date_for_check = datetime(self.current_year, self.current_month, day)
+        
+        found_date = None
         for d in self.selected_dates:
-            if d.year == new_date.year and d.month == new_date.month and d.day == new_date.day:
-                self.selected_dates.remove(d)
-                found = True
+            if d.year == new_date_for_check.year and d.month == new_date_for_check.month and d.day == new_date_for_check.day:
+                found_date = d
                 break
-        if not found:
-            self.selected_dates.append(new_date)
+        
+        if found_date:
+            self.selected_dates.remove(found_date)
+        else:
+            new_date_with_time = new_date_for_check.replace(hour=hour, minute=minute)
+            self.selected_dates.append(new_date_with_time)
         
         self.selected_dates.sort()
         self._update_calendar()
@@ -217,16 +225,12 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
     def _update_text_widget(self, event=None):
         try:
-            hour = int(self.hour_var.get())
-            minute = int(self.minute_var.get())
             format_str = self.format_var.get()
 
             self.text_widget.delete(1.0, tk.END)
             
             output_lines = []
-            for date in self.selected_dates:
-                full_date = date.replace(hour=hour, minute=minute)
-                
+            for full_date in self.selected_dates:
                 if "%a" in format_str:
                     weekdays = self.app.translator("weekdays_full")
                     day_of_week = weekdays[full_date.weekday()]
