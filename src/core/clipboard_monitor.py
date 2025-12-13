@@ -7,6 +7,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 import win32clipboard
+import pywintypes
 from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
 
@@ -156,9 +157,15 @@ class ClipboardMonitor:
                         current_content = self._decode_clipboard_data(data) # Decode bytes
                     else:
                         current_content = "" # Not a text format we can handle
-                except Exception as win32_e:
-                    logging.error(f"win32clipboard fallback failed: {win32_e}", exc_info=True)
+                except pywintypes.error as win32_e:
+                    if win32_e.winerror == 5: # Error code 5 is "Access is denied."
+                        logging.warning("win32clipboard could not open clipboard (Access Denied). It may be in use. Will retry.")
+                    else:
+                        logging.error(f"win32clipboard fallback failed with an unexpected error: {win32_e}", exc_info=True)
                     current_content = ""
+                except Exception as general_e:
+                     logging.error(f"win32clipboard fallback failed with a general error: {general_e}", exc_info=True)
+                     current_content = ""
                 finally:
                     try:
                         win32clipboard.CloseClipboard()
