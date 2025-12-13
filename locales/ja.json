@@ -54,5 +54,7 @@
     "how_to_use_menu_item": "使い方",
     "about_menu_item": "バージョン情報",
     "days_short": ["日", "月", "火", "水", "木", "金", "土"],
-    "weekdays_full": ["月", "火", "水", "木", "金", "土", "日"]
+    "weekdays_full": ["月", "火", "水", "木", "金", "土", "日"],
+    "status_saved": "保存しました",
+    "status_added_new": "新しい項目として追加しました"
 }

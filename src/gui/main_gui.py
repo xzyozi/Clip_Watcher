@@ -15,6 +15,10 @@ class ClipWatcherGUI(BaseFrameGUI):
         super().__init__(master, app_instance)
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
         
+        # Status Bar - Pack this first to reserve space at the bottom
+        # self.status_bar = ttk.Label(self.master, text="", anchor=tk.W)
+        # self.status_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
+        
         self.history_data = []
         self.is_user_editing = False # Flag to prevent UI updates during editing
 
@@ -97,6 +101,33 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.on_settings_changed(self.app.settings_manager.settings)
         self._update_widget_text() # Initial text setup
+        self.notebook.bind("<Button-1>", self.handle_global_click, add="+")
+
+    # def show_status_message(self, message, duration_ms=3000):
+    #     """Displays a message in the status bar for a limited time."""
+    #     self.status_bar.config(text=message)
+    #     self.master.after(duration_ms, self.clear_status_message)
+
+    # def clear_status_message(self):
+    #     """Clears the status bar message."""
+    #     self.status_bar.config(text="")
+
+    def handle_global_click(self, event):
+        """
+        Handles a click anywhere in the notebook. If the click is outside
+        the main text widget while it has focus, treat it as a focus-out
+        event to ensure the content is saved. This is a workaround for
+        cases where the <FocusOut> event doesn't fire as expected when
+        clicking on other widgets within the same window.
+        """
+        focused_widget = self.focus_get()
+
+        # If the text widget has focus and the user clicked on something else...
+        if focused_widget == self.clipboard_text_widget and event.widget != self.clipboard_text_widget:
+            # ...then trigger the save logic.
+            # The finish_editing method has a flag to prevent it from running more than once
+            # per edit, so it's safe to call even if <FocusOut> also fires.
+            self.finish_editing(event)
 
     def start_editing(self, event):
         """User starts editing the text area."""
@@ -134,9 +165,11 @@ class ClipWatcherGUI(BaseFrameGUI):
                         new_text=edited_text
                     )
                     self.app.undo_manager.execute_command(command)
+                    # self.show_status_message(self.app.translator("status_saved"))
         else:
             # No history item is selected, so treat this as a new entry.
             self.app.monitor.update_clipboard(edited_text)
+            # self.show_status_message(self.app.translator("status_added_new"))
 
     def _update_widget_text(self):
         """Updates all translatable text widgets."""
