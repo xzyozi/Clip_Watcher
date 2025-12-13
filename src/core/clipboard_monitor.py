@@ -6,6 +6,7 @@ import os
 import ctypes
 import ctypes.wintypes
 import logging
+import win32clipboard
 from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
 
@@ -139,28 +140,42 @@ class ClipboardMonitor:
 
     def _check_clipboard(self):
         try:
-            clipboard_data = ""
+            current_content = ""
             try:
+                # Try tkinter first
                 current_content = self.tk_root.clipboard_get()
-                
-                if len(current_content) > 1024 * 1024:
-                    logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
-                    return
-
+            except (tk.TclError, UnicodeDecodeError) as e:
+                # If tkinter fails, fall back to win32clipboard
+                logging.warning(f"Tkinter clipboard_get failed ({e}), falling back to win32clipboard.")
                 try:
-                    clipboard_data = self._decode_clipboard_data(current_content)
-                except Exception as e:
-                    logging.error("クリップボードデータの正規化に失敗しました。", exc_info=True)
-                    clipboard_data = str(current_content)
+                    win32clipboard.OpenClipboard()
+                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                        current_content = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+                    elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
+                        data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
+                        current_content = self._decode_clipboard_data(data) # Decode bytes
+                    else:
+                        current_content = "" # Not a text format we can handle
+                except Exception as win32_e:
+                    logging.error(f"win32clipboard fallback failed: {win32_e}", exc_info=True)
+                    current_content = ""
+                finally:
+                    try:
+                        win32clipboard.CloseClipboard()
+                    except Exception:
+                        pass
 
-            except tk.TclError as e:
-                if "CLIPBOARD_GET" in str(e) and "too large" in str(e).lower():
-                    logging.warning(f"Tkinterが処理するにはクリップボードのコンテンツが大きすぎます: {e}")
-                else:
-                    pass
-                return
+            try:
+                clipboard_data = self._decode_clipboard_data(current_content)
             except Exception as e:
-                logging.error("クリップボードの取得または初期デコードに失敗しました。", exc_info=True)
+                logging.error("クリップボードデータの正規化に失敗しました。", exc_info=True)
+                clipboard_data = str(current_content) if current_content else ""
+
+            if not clipboard_data:
+                return
+
+            if len(clipboard_data) > 1024 * 1024:
+                logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
                 return
 
             if clipboard_data and clipboard_data != self.last_clipboard_data:
