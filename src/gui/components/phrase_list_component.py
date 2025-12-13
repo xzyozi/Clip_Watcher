@@ -2,11 +2,11 @@ import tkinter as tk
 from tkinter import messagebox
 import logging
 from src.core.exceptions import PhraseError
-from src.gui import context_menu
+from src.gui.base import context_menu
 
 logger = logging.getLogger(__name__)
 
-from src.gui.base_frame_gui import BaseFrameGUI
+from src.gui.base.base_frame_gui import BaseFrameGUI
 
 class PhraseListComponent(BaseFrameGUI):
     """定型文リスト表示コンポーネント"""

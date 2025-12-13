@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from src.core import config
-from src.core.config import THEMES
+from src.core.config import defaults as config
+from src.core.config.defaults import THEMES
 from src.gui import theme_manager
 from src.utils.error_handler import log_and_show_error
 

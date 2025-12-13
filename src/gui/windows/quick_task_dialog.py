@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from .base_toplevel_gui import BaseToplevelGUI
+from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 
 class QuickTaskDialog(BaseToplevelGUI):
     def __init__(self, master, app_instance, tasks=None):

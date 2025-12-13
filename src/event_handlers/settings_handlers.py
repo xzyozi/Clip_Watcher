@@ -2,17 +2,20 @@ from __future__ import annotations
 import os
 import sys
 from typing import TYPE_CHECKING
+from .base_event_handler import BaseEventHandler
 
 if TYPE_CHECKING:
     from src.core.event_dispatcher import EventDispatcher
-    from src.core.settings_manager import SettingsManager
+    from src.core.config.settings_manager import SettingsManager
 
 
-class SettingsEventHandlers:
+class SettingsEventHandlers(BaseEventHandler):
     def __init__(self, event_dispatcher: "EventDispatcher", settings_manager: "SettingsManager"):
-        self.event_dispatcher = event_dispatcher
         self.settings_manager = settings_manager
-        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
+        super().__init__(event_dispatcher)
+
+    def _register_handlers(self):
+        self.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
 
     def handle_set_always_on_top(self, value: bool):
         self.settings_manager.set_setting("always_on_top", value)

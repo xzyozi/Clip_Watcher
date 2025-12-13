@@ -5,28 +5,30 @@ from src.core.event_dispatcher import EventDispatcher
 from src.utils.error_handler import log_and_show_error
 from src.utils.undo_manager import UndoManager
 from src.core.commands import UpdateHistoryCommand
+from .base_event_handler import BaseEventHandler
 
 logger = logging.getLogger(__name__)
 
-class HistoryEventHandlers:
+class HistoryEventHandlers(BaseEventHandler):
     def __init__(self, app_instance, event_dispatcher: EventDispatcher, undo_manager: UndoManager):
         self.app = app_instance
-        self.event_dispatcher = event_dispatcher
         self.undo_manager = undo_manager
+        super().__init__(event_dispatcher)
 
-        # Subscribe to events
-        self.event_dispatcher.subscribe("HISTORY_COPY_SELECTED", self.handle_copy_selected_history)
-        self.event_dispatcher.subscribe("HISTORY_CLEAR_ALL", self.handle_clear_all_history)
-        self.event_dispatcher.subscribe("HISTORY_DELETE_SELECTED", self.handle_delete_selected_history)
-        self.event_dispatcher.subscribe("HISTORY_DELETE_ALL_UNPINNED", self.handle_delete_all_unpinned_history)
-        self.event_dispatcher.subscribe("HISTORY_PIN_UNPIN", self.handle_pin_unpin_history)
-        self.event_dispatcher.subscribe("HISTORY_COPY_MERGED", self.handle_copy_selected_as_merged)
-        self.event_dispatcher.subscribe("HISTORY_FORMAT_ITEM", self.format_selected_item)
-        self.event_dispatcher.subscribe("HISTORY_SEARCH", self.handle_search_history)
-        self.event_dispatcher.subscribe("HISTORY_CREATE_QUICK_TASK", self.handle_create_quick_task)
-        self.event_dispatcher.subscribe("HISTORY_ITEM_EDITED", self.handle_history_item_edited)
-        self.event_dispatcher.subscribe("REQUEST_UNDO_LAST_ACTION", self.undo_manager.undo)
-        self.event_dispatcher.subscribe("REQUEST_REDO_LAST_ACTION", self.undo_manager.redo)
+    def _register_handlers(self):
+        """Register all event handlers for this class."""
+        self.subscribe("HISTORY_COPY_SELECTED", self.handle_copy_selected_history)
+        self.subscribe("HISTORY_CLEAR_ALL", self.handle_clear_all_history)
+        self.subscribe("HISTORY_DELETE_SELECTED", self.handle_delete_selected_history)
+        self.subscribe("HISTORY_DELETE_ALL_UNPINNED", self.handle_delete_all_unpinned_history)
+        self.subscribe("HISTORY_PIN_UNPIN", self.handle_pin_unpin_history)
+        self.subscribe("HISTORY_COPY_MERGED", self.handle_copy_selected_as_merged)
+        self.subscribe("HISTORY_FORMAT_ITEM", self.format_selected_item)
+        self.subscribe("HISTORY_SEARCH", self.handle_search_history)
+        self.subscribe("HISTORY_CREATE_QUICK_TASK", self.handle_create_quick_task)
+        self.subscribe("HISTORY_ITEM_EDITED", self.handle_history_item_edited)
+        self.subscribe("REQUEST_UNDO_LAST_ACTION", self.undo_manager.undo)
+        self.subscribe("REQUEST_REDO_LAST_ACTION", self.undo_manager.redo)
 
     def handle_history_item_edited(self, data):
         try:
@@ -62,7 +64,7 @@ class HistoryEventHandlers:
             tasks.append(content)
 
         if tasks:
-            from src.gui.quick_task_dialog import QuickTaskDialog
+            from src.gui.windows.quick_task_dialog import QuickTaskDialog
             dialog = QuickTaskDialog(self.app.master, self.app, tasks)
 
     def handle_copy_selected_history(self, selected_indices):
@@ -154,7 +156,7 @@ class HistoryEventHandlers:
             if not selected_indices:
                 return
 
-            from src.gui.format_dialog import FormatDialog
+            from src.gui.dialogs.format_dialog import FormatDialog
             
             dialog = self.app.create_toplevel(FormatDialog, self.app.settings_manager)
             selected_plugin = dialog.selected_plugin

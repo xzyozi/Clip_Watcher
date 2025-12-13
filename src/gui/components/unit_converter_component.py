@@ -3,7 +3,7 @@ from tkinter import ttk
 import logging
 from datetime import datetime
 
-from src.gui.base_frame_gui import BaseFrameGUI
+from src.gui.base.base_frame_gui import BaseFrameGUI
 
 class UnitConverterComponent(BaseFrameGUI):
     """

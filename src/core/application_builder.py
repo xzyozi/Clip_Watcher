@@ -1,7 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 import tkinter as tk
 from .clipboard_monitor import ClipboardMonitor
-from .settings_manager import SettingsManager
+from .config.settings_manager import SettingsManager
 from .fixed_phrases_manager import FixedPhrasesManager
 from .exceptions import ConfigError
 from .plugin_manager import PluginManager
@@ -10,11 +10,11 @@ from .tool_manager import ToolManager
 from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
-from src.core.app_main import MainApplication
 from src.utils.i18n import Translator
 
 if TYPE_CHECKING:
     from .base_application import BaseApplication
+    from src.core.app_main import MainApplication
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,7 @@ class ApplicationBuilder:
             raise ConfigError("必要なコンポーネントが初期化されていません")
         
         try:
+            from src.core.app_main import MainApplication
             app = MainApplication(
                 master=master,
                 settings_manager=self.settings_manager,
@@ -139,6 +140,9 @@ class ApplicationBuilder:
 
             # Load settings and notify all components
             self.settings_manager.load_and_notify()
+
+            # Signal that the application is ready
+            app.on_ready()
 
             return app
         except Exception as e:

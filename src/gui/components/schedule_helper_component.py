@@ -4,20 +4,18 @@ import calendar
 from datetime import datetime
 import logging
 
-from src.gui.base_frame_gui import BaseFrameGUI
-from src.gui import context_menu
+from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.gui.base import context_menu
 from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):
     """
-    日付と時刻に関連するテキストの作成を支援するGUIコンポーネント。
+    A GUI component to help create texts related to dates and times.
     """
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing ScheduleHelperComponent.")
-        
-        calendar.setfirstweekday(calendar.SUNDAY)
 
         self.today = datetime.now()
         self.current_year = self.today.year
@@ -41,14 +39,43 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.format_var = tk.StringVar(value=self.date_formats[7])
 
         self._create_widgets()
+        
+        # Subscribe to language changes and apply initial settings
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
+        self._apply_locale_settings()
+
+    def _apply_locale_settings(self, *args):
+        """Applies locale-specific settings like the first day of the week and updates UI."""
+        self.logger.info("Applying locale settings to calendar.")
+        
+        # Get the first day of the week from translation, with a fallback
+        key = "calendar_first_weekday"
+        first_day_str = self.app.translator(key)
+        if first_day_str == key:  # Key not found, use default
+            first_day_str = "monday"
+            
+        day_map = {
+            "monday": calendar.MONDAY,
+            "tuesday": calendar.TUESDAY,
+            "wednesday": calendar.WEDNESDAY,
+            "thursday": calendar.THURSDAY,
+            "friday": calendar.FRIDAY,
+            "saturday": calendar.SATURDAY,
+            "sunday": calendar.SUNDAY
+        }
+        first_day = day_map.get(first_day_str.lower(), calendar.MONDAY)
+        calendar.setfirstweekday(first_day)
+        
+        # Redraw the calendar and update the text widget to reflect changes
         self._update_calendar()
+        self._update_text_widget()
 
     def _create_widgets(self):
         main_paned_window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RAISED)
         main_paned_window.pack(fill=tk.BOTH, expand=True)
 
         controls_frame = ttk.Frame(main_paned_window, padding=5)
-        main_paned_window.add(controls_frame, height=320)
+        main_paned_window.add(controls_frame, height=360)
 
         calendar_part_frame = ttk.Frame(controls_frame)
         calendar_part_frame.pack(fill=tk.X)
@@ -75,11 +102,9 @@ class ScheduleHelperComponent(BaseFrameGUI):
         minute_values = ["00", "15", "30", "45"]
         hour_combo = ttk.Combobox(time_frame, textvariable=self.hour_var, values=hour_values, width=4)
         hour_combo.pack(side=tk.LEFT, padx=5, pady=5)
-        hour_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
         ttk.Label(time_frame, text=":").pack(side=tk.LEFT)
         minute_combo = ttk.Combobox(time_frame, textvariable=self.minute_var, values=minute_values, width=4)
         minute_combo.pack(side=tk.LEFT, padx=5, pady=5)
-        minute_combo.bind("<<ComboboxSelected>>", self._update_text_widget)
 
         format_frame = ttk.LabelFrame(time_format_frame, text="Format")
         format_frame.pack(side=tk.LEFT, padx=10, fill=tk.X, expand=True)
@@ -153,15 +178,25 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self._update_calendar()
 
     def _select_date(self, day):
-        new_date = datetime(self.current_year, self.current_month, day)
-        found = False
+        try:
+            hour = int(self.hour_var.get())
+            minute = int(self.minute_var.get())
+        except ValueError:
+            hour, minute = self.today.hour, self.today.minute
+
+        new_date_for_check = datetime(self.current_year, self.current_month, day)
+        
+        found_date = None
         for d in self.selected_dates:
-            if d.year == new_date.year and d.month == new_date.month and d.day == new_date.day:
-                self.selected_dates.remove(d)
-                found = True
+            if d.year == new_date_for_check.year and d.month == new_date_for_check.month and d.day == new_date_for_check.day:
+                found_date = d
                 break
-        if not found:
-            self.selected_dates.append(new_date)
+        
+        if found_date:
+            self.selected_dates.remove(found_date)
+        else:
+            new_date_with_time = new_date_for_check.replace(hour=hour, minute=minute)
+            self.selected_dates.append(new_date_with_time)
         
         self.selected_dates.sort()
         self._update_calendar()
@@ -190,16 +225,12 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
     def _update_text_widget(self, event=None):
         try:
-            hour = int(self.hour_var.get())
-            minute = int(self.minute_var.get())
             format_str = self.format_var.get()
 
             self.text_widget.delete(1.0, tk.END)
             
             output_lines = []
-            for date in self.selected_dates:
-                full_date = date.replace(hour=hour, minute=minute)
-                
+            for full_date in self.selected_dates:
                 if "%a" in format_str:
                     weekdays = self.app.translator("weekdays_full")
                     day_of_week = weekdays[full_date.weekday()]

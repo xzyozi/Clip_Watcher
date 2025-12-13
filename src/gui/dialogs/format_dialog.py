@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from src.gui import theme_manager
 
-from src.gui.base_toplevel_gui import BaseToplevelGUI
+from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 
 class FormatDialog(BaseToplevelGUI):
     def __init__(self, master, app_instance, settings_manager):

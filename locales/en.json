@@ -54,5 +54,7 @@
     "how_to_use_menu_item": "How to Use",
     "about_menu_item": "About",
     "days_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    "weekdays_full": ["Mon", "Tue", "Wed", "Thu", "Fri", "Satur", "Sun"]
+    "weekdays_full": ["Mon", "Tue", "Wed", "Thu", "Fri", "Satur", "Sun"],
+    "status_saved": "Saved.",
+    "status_added_new": "Added as new item."
 }
