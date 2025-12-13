@@ -17,7 +17,7 @@ class ClipboardMonitor:
     def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
-        self.notification_manager = NotificationManager(None) # Settings will be passed via event
+        self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
         self.update_callback = None
         self.error_callback = None
         self.last_clipboard_data = ""
@@ -67,24 +67,24 @@ class ClipboardMonitor:
         self.update_callback = callback
 
     def update_clipboard(self, text: str):
-        """Programmatically updates the system clipboard and treats it as a new entry."""
+        """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
         if not text:
             return
 
-        # Avoid adding a duplicate entry if the text is identical to the most recent history item.
+        # テキストが最新の履歴アイテムと同一である場合、重複したエントリの追加を避けます。
         if self.history and text == self.history[0][0]:
             return
 
         try:
-            # Update the system clipboard first
+            # 最初にシステムクリップボードを更新します
             self.tk_root.clipboard_clear()
             self.tk_root.clipboard_append(text)
             self.tk_root.update()
         except Exception as e:
             logging.error(f"プログラムによるクリップボードの更新に失敗しました: {e}", exc_info=True)
-            return # If clipboard update fails, don't modify history
+            return # クリップボードの更新に失敗した場合、履歴は変更しません
 
-        # Now, directly update the history, mimicking the logic in _check_clipboard
+        # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.last_clipboard_data = text
         
         existing_item_index = -1
@@ -94,20 +94,20 @@ class ClipboardMonitor:
                 break
 
         if existing_item_index != -1:
-            # Item exists, move it to the top
+            # 項目が存在する場合、一番上に移動します
             content_to_move, is_pinned_status = self.history.pop(existing_item_index)
             self.history.insert(0, (content_to_move, is_pinned_status))
         else:
-            # New item, add it to the top
+            # 新しい項目の場合、一番上に追加します
             self.history.insert(0, (text, False))
-            # Trim history if over limit
+            # 制限を超えた場合、履歴を整理します
             if len(self.history) > self.history_limit:
-                # Find the last unpinned item to remove
+                # 削除するために最後のピン留めされていない項目を見つけます
                 unpinned_indices = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
                 if unpinned_indices:
                     del self.history[unpinned_indices[-1]]
         
-        # Trigger a GUI update to show the new history
+        # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
     def _monitor_clipboard(self):
@@ -139,44 +139,84 @@ class ClipboardMonitor:
                 return data
         return str(data)
 
+    def _get_clipboard_content(self):
+        """
+        tkinterを使用してクリップボードのコンテンツを取得し、失敗した場合はwin32clipboardにフォールバックします。
+        コンテンツを文字列として返すか、失敗した場合やコンテンツがテキストでない場合はNoneを返します。
+        """
+        # 1. 最初にtkinterを試します
+        try:
+            return self.tk_root.clipboard_get()
+        except (tk.TclError, UnicodeDecodeError) as e:
+            logging.warning(f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。")
+
+        # 2. win32clipboardにフォールバックします
+        try:
+            win32clipboard.OpenClipboard()
+            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                return win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
+                data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
+                return self._decode_clipboard_data(data)
+            return "" # 処理できないテキスト形式です
+        except pywintypes.error as e:
+            if e.winerror == 5: # アクセスが拒否されました
+                logging.warning("win32clipboardがクリップボードを開けませんでした（アクセス拒否）。使用中の可能性があります。")
+            else:
+                logging.error(f"win32clipboardフォールバックが予期せぬエラーで失敗しました: {e}", exc_info=True)
+            return None # 失敗したことを示します
+        except Exception as e:
+            logging.error(f"win32clipboardフォールバックが一般的なエラーで失敗しました: {e}", exc_info=True)
+            return None # 失敗したことを示します
+        finally:
+            try:
+                win32clipboard.CloseClipboard()
+            except Exception:
+                pass # すでに閉じられているか、開けませんでした。
+
+    def _update_history_with_new_entry(self, clipboard_data):
+        """新しいクリップボードエントリで履歴を更新します。"""
+        self.last_clipboard_data = clipboard_data
+        active_process = self.get_active_process_name()
+        logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
+        
+        if active_process in self.excluded_apps:
+            logging.info(f"除外アプリからのコピーのため無視: {active_process}")
+            return
+        
+        # 既存の項目を一番上に移動するか、新しい項目を追加します
+        existing_item_index = -1
+        for i, (content, is_pinned) in enumerate(self.history):
+            if content == clipboard_data:
+                existing_item_index = i
+                break
+
+        if existing_item_index != -1:
+            content_to_move, is_pinned_status = self.history.pop(existing_item_index)
+            self.history.insert(0, (content_to_move, is_pinned_status))
+        else:
+            self.history.insert(0, (clipboard_data, False))
+            # 制限を超えた場合、履歴を整理します
+            if len(self.history) > self.history_limit:
+                unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
+                if unpinned:
+                    del self.history[unpinned[-1]]
+
+        self.notification_manager.play_notification_sound()
+        self._trigger_gui_update()
+
     def _check_clipboard(self):
         try:
-            current_content = ""
-            try:
-                # Try tkinter first
-                current_content = self.tk_root.clipboard_get()
-            except (tk.TclError, UnicodeDecodeError) as e:
-                # If tkinter fails, fall back to win32clipboard
-                logging.warning(f"Tkinter clipboard_get failed ({e}), falling back to win32clipboard.")
-                try:
-                    win32clipboard.OpenClipboard()
-                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
-                        current_content = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                    elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
-                        data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
-                        current_content = self._decode_clipboard_data(data) # Decode bytes
-                    else:
-                        current_content = "" # Not a text format we can handle
-                except pywintypes.error as win32_e:
-                    if win32_e.winerror == 5: # Error code 5 is "Access is denied."
-                        logging.warning("win32clipboard could not open clipboard (Access Denied). It may be in use. Will retry.")
-                    else:
-                        logging.error(f"win32clipboard fallback failed with an unexpected error: {win32_e}", exc_info=True)
-                    current_content = ""
-                except Exception as general_e:
-                     logging.error(f"win32clipboard fallback failed with a general error: {general_e}", exc_info=True)
-                     current_content = ""
-                finally:
-                    try:
-                        win32clipboard.CloseClipboard()
-                    except Exception:
-                        pass
+            # 1. 堅牢な方法でクリップボードのコンテンツを取得します
+            raw_content = self._get_clipboard_content()
+            if raw_content is None:
+                return # コンテンツの取得に失敗したか、テキストではありません
 
+            # 2. 正規化と検証
             try:
-                clipboard_data = self._decode_clipboard_data(current_content)
-            except Exception as e:
-                logging.error("クリップボードデータの正規化に失敗しました。", exc_info=True)
-                clipboard_data = str(current_content) if current_content else ""
+                clipboard_data = self._decode_clipboard_data(raw_content)
+            except Exception:
+                clipboard_data = str(raw_content)
 
             if not clipboard_data:
                 return
@@ -185,43 +225,19 @@ class ClipboardMonitor:
                 logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
                 return
 
-            if clipboard_data and clipboard_data != self.last_clipboard_data:
-                self.last_clipboard_data = clipboard_data
-                active_process = self.get_active_process_name()
-                logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
-                
-                if active_process in self.excluded_apps:
-                    logging.info(f"除外アプリからのコピーのため無視: {active_process}")
-                    return
-                
-                existing_item_index = -1
-                for i, (content, is_pinned) in enumerate(self.history):
-                    if content == clipboard_data:
-                        existing_item_index = i
-                        break
-
-                if existing_item_index != -1:
-                    content_to_move, is_pinned_status = self.history.pop(existing_item_index)
-                    self.history.insert(0, (content_to_move, is_pinned_status))
-                else:
-                    self.history.insert(0, (clipboard_data, False))
-                    if len(self.history) > self.history_limit:
-                        unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
-                        if unpinned:
-                            del self.history[unpinned[-1]]
-    
-                self.notification_manager.play_notification_sound()
-                self._trigger_gui_update()
+            # 3. 新しい場合、処理します
+            if clipboard_data != self.last_clipboard_data:
+                self._update_history_with_new_entry(clipboard_data)
 
         except Exception as e:
             logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
 
     def update_history_item(self, old_text: str, new_text: str):
-        """Updates a history item by finding it by its content."""
+        """コンテンツによって履歴項目を見つけて更新します。"""
         for i, (content, is_pinned) in enumerate(self.history):
             if content == old_text:
                 self.history[i] = (new_text, is_pinned)
-                # If the updated item was the most recent one, update last_clipboard_data as well
+                # 更新された項目が最新のものであった場合、last_clipboard_dataも更新します
                 if self.last_clipboard_data == old_text:
                     self.last_clipboard_data = new_text
                 self._trigger_gui_update()
@@ -282,7 +298,7 @@ class ClipboardMonitor:
     def delete_all_unpinned_history(self):
         self.history = [item for item in self.history if item[1]]
         self._trigger_gui_update()
-        logging.info("Monitor: Deleted all unpinned history.")
+        logging.info("モニター: ピン留めされていないすべての履歴を削除しました。")
 
     def import_history(self, new_history_items):
         for item_content in reversed(new_history_items):
