@@ -11,6 +11,8 @@ from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
+from .dependency_checker import DependencyChecker
+from .config.app_status import AppStatus
 
 if TYPE_CHECKING:
     from .base_application import BaseApplication
@@ -30,6 +32,7 @@ class ApplicationBuilder:
         self.theme_manager: Optional[ThemeManager] = None
         self.tool_manager: Optional[ToolManager] = None
         self.translator: Optional[Translator] = None
+        self.app_status: Optional[AppStatus] = None
         
     def with_event_dispatcher(self) -> 'ApplicationBuilder':
         """イベントディスパッチャの初期化"""
@@ -40,6 +43,17 @@ class ApplicationBuilder:
         except Exception as e:
             log_and_show_error("エラー", f"イベントディスパッチャの初期化に失敗: {str(e)}")
             raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}")
+
+    def with_dependency_check(self) -> 'ApplicationBuilder':
+        """依存関係のチェック"""
+        try:
+            dependency_status = DependencyChecker.check_dependencies()
+            self.app_status = AppStatus(dependencies=dependency_status)
+            logger.info("依存関係のチェックが完了しました")
+            return self
+        except Exception as e:
+            log_and_show_error("エラー", f"依存関係のチェック中にエラーが発生: {str(e)}")
+            raise ConfigError(f"依存関係のチェックに失敗しました: {str(e)}")
 
     def with_settings(self, settings_file_path: str = "settings.json") -> 'ApplicationBuilder':
         """設定マネージャーの初期化"""
@@ -77,11 +91,12 @@ class ApplicationBuilder:
 
     def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> 'ApplicationBuilder':
         """クリップボードモニターの初期化"""
-        if not self.event_dispatcher:
-            raise ConfigError("イベントディスパッチャが初期化されていません")
+        if not self.event_dispatcher or not self.app_status:
+            raise ConfigError("イベントディスパッチャまたはアプリケーションステータスが初期化されていません")
         
         try:
-            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path)
+            win32_available = self.app_status.dependencies.win32_available
+            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path, win32_available)
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
@@ -120,7 +135,7 @@ class ApplicationBuilder:
 
     def build(self, master: tk.Tk) -> 'MainApplication':
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.tool_manager, self.translator]):
+        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.tool_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
         
         try:
@@ -134,7 +149,8 @@ class ApplicationBuilder:
                 event_dispatcher=self.event_dispatcher,
                 theme_manager=self.theme_manager,
                 tool_manager=self.tool_manager,
-                translator=self.translator
+                translator=self.translator,
+                app_status=self.app_status
             )
             logger.info("アプリケーションのビルドが完了しました")
 

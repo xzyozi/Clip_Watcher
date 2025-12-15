@@ -19,7 +19,7 @@ from src.core.application_builder import ApplicationBuilder
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator, app_status):
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -32,6 +32,7 @@ class MainApplication(BaseApplication):
         self.theme_manager = theme_manager
         self.tool_manager = tool_manager
         self.translator = translator
+        self.app_status = app_status
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
 
@@ -238,15 +239,16 @@ def start_app():
         root = tk.Tk()
         
         builder = ApplicationBuilder()
-        app = builder.with_event_dispatcher()\
-                     .with_settings(SETTINGS_FILE_PATH)\
-                     .with_translator()\
-                     .with_theme_manager(root)\
-                     .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
-                     .with_plugin_manager()\
-                     .with_tool_manager()\
-                     .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
-                     .build(root)
+        app = builder.with_event_dispatcher() \
+            .with_dependency_check() \
+            .with_settings(SETTINGS_FILE_PATH) \
+            .with_translator() \
+            .with_theme_manager(root) \
+            .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH) \
+            .with_plugin_manager() \
+            .with_tool_manager() \
+            .with_clipboard_monitor(root, HISTORY_FILE_PATH) \
+            .build(root)
                
         logger.info("アプリケーションの初期化が完了しました")
         

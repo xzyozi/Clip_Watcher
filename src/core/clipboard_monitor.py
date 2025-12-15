@@ -7,14 +7,12 @@ import ctypes
 import ctypes.wintypes
 import logging
 
-# win32clipboardが利用可能かどうかのフラグ
-WIN32_AVAILABLE = False
 try:
     import win32clipboard
     import pywintypes
-    WIN32_AVAILABLE = True
 except ImportError:
-    logging.warning("win32clipboardモジュールが見つかりません。一部のクリップボード機能が制限される可能性があります。")
+    # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
+    pass
 
 from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
@@ -22,9 +20,10 @@ from .event_dispatcher import EventDispatcher
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, win32_available: bool, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
+        self.win32_available = win32_available
         self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
         self.update_callback = None
         self.error_callback = None
@@ -159,7 +158,7 @@ class ClipboardMonitor:
             logging.warning(f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。")
 
         # 2. win32clipboardが利用可能な場合にフォールバックします
-        if not WIN32_AVAILABLE:
+        if not self.win32_available:
             logging.warning("win32clipboardが利用できないため、フォールバックできません。")
             return None
 
