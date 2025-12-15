@@ -3,8 +3,7 @@ from tkinter import messagebox, simpledialog
 import logging
 from pathlib import Path
 from src.core.exceptions import PhraseError
-from src.gui.components.phrase_list_component import PhraseListComponent
-from src.gui.components.phrase_edit_component import PhraseEditComponent
+from src.gui.components import PhraseListComponent, PhraseEditComponent
 
 logger = logging.getLogger(__name__)
 

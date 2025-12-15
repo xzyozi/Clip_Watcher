@@ -4,7 +4,7 @@ from src.gui.base import context_menu
 from src.core.config import defaults as config
 from src.core.config.defaults import THEMES
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
-from src.gui.components.history_list_component import HistoryListComponent
+from src.gui.components import HistoryListComponent
 from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomText, CustomEntry
 

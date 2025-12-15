@@ -1,6 +1,8 @@
-from src.gui.components.schedule_helper_component import ScheduleHelperComponent
-from src.gui.components.hash_calculator_component import HashCalculatorComponent
-from src.gui.components.unit_converter_component import UnitConverterComponent
+from src.gui.components import (
+    ScheduleHelperComponent,
+    HashCalculatorComponent,
+    UnitConverterComponent,
+)
 
 TOOL_COMPONENTS = [
     {
