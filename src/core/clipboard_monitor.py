@@ -6,8 +6,16 @@ import os
 import ctypes
 import ctypes.wintypes
 import logging
-import win32clipboard
-import pywintypes
+
+# win32clipboardが利用可能かどうかのフラグ
+WIN32_AVAILABLE = False
+try:
+    import win32clipboard
+    import pywintypes
+    WIN32_AVAILABLE = True
+except ImportError:
+    logging.warning("win32clipboardモジュールが見つかりません。一部のクリップボード機能が制限される可能性があります。")
+
 from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
 
@@ -150,7 +158,11 @@ class ClipboardMonitor:
         except (tk.TclError, UnicodeDecodeError) as e:
             logging.warning(f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。")
 
-        # 2. win32clipboardにフォールバックします
+        # 2. win32clipboardが利用可能な場合にフォールバックします
+        if not WIN32_AVAILABLE:
+            logging.warning("win32clipboardが利用できないため、フォールバックできません。")
+            return None
+
         try:
             win32clipboard.OpenClipboard()
             if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
