@@ -233,7 +233,7 @@ class ClipboardMonitor:
                 return
 
             if len(clipboard_data) > 1024 * 1024:
-                logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
+                # logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
                 return
 
             # 3. 新しい場合、処理します
