@@ -1,8 +1,7 @@
-import os
-import importlib
 import inspect
-from src.plugins.base_plugin import Plugin
 import logging
+import src.plugins as plugins_package
+from src.plugins import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -12,20 +11,13 @@ class PluginManager:
         self.load_plugins()
 
     def load_plugins(self):
-        """Dynamically load all plugins from the plugins directory."""
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        plugins_dir = os.path.join(project_root,"src", "plugins")
-        plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith('_plugin.py')]
-
-        for plugin_file in plugin_files:
-            module_name = f"src.plugins.{plugin_file[:-3]}"
-            try:
-                module = importlib.import_module(module_name)
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, Plugin) and obj is not Plugin:
-                        self.plugins.append(obj())
-            except Exception as e:
-                logger.info(f"Failed to load plugin {module_name}: {e}")
+        """Dynamically load all plugins from the plugins package."""
+        try:
+            for name, obj in inspect.getmembers(plugins_package, inspect.isclass):
+                if issubclass(obj, Plugin) and obj is not Plugin:
+                    self.plugins.append(obj())
+        except Exception as e:
+            logger.error(f"Failed to load plugins: {e}", exc_info=True)
 
     def get_available_plugins(self):
         """Return a list of all available plugin instances."""
