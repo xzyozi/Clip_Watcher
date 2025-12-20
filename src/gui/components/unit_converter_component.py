@@ -3,12 +3,20 @@ from tkinter import ttk
 import logging
 from datetime import datetime
 
-from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.gui.components.base_tool_component import BaseToolComponent
 
-class UnitConverterComponent(BaseFrameGUI):
+class UnitConverterComponent(BaseToolComponent):
     """
     A GUI component for converting units, including time.
     """
+    @property
+    def tool_name(self) -> str:
+        return "Unit Converter"
+
+    @property
+    def setting_key(self) -> str:
+        return "show_unit_converter_tab"
+
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)

@@ -4,14 +4,22 @@ import calendar
 from datetime import datetime
 import logging
 
-from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.gui.components.base_tool_component import BaseToolComponent
 from src.gui.base import context_menu
 from src.gui.custom_widgets import CustomText
 
-class ScheduleHelperComponent(BaseFrameGUI):
+class ScheduleHelperComponent(BaseToolComponent):
     """
     A GUI component to help create texts related to dates and times.
     """
+    @property
+    def tool_name(self) -> str:
+        return "Calendar"
+
+    @property
+    def setting_key(self) -> str:
+        return "show_calendar_tab"
+
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)

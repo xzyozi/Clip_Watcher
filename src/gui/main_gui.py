@@ -5,7 +5,7 @@ from src.core.config import defaults as config
 from src.core.config.defaults import THEMES
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.components import HistoryListComponent
-from src.core.config.tool_config import TOOL_COMPONENTS
+# from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomText, CustomEntry
 
 from src.gui.base.base_frame_gui import BaseFrameGUI
@@ -91,15 +91,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(self.fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.tool_frames = {}
-        self.tool_components = {}
-        self.tabs = {}
+        # self.tool_frames, self.tool_components, self.tabs removed for plugin system
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
 
-        self.on_settings_changed(self.app.settings_manager.settings)
+        self.on_font_settings_changed(self.app.settings_manager.settings)
+        self._create_plugin_tabs()
         self._update_widget_text() # Initial text setup
         self.notebook.bind("<Button-1>", self.handle_global_click, add="+")
 
@@ -194,76 +193,27 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.quit_button.config(text=translator("quit_button"))
         self.notebook.tab(self.fixed_phrases_tab_frame, text=translator("fixed_phrases_tab"))
 
-        # Update tool tabs
-        self._update_tab_visibility(self.app.settings_manager.settings)
+        # Tool tabs are now handled by the plugin system
 
-    def create_tool_tabs(self):
-        """Dynamically create tab components for registered tools."""
-        for tool_config in TOOL_COMPONENTS:
-            tool_name = tool_config["name"]
-            component_class = tool_config["component"]
-            setting_key = tool_config["setting_key"]
-
-            tool_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-            self.tool_frames[tool_name] = tool_frame
-
-            component = component_class(tool_frame, self.app)
-            self.tool_components[tool_name] = component
-            component.pack(fill=tk.BOTH, expand=True)
-
-            self.tabs[setting_key] = (tool_frame, tool_name)
-
-        # After creating tabs, update their visibility based on settings
-        self._update_tab_visibility(self.app.settings_manager.settings)
-
-    def toggle_tool_tab(self, tool_name):
-        """Toggles the visibility of a tool tab."""
-        for tool_config in TOOL_COMPONENTS:
-            if tool_config["name"] == tool_name:
-                setting_key = tool_config["setting_key"]
-                if setting_key in self.tabs:
-                    tab_frame, tab_text_key = self.tabs[setting_key]
-                    translated_text = self.app.translator(tab_text_key)
-                    try:
-                        # Check if the tab exists and is visible
-                        tab_id = self.notebook.index(tab_frame)
-                        self.notebook.forget(tab_id)
-                    except tk.TclError:
-                        # Tab doesn't exist, so add it
-                        self.notebook.add(tab_frame, text=translated_text)
-                        self.notebook.select(tab_frame)
-                else:
-                    print(f"Tool tab '{tool_name}' not found or not configured.")
-                break
+    def _create_plugin_tabs(self):
+        """Dynamically creates GUI tabs from plugins."""
+        gui_plugins = self.app.plugin_manager.get_gui_plugins()
+        for plugin in gui_plugins:
+            try:
+                # The plugin creates and returns the component frame
+                component_frame = plugin.create_gui_component(self.notebook, self.app)
+                if component_frame:
+                    # The tab text should be translatable, but for now, use the plugin name
+                    tab_text = self.app.translator(plugin.name)
+                    self.notebook.add(component_frame, text=tab_text)
+            except Exception as e:
+                # In a real app, you'd want to log this error properly
+                print(f"Failed to create GUI component for plugin '{plugin.name}': {e}")
 
     def on_settings_changed(self, settings):
         self.on_font_settings_changed(settings)
-        self._update_tab_visibility(settings)
+        # self._update_tab_visibility(settings) # Removed for plugin system
         self._update_widget_text() # Re-translate UI on language change
-
-    def _update_tab_visibility(self, settings):
-        """
-        Updates the visibility and text of tool tabs based on settings.
-        This method is called on initial load and when settings change.
-        """
-        translator = self.app.translator
-        for setting_key, (tab_frame, tab_text_key) in self.tabs.items():
-            is_visible = settings.get(setting_key, False)
-            translated_text = translator(tab_text_key)
-            
-            try:
-                tab_exists = self.notebook.index(tab_frame) is not None
-            except tk.TclError:
-                tab_exists = False
-
-            if is_visible:
-                if not tab_exists:
-                    self.notebook.add(tab_frame, text=translated_text)
-                else:
-                    # If tab already exists, just update its text
-                    self.notebook.tab(tab_frame, text=translated_text)
-            elif tab_exists:
-                self.notebook.forget(tab_frame)
 
     def on_font_settings_changed(self, settings):
         self.apply_font_settings(
