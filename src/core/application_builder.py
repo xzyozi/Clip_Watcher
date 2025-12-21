@@ -6,7 +6,7 @@ from .fixed_phrases_manager import FixedPhrasesManager
 from .exceptions import ConfigError
 from .plugin_manager import PluginManager
 from .event_dispatcher import EventDispatcher
-from .tool_manager import ToolManager
+
 from src.gui.theme_manager import ThemeManager
 import logging
 from src.utils.error_handler import log_and_show_error
@@ -30,7 +30,7 @@ class ApplicationBuilder:
         self.plugin_manager: Optional[PluginManager] = None
         self.event_dispatcher: Optional[EventDispatcher] = None
         self.theme_manager: Optional[ThemeManager] = None
-        self.tool_manager: Optional[ToolManager] = None
+        
         self.translator: Optional[Translator] = None
         self.app_status: Optional[AppStatus] = None
         
@@ -123,19 +123,11 @@ class ApplicationBuilder:
             log_and_show_error("エラー", f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}")
 
-    def with_tool_manager(self) -> 'ApplicationBuilder':
-        """ツールマネージャーの初期化"""
-        try:
-            self.tool_manager = ToolManager()
-            logger.info("ツールマネージャーを初期化しました")
-            return self
-        except Exception as e:
-            log_and_show_error("エラー", f"ツールマネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"ツールマネージャーの初期化に失敗しました: {str(e)}")
+    
 
     def build(self, master: tk.Tk) -> 'MainApplication':
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.tool_manager, self.translator, self.app_status]):
+        if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
         
         try:
@@ -148,7 +140,7 @@ class ApplicationBuilder:
                 plugin_manager=self.plugin_manager,
                 event_dispatcher=self.event_dispatcher,
                 theme_manager=self.theme_manager,
-                tool_manager=self.tool_manager,
+                
                 translator=self.translator,
                 app_status=self.app_status
             )

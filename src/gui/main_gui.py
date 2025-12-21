@@ -282,3 +282,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self.clipboard_text_widget.insert(tk.END, current_content)
             self.clipboard_text_widget.config(state=tk.NORMAL)
+
+    def select_tool_tab(self, plugin_name):
+        """Selects a notebook tab corresponding to the given plugin name."""
+        for i, tab_id in enumerate(self.notebook.tabs()):
+            # The tab text is translated, so we need to translate the plugin name
+            # to match it.
+            tab_text = self.notebook.tab(tab_id, "text")
+            translated_plugin_name = self.app.translator(plugin_name)
+            if tab_text == translated_plugin_name:
+                self.notebook.select(i)
+                break

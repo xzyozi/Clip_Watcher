@@ -12,14 +12,12 @@ from src.event_handlers.history_handlers import HistoryEventHandlers
 from src.event_handlers.file_handlers import FileEventHandlers
 from src.event_handlers.settings_handlers import SettingsEventHandlers
 from src.utils.undo_manager import UndoManager
-from src.core.tool_manager import ToolManager
-from src.core.config.tool_config import TOOL_COMPONENTS
 from src.utils.logging_config import setup_logging
 from src.core.application_builder import ApplicationBuilder
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator, app_status):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, translator, app_status):
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -30,7 +28,6 @@ class MainApplication(BaseApplication):
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
-        self.tool_manager = tool_manager
         self.translator = translator
         self.app_status = app_status
         self.undo_manager = UndoManager(event_dispatcher)
@@ -41,8 +38,6 @@ class MainApplication(BaseApplication):
         self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
         
         self.gui = ClipWatcherGUI(master, self)
-        self._register_tools()
-        self.gui.create_tool_tabs()
 
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
@@ -80,12 +75,6 @@ class MainApplication(BaseApplication):
         self.menubar = menu_bar.create_menu_bar(self.master, self)
         self.master.config(menu=self.menubar)
         self.theme_manager.set_menubar(self.menubar)
-
-    def _register_tools(self):
-        """Register tools from the tool configuration."""
-        for tool_config in TOOL_COMPONENTS:
-            tool_name = tool_config["name"]
-            self.tool_manager.register_tool(tool_name, lambda name=tool_name: self.gui.toggle_tool_tab(name))
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""
@@ -246,7 +235,6 @@ def start_app():
             .with_theme_manager(root) \
             .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH) \
             .with_plugin_manager() \
-            .with_tool_manager() \
             .with_clipboard_monitor(root, HISTORY_FILE_PATH) \
             .build(root)
                

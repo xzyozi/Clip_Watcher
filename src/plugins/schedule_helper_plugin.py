@@ -4,22 +4,14 @@ import calendar
 from datetime import datetime
 import logging
 
-from src.gui.components.base_tool_component import BaseToolComponent
-from src.gui.base import context_menu
+from src.plugins.base_plugin import Plugin
+from src.gui.base.base_frame_gui import BaseFrameGUI
 from src.gui.custom_widgets import CustomText
 
-class ScheduleHelperComponent(BaseToolComponent):
+class ScheduleHelperComponent(BaseFrameGUI):
     """
     A GUI component to help create texts related to dates and times.
     """
-    @property
-    def tool_name(self) -> str:
-        return "Calendar"
-
-    @property
-    def setting_key(self) -> str:
-        return "show_calendar_tab"
-
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
@@ -252,3 +244,21 @@ class ScheduleHelperComponent(BaseToolComponent):
 
         except (ValueError, TypeError) as e:
             self.logger.error(f"Error updating text widget: {e}")
+
+class ScheduleHelperPlugin(Plugin):
+    """
+    Plugin wrapper for the Schedule Helper GUI tool.
+    """
+    @property
+    def name(self) -> str:
+        return "Calendar"
+
+    @property
+    def description(self) -> str:
+        return "A GUI tool to help create texts related to dates and times."
+
+    def has_gui_component(self) -> bool:
+        return True
+
+    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+        return ScheduleHelperComponent(parent, app_instance)
