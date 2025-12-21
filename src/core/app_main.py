@@ -207,18 +207,14 @@ def start_app():
 
         # --- Path Definitions ---
         if sys.platform == "win32":
-            APP_DATA_DIR = os.path.join(os.environ['APPDATA'], 'ClipWatcher')
+            APP_DATA_DIR = os.path.join(os.environ['USERPROFILE'], '.clipWatcher')
         else:
             APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
         os.makedirs(APP_DATA_DIR, exist_ok=True)
         
-        # Correctly determine BASE_DIR from the project root
-        # Assuming this file is at src/core/app_main.py, so we go up two levels.
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-
         HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
-        SETTINGS_FILE_PATH = os.path.join(project_root, 'settings.json')
-        FIXED_PHRASES_FILE_PATH = os.path.join(project_root, 'fixed_phrases.json')
+        SETTINGS_FILE_PATH = os.path.join(APP_DATA_DIR, 'settings.json')
+        FIXED_PHRASES_FILE_PATH = os.path.join(APP_DATA_DIR, 'fixed_phrases.json')
 
         # --- Logging ---
         logger = setup_logging()
