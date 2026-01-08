@@ -44,6 +44,14 @@ class ScheduleHelperComponent(BaseFrameGUI):
         self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
         self._apply_locale_settings()
 
+        # Unsubscribe when the widget is destroyed to prevent errors.
+        self.bind("<Destroy>", self._on_destroy)
+
+    def _on_destroy(self, event):
+        """Unsubscribes the listener when the widget is destroyed."""
+        if event.widget == self:
+            self.app.event_dispatcher.unsubscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
+
     def _apply_locale_settings(self, *args):
         """Applies locale-specific settings like the first day of the week and updates UI."""
         self.logger.info("Applying locale settings to calendar.")
