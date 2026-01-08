@@ -92,6 +92,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._update_widget_text)
 
         self.on_font_settings_changed(self.app.settings_manager.settings)
         self._create_plugin_tabs()
@@ -195,7 +196,6 @@ class ClipWatcherGUI(BaseFrameGUI):
     def on_settings_changed(self, settings):
         self.on_font_settings_changed(settings)
         self._create_plugin_tabs() # Re-create tabs based on new settings
-        self._update_widget_text() # Re-translate UI on language change
 
     def on_font_settings_changed(self, settings):
         self.apply_font_settings(
