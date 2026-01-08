@@ -2,18 +2,12 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import os
 import sys
-import socket
-import traceback
 from src.gui.main_gui import ClipWatcherGUI
 from src.core.base_application import BaseApplication, ApplicationState
 from src.gui import menu_bar
 from src.gui.windows.settings_window import SettingsWindow
-from src.event_handlers.history_handlers import HistoryEventHandlers
-from src.event_handlers.file_handlers import FileEventHandlers
-from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src import event_handlers
 from src.utils.undo_manager import UndoManager
-from src.utils.logging_config import setup_logging
-from src.core.application_builder import ApplicationBuilder
 
 
 class MainApplication(BaseApplication):
@@ -33,9 +27,7 @@ class MainApplication(BaseApplication):
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
 
-        self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
-        self.file_handlers = FileEventHandlers(self, event_dispatcher)
-        self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
+        event_handlers.register_class_based_handlers(self)
         
         self.gui = ClipWatcherGUI(master, self)
 
@@ -193,59 +185,3 @@ class MainApplication(BaseApplication):
 
     def stop_monitor(self):
         self.monitor.stop()
-
-def start_app():
-    lock_socket = None
-    try:
-        # --- Single Instance Check ---
-        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            lock_socket.bind(("127.0.0.1", 61957))
-        except OSError:
-            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
-            sys.exit(0)
-
-        # --- Path Definitions ---
-        if sys.platform == "win32":
-            APP_DATA_DIR = os.path.join(os.environ['USERPROFILE'], '.clipWatcher')
-        else:
-            APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
-        os.makedirs(APP_DATA_DIR, exist_ok=True)
-        
-        HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
-        SETTINGS_FILE_PATH = os.path.join(APP_DATA_DIR, 'settings.json')
-        FIXED_PHRASES_FILE_PATH = os.path.join(APP_DATA_DIR, 'fixed_phrases.json')
-
-        # --- Logging ---
-        logger = setup_logging()
-        logger.info("アプリケーションを開始します")
-
-        # --- Application Setup ---
-        root = tk.Tk()
-        
-        builder = ApplicationBuilder()
-        app = builder.with_event_dispatcher() \
-            .with_dependency_check() \
-            .with_settings(SETTINGS_FILE_PATH) \
-            .with_translator() \
-            .with_theme_manager(root) \
-            .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH) \
-            .with_plugin_manager() \
-            .with_clipboard_monitor(root, HISTORY_FILE_PATH) \
-            .build(root)
-               
-        logger.info("アプリケーションの初期化が完了しました")
-        
-        root.mainloop()
-
-    except Exception as e:
-        # Use a local logger variable to avoid UnboundLocalError
-        local_logger = locals().get('logger')
-        if local_logger:
-            local_logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
-        else:
-            print(f"アプリケーション起動エラー: {str(e)}")
-        traceback.print_exc()
-    finally:
-        if lock_socket:
-            lock_socket.close()
