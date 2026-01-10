@@ -6,7 +6,7 @@ class HistoryListComponent(tk.Frame):
     def __init__(self, master, app_instance):
         super().__init__(master)
         self.app = app_instance
-        self.history_data = []
+        self.displayed_history = []  # Will store the full (content, is_pinned, timestamp) tuples
 
         self._create_widgets()
         self._bind_events()
@@ -21,10 +21,22 @@ class HistoryListComponent(tk.Frame):
 
     def _bind_events(self):
         self.listbox.bind("<<ListboxSelect>>", self._on_history_select)
-        self.listbox.bind("<Double-Button-1>", lambda e: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.listbox.curselection()))
+        self.listbox.bind("<Double-Button-1>", self._on_double_click)
         from src.gui.base import context_menu
         history_context_menu = context_menu.HistoryContextMenu(self.master, self.app)
         self.listbox.bind("<Button-3>", history_context_menu.show)
+
+    def _on_double_click(self, event):
+        """Handler for double-click events to copy an item."""
+        selected_indices = self.listbox.curselection()
+        if not selected_indices:
+            return
+        
+        # On double-click, we typically act on the first selected item.
+        item_ids = self.get_ids_for_indices(selected_indices[:1])
+        if item_ids:
+            # The event now passes a list of IDs, even if it's just one.
+            self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", item_ids)
 
     def _on_history_select(self, event):
         # This event is now handled by the parent (main_gui) to update the text widget
@@ -32,8 +44,12 @@ class HistoryListComponent(tk.Frame):
             "selected_indices": self.listbox.curselection()
         })
 
+    def get_ids_for_indices(self, indices):
+        """Translates listbox indices to unique history item IDs."""
+        return [self.displayed_history[i][2] for i in indices if 0 <= i < len(self.displayed_history)]
+
     def update_history(self, history, theme):
-        self.history_data = history
+        self.displayed_history = history  # Store the full data
         
         selected_indices = self.listbox.curselection()
         scroll_pos = self.listbox.yview()
@@ -42,21 +58,22 @@ class HistoryListComponent(tk.Frame):
         
         pinned_bg_color = theme["pinned_bg"]
 
-        for i, item_tuple in enumerate(history):
-            content, is_pinned = item_tuple
+        for i, (content, is_pinned, timestamp) in enumerate(history):
             display_text = content.replace('\n', ' ').replace('\r', '')
             prefix = "📌 " if is_pinned else ""
+            # The displayed number is still based on visual order (1-based index)
             self.listbox.insert(tk.END, f"{prefix}{i+1}. {display_text[:100]}...")
             if is_pinned:
                 self.listbox.itemconfig(i, {'bg': pinned_bg_color})
 
         for index in selected_indices:
-            self.listbox.selection_set(index)
+            if index < self.listbox.size():
+                self.listbox.selection_set(index)
         self.listbox.yview_moveto(scroll_pos[0])
 
     def apply_theme(self, theme):
         self.listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
-        self.update_history(self.history_data, theme) # Re-apply pinned colors
+        self.update_history(self.displayed_history, theme) # Re-apply pinned colors
 
     def apply_font(self, font):
         self.listbox.config(font=font)

@@ -137,12 +137,13 @@ class ClipWatcherGUI(BaseFrameGUI):
             index = selected_indices[0]
             
             if 0 <= index < len(self.history_data):
-                original_text, _ = self.history_data[index]
+                original_text, _, item_id = self.history_data[index]
 
                 if edited_text != original_text:
                     from src.core.commands import UpdateHistoryCommand
                     command = UpdateHistoryCommand(
                         monitor=self.app.monitor,
+                        item_id=item_id,
                         original_text=original_text,
                         new_text=edited_text
                     )
@@ -218,7 +219,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.format_button.config(state=tk.NORMAL)
             index = selected_indices[0]
             if 0 <= index < len(self.history_data):
-                content, _ = self.history_data[index]
+                content, _, _ = self.history_data[index]
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.format_button.config(state=tk.DISABLED)
@@ -258,7 +259,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         if selected_indices:
             index = selected_indices[0]
             if 0 <= index < len(self.history_data):
-                content, _ = self.history_data[index]
+                content, _, _ = self.history_data[index]
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.clipboard_text_widget.insert(tk.END, current_content)
