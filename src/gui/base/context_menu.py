@@ -10,7 +10,8 @@ class MenuState(NamedTuple):
     """Represents the state of the history menu at a given moment."""
     has_selection: bool
     selected_indices: tuple[int, ...]
-    first_selected_index: Optional[int]
+    selected_ids: list[float]
+    first_selected_id: Optional[float]
     is_pinned: bool
     can_undo: bool
 
@@ -24,22 +25,29 @@ class HistoryMenuStateProvider:
 
     def get_menu_state(self, listbox: tk.Listbox) -> MenuState:
         """Calculates and returns the current state of the menu."""
+        history_component = self.app.gui.history_component
         selected_indices = listbox.curselection()
         has_selection = bool(selected_indices)
-        first_selected_index = selected_indices[0] if has_selection else None
+
+        selected_ids = history_component.get_ids_for_indices(selected_indices)
+        first_selected_id = selected_ids[0] if selected_ids else None
 
         is_pinned = False
         if has_selection:
-            history_data = self.app.monitor.get_history()
+            # Use the already available displayed_history in the component
+            history_data = history_component.displayed_history
+            first_selected_index = selected_indices[0]
             if first_selected_index < len(history_data):
-                _, is_pinned = history_data[first_selected_index]
+                # Tuple is (content, is_pinned, timestamp)
+                is_pinned = history_data[first_selected_index][1]
 
         can_undo = self.app.undo_manager.can_undo()
 
         return MenuState(
             has_selection=has_selection,
             selected_indices=selected_indices,
-            first_selected_index=first_selected_index,
+            selected_ids=selected_ids,
+            first_selected_id=first_selected_id,
             is_pinned=is_pinned,
             can_undo=can_undo,
         )
@@ -109,11 +117,12 @@ class HistoryContextMenu(BaseContextMenu):
         """Adds items to the menu based on the provided state."""
         self.menu.add_command(
             label=self.translator("copy_selected"),
-            command=lambda: self.dispatcher.dispatch("HISTORY_COPY_SELECTED", state.selected_indices)
+            command=lambda: self.dispatcher.dispatch("HISTORY_COPY_SELECTED", state.selected_ids),
+            state="normal" if state.has_selection else "disabled"
         )
         self.menu.add_command(
             label=self.translator("open_as_quick_task"),
-            command=lambda: self.dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", state.selected_indices),
+            command=lambda: self.dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", state.selected_ids),
             state="normal" if state.has_selection else "disabled"
         )
         self.menu.add_command(
@@ -123,7 +132,8 @@ class HistoryContextMenu(BaseContextMenu):
         )
         self.menu.add_command(
             label=self.translator("delete_selected"),
-            command=lambda: self.dispatcher.dispatch("HISTORY_DELETE_SELECTED", state.selected_indices)
+            command=lambda: self.dispatcher.dispatch("HISTORY_DELETE_SELECTED", state.selected_ids),
+            state="normal" if state.has_selection else "disabled"
         )
         self.menu.add_separator()
         self.menu.add_command(
@@ -136,7 +146,7 @@ class HistoryContextMenu(BaseContextMenu):
         pin_unpin_label = self.translator("unpin") if state.is_pinned else self.translator("pin")
         self.menu.add_command(
             label=pin_unpin_label,
-            command=lambda: self.dispatcher.dispatch("HISTORY_PIN_UNPIN", state.first_selected_index),
+            command=lambda: self.dispatcher.dispatch("HISTORY_PIN_UNPIN", state.first_selected_id),
             state="normal" if state.has_selection else "disabled"
         )
 

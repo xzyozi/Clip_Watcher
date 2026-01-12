@@ -8,7 +8,7 @@ project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.core.app_main import start_app
+from src.event_handlers import start_app
 
 if __name__ == "__main__":
     start_app()

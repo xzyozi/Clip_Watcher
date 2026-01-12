@@ -2,24 +2,16 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 import os
 import sys
-import socket
-import traceback
 from src.gui.main_gui import ClipWatcherGUI
 from src.core.base_application import BaseApplication, ApplicationState
 from src.gui import menu_bar
 from src.gui.windows.settings_window import SettingsWindow
-from src.event_handlers.history_handlers import HistoryEventHandlers
-from src.event_handlers.file_handlers import FileEventHandlers
-from src.event_handlers.settings_handlers import SettingsEventHandlers
+from src import event_handlers
 from src.utils.undo_manager import UndoManager
-from src.core.tool_manager import ToolManager
-from src.core.config.tool_config import TOOL_COMPONENTS
-from src.utils.logging_config import setup_logging
-from src.core.application_builder import ApplicationBuilder
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, tool_manager, translator):
+    def __init__(self, master, settings_manager, monitor, fixed_phrases_manager, plugin_manager, event_dispatcher, theme_manager, translator, app_status):
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -30,18 +22,14 @@ class MainApplication(BaseApplication):
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
-        self.tool_manager = tool_manager
         self.translator = translator
+        self.app_status = app_status
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending = False
 
-        self.history_handlers = HistoryEventHandlers(self, event_dispatcher, self.undo_manager)
-        self.file_handlers = FileEventHandlers(self, event_dispatcher)
-        self.settings_handlers = SettingsEventHandlers(event_dispatcher, self.settings_manager)
+        event_handlers.register_class_based_handlers(self)
         
         self.gui = ClipWatcherGUI(master, self)
-        self._register_tools()
-        self.gui.create_tool_tabs()
 
         self.monitor.set_gui_update_callback(self.update_gui)
         self.monitor.set_error_callback(self.show_error_message)
@@ -79,12 +67,6 @@ class MainApplication(BaseApplication):
         self.menubar = menu_bar.create_menu_bar(self.master, self)
         self.master.config(menu=self.menubar)
         self.theme_manager.set_menubar(self.menubar)
-
-    def _register_tools(self):
-        """Register tools from the tool configuration."""
-        for tool_config in TOOL_COMPONENTS:
-            tool_name = tool_config["name"]
-            self.tool_manager.register_tool(tool_name, lambda name=tool_name: self.gui.toggle_tool_tab(name))
 
     def update_gui(self, current_content, history):
         """Wrapper to pass sort order to the GUI."""
@@ -203,63 +185,3 @@ class MainApplication(BaseApplication):
 
     def stop_monitor(self):
         self.monitor.stop()
-
-def start_app():
-    lock_socket = None
-    try:
-        # --- Single Instance Check ---
-        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            lock_socket.bind(("127.0.0.1", 61957))
-        except OSError:
-            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
-            sys.exit(0)
-
-        # --- Path Definitions ---
-        if sys.platform == "win32":
-            APP_DATA_DIR = os.path.join(os.environ['APPDATA'], 'ClipWatcher')
-        else:
-            APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
-        os.makedirs(APP_DATA_DIR, exist_ok=True)
-        
-        # Correctly determine BASE_DIR from the project root
-        # Assuming this file is at src/core/app_main.py, so we go up two levels.
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-
-        HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
-        SETTINGS_FILE_PATH = os.path.join(project_root, 'settings.json')
-        FIXED_PHRASES_FILE_PATH = os.path.join(project_root, 'fixed_phrases.json')
-
-        # --- Logging ---
-        logger = setup_logging()
-        logger.info("アプリケーションを開始します")
-
-        # --- Application Setup ---
-        root = tk.Tk()
-        
-        builder = ApplicationBuilder()
-        app = builder.with_event_dispatcher()\
-                     .with_settings(SETTINGS_FILE_PATH)\
-                     .with_translator()\
-                     .with_theme_manager(root)\
-                     .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH)\
-                     .with_plugin_manager()\
-                     .with_tool_manager()\
-                     .with_clipboard_monitor(root, HISTORY_FILE_PATH)\
-                     .build(root)
-               
-        logger.info("アプリケーションの初期化が完了しました")
-        
-        root.mainloop()
-
-    except Exception as e:
-        # Use a local logger variable to avoid UnboundLocalError
-        local_logger = locals().get('logger')
-        if local_logger:
-            local_logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
-        else:
-            print(f"アプリケーション起動エラー: {str(e)}")
-        traceback.print_exc()
-    finally:
-        if lock_socket:
-            lock_socket.close()

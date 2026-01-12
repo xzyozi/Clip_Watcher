@@ -4,8 +4,8 @@ import calendar
 from datetime import datetime
 import logging
 
+from src.plugins.base_plugin import Plugin
 from src.gui.base.base_frame_gui import BaseFrameGUI
-from src.gui.base import context_menu
 from src.gui.custom_widgets import CustomText
 
 class ScheduleHelperComponent(BaseFrameGUI):
@@ -43,6 +43,14 @@ class ScheduleHelperComponent(BaseFrameGUI):
         # Subscribe to language changes and apply initial settings
         self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
         self._apply_locale_settings()
+
+        # Unsubscribe when the widget is destroyed to prevent errors.
+        self.bind("<Destroy>", self._on_destroy)
+
+    def _on_destroy(self, event):
+        """Unsubscribes the listener when the widget is destroyed."""
+        if event.widget == self:
+            self.app.event_dispatcher.unsubscribe("LANGUAGE_CHANGED", self._apply_locale_settings)
 
     def _apply_locale_settings(self, *args):
         """Applies locale-specific settings like the first day of the week and updates UI."""
@@ -244,3 +252,21 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         except (ValueError, TypeError) as e:
             self.logger.error(f"Error updating text widget: {e}")
+
+class ScheduleHelperPlugin(Plugin):
+    """
+    Plugin wrapper for the Schedule Helper GUI tool.
+    """
+    @property
+    def name(self) -> str:
+        return "Calendar"
+
+    @property
+    def description(self) -> str:
+        return "A GUI tool to help create texts related to dates and times."
+
+    def has_gui_component(self) -> bool:
+        return True
+
+    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+        return ScheduleHelperComponent(parent, app_instance)

@@ -56,10 +56,11 @@ def create_menu_bar(master, app_instance):
 
     # Tools Menu
     tools_menu = tk.Menu(menubar, tearoff=0)
-    for tool_name in app_instance.tool_manager.get_all_tool_names():
-        tool_command = app_instance.tool_manager.get_tool_command(tool_name)
-        if tool_command:
-            tools_menu.add_command(label=tool_name, command=tool_command)
+    gui_plugins = app_instance.plugin_manager.get_gui_plugins()
+    for plugin in gui_plugins:
+        # The command should switch to the plugin's tab in the GUI
+        command = lambda p=plugin: app_instance.gui.select_tool_tab(p.name)
+        tools_menu.add_command(label=translator(plugin.name), command=command)
     menubar.add_cascade(label=translator("tools_menu"), menu=tools_menu)
 
     # Help Menu

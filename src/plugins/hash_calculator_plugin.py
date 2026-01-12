@@ -3,8 +3,11 @@ from tkinter import ttk
 import hashlib
 import logging
 
+from src.plugins.base_plugin import Plugin
 from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.core.config import defaults as config
 
+# The GUI Component implementation, moved from gui/components
 class HashCalculatorComponent(BaseFrameGUI):
     """
     A GUI component for calculating hash values of text.
@@ -74,3 +77,31 @@ class HashCalculatorComponent(BaseFrameGUI):
             self.output_text.delete("1.0", tk.END)
             self.output_text.insert("1.0", f"Error: {e}")
             self.output_text.config(state=tk.DISABLED)
+
+
+# The Plugin definition
+class HashCalculatorPlugin(Plugin):
+    """
+    Plugin wrapper for the Hash Calculator GUI tool.
+    """
+    @property
+    def name(self) -> str:
+        return "Hash Calculator"
+
+    @property
+    def description(self) -> str:
+        return "A GUI tool to calculate hash values of text."
+
+    def has_gui_component(self) -> bool:
+        return True
+
+    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+        # Create a container frame with padding, similar to the original implementation
+        tool_frame = ttk.Frame(parent, padding=config.FRAME_PADDING)
+        
+        # Create the actual component inside the container frame
+        component = HashCalculatorComponent(tool_frame, app_instance)
+        component.pack(fill=tk.BOTH, expand=True)
+        
+        # Return the container frame, which will be added as a tab
+        return tool_frame

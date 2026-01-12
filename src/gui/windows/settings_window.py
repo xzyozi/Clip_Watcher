@@ -35,9 +35,11 @@ class SettingsWindow(BaseToplevelGUI):
         self.history_font_size_var = tk.IntVar(value=self.settings_manager.get_setting("history_font_size"))
 
         self.tool_tab_vars = {}
-        for tool_name in self.app_instance.tool_manager.get_all_tool_names():
+        gui_plugins = self.app_instance.plugin_manager.get_gui_plugins()
+        for plugin in gui_plugins:
+            tool_name = plugin.name
             setting_name = f"show_{tool_name.lower().replace(' ', '_')}_tab"
-            self.tool_tab_vars[tool_name] = tk.BooleanVar(value=self.settings_manager.get_setting(setting_name))
+            self.tool_tab_vars[tool_name] = tk.BooleanVar(value=self.settings_manager.get_setting(setting_name, True))
 
         self.settings_tab_names = ["General", "History", "Notifications", "Font", "Excluded Apps", "Modules"]
         self.settings_tab_vars = {}

@@ -3,6 +3,7 @@ from tkinter import ttk
 import logging
 from datetime import datetime
 
+from src.plugins.base_plugin import Plugin
 from src.gui.base.base_frame_gui import BaseFrameGUI
 
 class UnitConverterComponent(BaseFrameGUI):
@@ -182,3 +183,21 @@ class UnitConverterComponent(BaseFrameGUI):
         except (ValueError, TypeError) as e:
             self.output_var.set(f"Result: Error")
             self.logger.error(f"Time conversion error: {e}")
+
+class UnitConverterPlugin(Plugin):
+    """
+    Plugin wrapper for the Unit Converter GUI tool.
+    """
+    @property
+    def name(self) -> str:
+        return "Unit Converter"
+
+    @property
+    def description(self) -> str:
+        return "A GUI tool to convert various units."
+
+    def has_gui_component(self) -> bool:
+        return True
+
+    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+        return UnitConverterComponent(parent, app_instance)

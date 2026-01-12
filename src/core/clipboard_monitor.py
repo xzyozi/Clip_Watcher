@@ -6,17 +6,24 @@ import os
 import ctypes
 import ctypes.wintypes
 import logging
-import win32clipboard
-import pywintypes
+
+try:
+    import win32clipboard
+    import pywintypes
+except ImportError:
+    # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
+    pass
+
 from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, win32_available: bool, history_limit=50, excluded_apps=None):
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
+        self.win32_available = win32_available
         self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
         self.update_callback = None
         self.error_callback = None
@@ -88,22 +95,23 @@ class ClipboardMonitor:
         self.last_clipboard_data = text
         
         existing_item_index = -1
-        for i, (content, is_pinned) in enumerate(self.history):
+        # The history tuple is now (content, is_pinned, timestamp)
+        for i, (content, _, _) in enumerate(self.history):
             if content == text:
                 existing_item_index = i
                 break
 
         if existing_item_index != -1:
             # 項目が存在する場合、一番上に移動します
-            content_to_move, is_pinned_status = self.history.pop(existing_item_index)
-            self.history.insert(0, (content_to_move, is_pinned_status))
+            item_to_move = self.history.pop(existing_item_index)
+            self.history.insert(0, item_to_move)
         else:
             # 新しい項目の場合、一番上に追加します
-            self.history.insert(0, (text, False))
+            self.history.insert(0, (text, False, time.time()))
             # 制限を超えた場合、履歴を整理します
             if len(self.history) > self.history_limit:
                 # 削除するために最後のピン留めされていない項目を見つけます
-                unpinned_indices = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
+                unpinned_indices = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
                 if unpinned_indices:
                     del self.history[unpinned_indices[-1]]
         
@@ -150,7 +158,11 @@ class ClipboardMonitor:
         except (tk.TclError, UnicodeDecodeError) as e:
             logging.warning(f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。")
 
-        # 2. win32clipboardにフォールバックします
+        # 2. win32clipboardが利用可能な場合にフォールバックします
+        if not self.win32_available:
+            logging.warning("win32clipboardが利用できないため、フォールバックできません。")
+            return None
+
         try:
             win32clipboard.OpenClipboard()
             if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
@@ -186,19 +198,22 @@ class ClipboardMonitor:
         
         # 既存の項目を一番上に移動するか、新しい項目を追加します
         existing_item_index = -1
-        for i, (content, is_pinned) in enumerate(self.history):
+        # The history tuple is now (content, is_pinned, timestamp)
+        for i, (content, _, _) in enumerate(self.history):
             if content == clipboard_data:
                 existing_item_index = i
                 break
 
         if existing_item_index != -1:
-            content_to_move, is_pinned_status = self.history.pop(existing_item_index)
-            self.history.insert(0, (content_to_move, is_pinned_status))
+            # Preserve the existing item's data, including timestamp
+            item_to_move = self.history.pop(existing_item_index)
+            self.history.insert(0, item_to_move)
         else:
-            self.history.insert(0, (clipboard_data, False))
+            # Add new item with a new timestamp
+            self.history.insert(0, (clipboard_data, False, time.time()))
             # 制限を超えた場合、履歴を整理します
             if len(self.history) > self.history_limit:
-                unpinned = [i for i, (_, is_pinned) in enumerate(self.history) if not is_pinned]
+                unpinned = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
                 if unpinned:
                     del self.history[unpinned[-1]]
 
@@ -222,7 +237,7 @@ class ClipboardMonitor:
                 return
 
             if len(clipboard_data) > 1024 * 1024:
-                logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
+                # logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
                 return
 
             # 3. 新しい場合、処理します
@@ -232,14 +247,18 @@ class ClipboardMonitor:
         except Exception as e:
             logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
 
-    def update_history_item(self, old_text: str, new_text: str):
-        """コンテンツによって履歴項目を見つけて更新します。"""
-        for i, (content, is_pinned) in enumerate(self.history):
-            if content == old_text:
-                self.history[i] = (new_text, is_pinned)
-                # 更新された項目が最新のものであった場合、last_clipboard_dataも更新します
-                if self.last_clipboard_data == old_text:
+    def update_history_item_by_id(self, item_id: float, new_text: str):
+        """Finds a history item by its ID and updates its content."""
+        for i, (content, is_pinned, timestamp) in enumerate(self.history):
+            if timestamp == item_id:
+                # To be safe, check if we are updating the most recent item
+                is_last_item = (self.last_clipboard_data == content)
+                
+                self.history[i] = (new_text, is_pinned, timestamp)
+                
+                if is_last_item:
                     self.last_clipboard_data = new_text
+                    
                 self._trigger_gui_update()
                 return
 
@@ -259,6 +278,7 @@ class ClipboardMonitor:
             self.monitor_thread.join(timeout=2)
 
     def get_history(self):
+        # The tuple is (content, is_pinned, timestamp)
         pinned = [item for item in self.history if item[1]]
         unpinned = [item for item in self.history if not item[1]]
         return pinned + unpinned
@@ -268,31 +288,35 @@ class ClipboardMonitor:
         self.last_clipboard_data = ""
         self._trigger_gui_update()
 
-    def delete_history_item(self, index):
-        current_display_history = self.get_history()
-        if 0 <= index < len(current_display_history):
-            item_to_delete = current_display_history[index]
-            for i, hist_item in enumerate(self.history):
-                if hist_item == item_to_delete:
-                    del self.history[i]
-                    break
-            
+    def delete_history_item_by_id(self, item_id: float):
+        """Deletes a history item using its unique timestamp ID."""
+        original_len = len(self.history)
+        self.history = [item for item in self.history if item[2] != item_id]
+        
+        if len(self.history) < original_len:
             if not self.history:
                 self.last_clipboard_data = ""
             self._trigger_gui_update()
+            logging.info(f"ID {item_id} の履歴項目を削除しました。")
+        else:
+            logging.warning(f"ID {item_id} の履歴項目が見つかりませんでした。")
 
-    def pin_item(self, item_to_pin):
-        for i, (content, is_pinned) in enumerate(self.history):
-            if (content, is_pinned) == item_to_pin:
-                self.history[i] = (content, True)
-                self._trigger_gui_update()
+    def pin_item_by_id(self, item_id: float):
+        """Pins an item using its unique ID."""
+        for i, (content, is_pinned, timestamp) in enumerate(self.history):
+            if timestamp == item_id:
+                if not is_pinned:
+                    self.history[i] = (content, True, timestamp)
+                    self._trigger_gui_update()
                 return
 
-    def unpin_item(self, item_to_unpin):
-        for i, (content, is_pinned) in enumerate(self.history):
-            if (content, is_pinned) == item_to_unpin:
-                self.history[i] = (content, False)
-                self._trigger_gui_update()
+    def unpin_item_by_id(self, item_id: float):
+        """Unpins an item using its unique ID."""
+        for i, (content, is_pinned, timestamp) in enumerate(self.history):
+            if timestamp == item_id:
+                if is_pinned:
+                    self.history[i] = (content, False, timestamp)
+                    self._trigger_gui_update()
                 return
 
     def delete_all_unpinned_history(self):
@@ -302,23 +326,30 @@ class ClipboardMonitor:
 
     def import_history(self, new_history_items):
         for item_content in reversed(new_history_items):
-            new_item = (item_content, False)
+            # Check for existing item based on content
             existing_item_index = -1
-            for i, (content, is_pinned) in enumerate(self.history):
+            for i, (content, _, _) in enumerate(self.history):
                 if content == item_content:
                     existing_item_index = i
                     break
             
             if existing_item_index != -1:
-                content_to_move, is_pinned_status = self.history.pop(existing_item_index)
-                self.history.insert(0, (content_to_move, is_pinned_status))
+                # If item exists, move it to the top
+                item_to_move = self.history.pop(existing_item_index)
+                self.history.insert(0, item_to_move)
             else:
+                # If new, add with a timestamp
+                new_item = (item_content, False, time.time())
                 self.history.insert(0, new_item)
+                # Trim history if it exceeds the limit
                 if len(self.history) > self.history_limit:
-                    self.history.pop()
+                    unpinned = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
+                    if unpinned:
+                        del self.history[unpinned[-1]]
         self._trigger_gui_update()
 
     def get_filtered_history(self, query):
+        # The tuple is (content, is_pinned, timestamp)
         filtered_raw = [item for item in self.history if query.lower() in item[0].lower()]
         
         pinned = [item for item in filtered_raw if item[1]]
@@ -330,7 +361,16 @@ class ClipboardMonitor:
             try:
                 with open(self.history_file_path, 'r', encoding='utf-8') as f:
                     loaded_data = json.load(f)
-                    return [(item[0], item[1]) for item in loaded_data if isinstance(item, list) and len(item) == 2]
+                    history = []
+                    for i, item in enumerate(loaded_data):
+                        if isinstance(item, list):
+                            if len(item) == 2:
+                                # Legacy format, add a synthetic timestamp
+                                history.append((item[0], item[1], time.time() - i))
+                            elif len(item) == 3:
+                                # New format, just convert to tuple
+                                history.append((item[0], item[1], item[2]))
+                    return history
             except (json.JSONDecodeError, FileNotFoundError) as e:
                 logging.error(f"履歴ファイルの読み込みに失敗しました: {e}", exc_info=True)
                 return []

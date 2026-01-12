@@ -21,6 +21,14 @@ class ContextMenuMixin:
         # Rebuild the menu if the language changes
         self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
 
+        # Unsubscribe when the widget is destroyed to prevent errors.
+        self.bind("<Destroy>", self._on_destroy)
+
+    def _on_destroy(self, event):
+        """Unsubscribes the listener when the widget is destroyed."""
+        if event.widget == self:
+            self.app.event_dispatcher.unsubscribe("LANGUAGE_CHANGED", self._rebuild_menu)
+
     def _rebuild_menu(self, *args):
         """Clears and rebuilds the menu, typically for language changes."""
         self.context_menu.delete(0, tk.END)

@@ -4,8 +4,8 @@ from src.gui.base import context_menu
 from src.core.config import defaults as config
 from src.core.config.defaults import THEMES
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
-from src.gui.components.history_list_component import HistoryListComponent
-from src.core.config.tool_config import TOOL_COMPONENTS
+from src.gui.components import HistoryListComponent
+# from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomText, CustomEntry
 
 from src.gui.base.base_frame_gui import BaseFrameGUI
@@ -14,10 +14,6 @@ class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master, app_instance):
         super().__init__(master, app_instance)
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
-        
-        # Status Bar - Pack this first to reserve space at the bottom
-        # self.status_bar = ttk.Label(self.master, text="", anchor=tk.W)
-        # self.status_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
         
         self.history_data = []
         self.is_user_editing = False # Flag to prevent UI updates during editing
@@ -91,26 +87,17 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.fixed_phrases_frame = FixedPhrasesFrame(self.fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.tool_frames = {}
-        self.tool_components = {}
-        self.tabs = {}
+        self.plugin_tab_frames = [] # Keep track of created frames
 
         self.app.event_dispatcher.subscribe("UNDO_REDO_STACK_CHANGED", self._update_undo_redo_buttons)
         self.app.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.app.event_dispatcher.subscribe("HISTORY_SELECTION_CHANGED", self._on_history_selection_changed)
+        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._update_widget_text)
 
-        self.on_settings_changed(self.app.settings_manager.settings)
+        self.on_font_settings_changed(self.app.settings_manager.settings)
+        self._create_plugin_tabs()
         self._update_widget_text() # Initial text setup
         self.notebook.bind("<Button-1>", self.handle_global_click, add="+")
-
-    # def show_status_message(self, message, duration_ms=3000):
-    #     """Displays a message in the status bar for a limited time."""
-    #     self.status_bar.config(text=message)
-    #     self.master.after(duration_ms, self.clear_status_message)
-
-    # def clear_status_message(self):
-    #     """Clears the status bar message."""
-    #     self.status_bar.config(text="")
 
     def handle_global_click(self, event):
         """
@@ -122,11 +109,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         """
         focused_widget = self.focus_get()
 
-        # If the text widget has focus and the user clicked on something else...
         if focused_widget == self.clipboard_text_widget and event.widget != self.clipboard_text_widget:
-            # ...then trigger the save logic.
-            # The finish_editing method has a flag to prevent it from running more than once
-            # per edit, so it's safe to call even if <FocusOut> also fires.
             self.finish_editing(event)
 
     def start_editing(self, event):
@@ -151,25 +134,22 @@ class ClipWatcherGUI(BaseFrameGUI):
         selected_indices = self.history_component.listbox.curselection()
 
         if selected_indices:
-            # A history item is selected, so perform an in-place, undoable edit.
             index = selected_indices[0]
             
             if 0 <= index < len(self.history_data):
-                original_text, _ = self.history_data[index]
+                original_text, _, item_id = self.history_data[index]
 
                 if edited_text != original_text:
                     from src.core.commands import UpdateHistoryCommand
                     command = UpdateHistoryCommand(
                         monitor=self.app.monitor,
+                        item_id=item_id,
                         original_text=original_text,
                         new_text=edited_text
                     )
                     self.app.undo_manager.execute_command(command)
-                    # self.show_status_message(self.app.translator("status_saved"))
         else:
-            # No history item is selected, so treat this as a new entry.
             self.app.monitor.update_clipboard(edited_text)
-            # self.show_status_message(self.app.translator("status_added_new"))
 
     def _update_widget_text(self):
         """Updates all translatable text widgets."""
@@ -178,7 +158,6 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.notebook.tab(self.clipboard_tab_frame, text=translator("clipboard_tab"))
         self.current_clipboard_frame.config(text=translator("current_clipboard_content_label"))
         
-        # Set initial text only if the widget is empty
         if not self.clipboard_text_widget.get("1.0", "end-1c"):
             self.clipboard_text_widget.insert(tk.END, translator("waiting_for_clipboard_content"))
 
@@ -186,7 +165,6 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.history_container_frame.config(text=translator("clipboard_history_label"))
         self.copy_history_button.config(text=translator("copy_selected_button"))
         
-        # Update sort button text based on current state
         sort_key = "sort_asc_button" if self.app.history_sort_ascending else "sort_desc_button"
         self.sort_button.config(text=translator(sort_key))
 
@@ -194,76 +172,31 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.quit_button.config(text=translator("quit_button"))
         self.notebook.tab(self.fixed_phrases_tab_frame, text=translator("fixed_phrases_tab"))
 
-        # Update tool tabs
-        self._update_tab_visibility(self.app.settings_manager.settings)
+    def _destroy_plugin_tabs(self):
+        for frame in self.plugin_tab_frames:
+            self.notebook.forget(frame)
+            frame.destroy()
+        self.plugin_tab_frames = []
 
-    def create_tool_tabs(self):
-        """Dynamically create tab components for registered tools."""
-        for tool_config in TOOL_COMPONENTS:
-            tool_name = tool_config["name"]
-            component_class = tool_config["component"]
-            setting_key = tool_config["setting_key"]
-
-            tool_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-            self.tool_frames[tool_name] = tool_frame
-
-            component = component_class(tool_frame, self.app)
-            self.tool_components[tool_name] = component
-            component.pack(fill=tk.BOTH, expand=True)
-
-            self.tabs[setting_key] = (tool_frame, tool_name)
-
-        # After creating tabs, update their visibility based on settings
-        self._update_tab_visibility(self.app.settings_manager.settings)
-
-    def toggle_tool_tab(self, tool_name):
-        """Toggles the visibility of a tool tab."""
-        for tool_config in TOOL_COMPONENTS:
-            if tool_config["name"] == tool_name:
-                setting_key = tool_config["setting_key"]
-                if setting_key in self.tabs:
-                    tab_frame, tab_text_key = self.tabs[setting_key]
-                    translated_text = self.app.translator(tab_text_key)
-                    try:
-                        # Check if the tab exists and is visible
-                        tab_id = self.notebook.index(tab_frame)
-                        self.notebook.forget(tab_id)
-                    except tk.TclError:
-                        # Tab doesn't exist, so add it
-                        self.notebook.add(tab_frame, text=translated_text)
-                        self.notebook.select(tab_frame)
-                else:
-                    print(f"Tool tab '{tool_name}' not found or not configured.")
-                break
+    def _create_plugin_tabs(self):
+        """Dynamically creates GUI tabs from plugins based on settings."""
+        self._destroy_plugin_tabs() # Clear existing plugin tabs
+        gui_plugins = self.app.plugin_manager.get_gui_plugins()
+        for plugin in gui_plugins:
+            setting_key = f"show_{plugin.name.lower().replace(' ', '_')}_tab"
+            if self.app.settings_manager.get_setting(setting_key, True):
+                try:
+                    component_frame = plugin.create_gui_component(self.notebook, self.app)
+                    if component_frame:
+                        self.plugin_tab_frames.append(component_frame) # Track the frame
+                        tab_text = self.app.translator(plugin.name)
+                        self.notebook.add(component_frame, text=tab_text)
+                except Exception as e:
+                    print(f"Failed to create GUI component for plugin '{plugin.name}': {e}")
 
     def on_settings_changed(self, settings):
         self.on_font_settings_changed(settings)
-        self._update_tab_visibility(settings)
-        self._update_widget_text() # Re-translate UI on language change
-
-    def _update_tab_visibility(self, settings):
-        """
-        Updates the visibility and text of tool tabs based on settings.
-        This method is called on initial load and when settings change.
-        """
-        translator = self.app.translator
-        for setting_key, (tab_frame, tab_text_key) in self.tabs.items():
-            is_visible = settings.get(setting_key, False)
-            translated_text = translator(tab_text_key)
-            
-            try:
-                tab_exists = self.notebook.index(tab_frame) is not None
-            except tk.TclError:
-                tab_exists = False
-
-            if is_visible:
-                if not tab_exists:
-                    self.notebook.add(tab_frame, text=translated_text)
-                else:
-                    # If tab already exists, just update its text
-                    self.notebook.tab(tab_frame, text=translated_text)
-            elif tab_exists:
-                self.notebook.forget(tab_frame)
+        self._create_plugin_tabs() # Re-create tabs based on new settings
 
     def on_font_settings_changed(self, settings):
         self.apply_font_settings(
@@ -286,7 +219,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.format_button.config(state=tk.NORMAL)
             index = selected_indices[0]
             if 0 <= index < len(self.history_data):
-                content, _ = self.history_data[index]
+                content, _, _ = self.history_data[index]
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.format_button.config(state=tk.DISABLED)
@@ -300,7 +233,6 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.history_component.apply_font(history_font)
 
     def update_clipboard_display(self, current_content, history, sort_ascending=False):
-        # If user is editing the text widget, do not update it.
         if self.is_user_editing:
             return
 
@@ -327,8 +259,17 @@ class ClipWatcherGUI(BaseFrameGUI):
         if selected_indices:
             index = selected_indices[0]
             if 0 <= index < len(self.history_data):
-                content, _ = self.history_data[index]
+                content, _, _ = self.history_data[index]
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.clipboard_text_widget.insert(tk.END, current_content)
             self.clipboard_text_widget.config(state=tk.NORMAL)
+
+    def select_tool_tab(self, plugin_name):
+        """Selects a notebook tab corresponding to the given plugin name."""
+        for i, tab_id in enumerate(self.notebook.tabs()):
+            tab_text = self.notebook.tab(tab_id, "text")
+            translated_plugin_name = self.app.translator(plugin_name)
+            if tab_text == translated_plugin_name:
+                self.notebook.select(i)
+                break
