@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
 
 
 class Plugin(ABC):
@@ -34,7 +39,7 @@ class Plugin(ABC):
         """
         return False
 
-    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+    def create_gui_component(self, parent: ttk.Notebook, app_instance: BaseApplication) -> ttk.Frame | None:
         """
         Creates and returns the GUI component for this plugin.
         This method should be overridden by plugins that provide a GUI.

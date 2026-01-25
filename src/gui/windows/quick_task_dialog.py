@@ -1,16 +1,24 @@
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
+
 from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+
+
 class QuickTaskDialog(BaseToplevelGUI):
-    def __init__(self, master, app_instance, tasks=None):
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication, tasks: list[str] | None = None) -> None:
         super().__init__(master, app_instance)
         self.title("クイックタスク")
         self.tasks = tasks or []
-        self.task_vars = []
+        self.task_vars: list[tk.StringVar] = []
         self._setup_gui()
 
-    def _setup_gui(self):
+    def _setup_gui(self) -> None:
         # メインフレーム
         main_frame = ttk.Frame(self)
         main_frame.pack(expand=True, fill='both', padx=10, pady=10)
@@ -40,7 +48,7 @@ class QuickTaskDialog(BaseToplevelGUI):
 
         self._populate_tasks()
 
-    def _populate_tasks(self):
+    def _populate_tasks(self) -> None:
         """
         quick_listを作成する
         渡されたタスクリストをTreeviewに表示します。
@@ -53,7 +61,7 @@ class QuickTaskDialog(BaseToplevelGUI):
             self.task_list.delete(item)
 
         # 最終的にリストに表示するためのタスクを格納する新しいリストを初期化します。
-        processed_tasks = []
+        processed_tasks: list[str] = []
 
         # self.tasks には、外部から渡されたタスクのリストが格納されています。
         # 例: ["タスクA\nタスクB", "タスクC"]
@@ -62,7 +70,7 @@ class QuickTaskDialog(BaseToplevelGUI):
             # これにより、"タスクA\nタスクB" は ["タスクA", "タスクB"] のようなリストになります。
             # 改行が含まれていないタスクは、要素が1つのリストになります (例: ["タスクC"])。
             lines = task_item.split('\n')
-            
+
             # 分割して得られた行のリストを processed_tasks に追加します。
             # extend を使用することで、リストがネストされず、すべての行がフラットなリストに格納されます。
             processed_tasks.extend(lines)
@@ -76,7 +84,7 @@ class QuickTaskDialog(BaseToplevelGUI):
                 # これにより、ユーザーはUI上で各タスクを個別の行として見ることができます。
                 self.task_list.insert('', 'end', values=(task.strip(),))
 
-    def _copy_selected(self):
+    def _copy_selected(self) -> None:
         """選択されたタスクをコピーして削除"""
         selection = self.task_list.selection()
         if not selection:
@@ -84,7 +92,7 @@ class QuickTaskDialog(BaseToplevelGUI):
 
         # 選択された項目の内容を取得
         item = self.task_list.item(selection[0])
-        content = item['values'][0]
+        content: str = item['values'][0]
 
         # クリップボードにコピー
         self.clipboard_clear()
@@ -97,11 +105,11 @@ class QuickTaskDialog(BaseToplevelGUI):
         if not self.task_list.get_children():
             self.destroy()
 
-    def add_tasks(self, tasks):
+    def add_tasks(self, tasks: list[str]) -> None:
         """タスクを追加"""
         for task in tasks:
             self.task_list.insert('', 'end', values=(task,))
 
-    def get_remaining_tasks(self):
+    def get_remaining_tasks(self) -> list[str]:
         """残りのタスクを取得"""
         return [self.task_list.item(item)['values'][0] for item in self.task_list.get_children()]

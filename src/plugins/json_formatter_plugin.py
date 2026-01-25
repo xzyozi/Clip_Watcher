@@ -1,5 +1,7 @@
 import json
+
 from .base_plugin import Plugin
+
 
 class JSONFormatterPlugin(Plugin):
     @property

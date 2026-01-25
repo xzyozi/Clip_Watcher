@@ -1,17 +1,20 @@
-from tkinter import ttk, Toplevel, Tk
 import tkinter as tk
+from tkinter import Tk, Toplevel, ttk
+from typing import Any
+
 from src.core.config.defaults import THEMES
 
+
 class ThemeManager:
-    def __init__(self, root):
+    def __init__(self, root: Tk) -> None:
         self.root = root
         self.current_theme = "light"
-        self.menubar = None
+        self.menubar: tk.Menu | None = None
 
-    def set_menubar(self, menubar):
+    def set_menubar(self, menubar: tk.Menu) -> None:
         self.menubar = menubar
 
-    def apply_theme(self, theme_name):
+    def apply_theme(self, theme_name: str) -> None:
         if theme_name not in THEMES:
             print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
@@ -56,14 +59,14 @@ class ThemeManager:
 
         # 2. Recursively apply theme to non-ttk widgets
         self.apply_theme_to_widget_tree(self.root, theme)
-        
+
         # 3. Apply theme to menubar
         if self.menubar:
             self._apply_theme_to_menu(self.menubar, theme)
 
-    def _apply_theme_to_menu(self, menu, theme):
+    def _apply_theme_to_menu(self, menu: tk.Menu, theme: dict[str, str]) -> None:
         try:
-            menu.config(
+            menu.config(  # type: ignore
                 background=theme.get("menu_bg"),
                 foreground=theme.get("menu_fg"),
                 activebackground=theme.get("active_menu_bg"),
@@ -75,23 +78,27 @@ class ThemeManager:
             pass # May fail on some systems
 
         try:
-            for i in range(menu.index("end") + 1):
-                if menu.type(i) == "cascade":
-                    submenu_name = menu.entrycget(i, "menu")
-                    if submenu_name:
-                        submenu = menu.nametowidget(submenu_name)
-                        self._apply_theme_to_menu(submenu, theme)
+            end_index = menu.index("end")
+            if end_index is not None:
+                for i in range(end_index + 1):
+                    if menu.type(i) == "cascade":
+                        submenu_name = menu.entrycget(i, "menu")
+                        if submenu_name:
+                            submenu = menu.nametowidget(submenu_name)
+                            self._apply_theme_to_menu(submenu, theme)
         except (tk.TclError, AttributeError):
             # This can fail on some systems or if the menu is torn off
             pass
 
-    def apply_theme_to_widget_tree(self, widget, theme):
+    def apply_theme_to_widget_tree(self, widget: tk.Misc, theme: dict[str, Any]) -> None:
         try:
             if isinstance(widget, (tk.Tk, tk.Toplevel, tk.Frame, tk.LabelFrame)):
                  widget.config(bg=theme["bg"])
             elif isinstance(widget, (tk.Text, tk.Listbox)):
                 widget.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
-            elif isinstance(widget, (tk.Button, tk.Checkbutton, tk.Radiobutton)):
+            elif isinstance(widget, tk.Button):
+                widget.config(bg=theme["button_bg"], fg=theme["button_fg"], activebackground=theme["select_bg"], activeforeground=theme["select_fg"])
+            elif isinstance(widget, (tk.Checkbutton, tk.Radiobutton)):
                 widget.config(bg=theme["button_bg"], fg=theme["button_fg"], activebackground=theme["select_bg"], activeforeground=theme["select_fg"], selectcolor=theme["frame_bg"])
             elif isinstance(widget, tk.Label):
                 widget.config(bg=theme["bg"], fg=theme["label_fg"])
@@ -102,10 +109,10 @@ class ThemeManager:
         for child in widget.winfo_children():
             self.apply_theme_to_widget_tree(child, theme)
 
-    def apply_theme_to_toplevel(self, toplevel_window):
+    def apply_theme_to_toplevel(self, toplevel_window: Toplevel) -> None:
         """Applies the current theme to a Toplevel window and its children."""
         theme = THEMES[self.current_theme]
         self.apply_theme_to_widget_tree(toplevel_window, theme)
 
-    def get_current_theme(self):
+    def get_current_theme(self) -> str:
         return self.current_theme
