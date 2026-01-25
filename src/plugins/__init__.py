@@ -1,8 +1,8 @@
 """
 This package dynamically loads all converter plugins from the current directory.
 """
-from .base_plugin import Plugin
 from .base64_converter_plugin import Base64ConverterPlugin
+from .base_plugin import Plugin
 from .csv_formatter_plugin import CSVFormatterPlugin
 from .duplicate_line_remover_plugin import DuplicateLineRemoverPlugin
 from .general_case_converter_plugin import GeneralCaseConverterPlugin

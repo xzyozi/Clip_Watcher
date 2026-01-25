@@ -1,30 +1,36 @@
-from .history_handlers import HistoryEventHandlers
-from .file_handlers import FileEventHandlers
-from .settings_handlers import SettingsEventHandlers
+from __future__ import annotations
+
+import os
+import socket
+import sys
+import tkinter as tk
+import traceback
+from tkinter import messagebox
+from typing import TYPE_CHECKING
+
+from src.core.application_builder import ApplicationBuilder
+from src.utils.logging_config import setup_logging
 
 # Import standalone handlers so they can be accessed via the package
-from . import main_handlers
+from . import main_handlers  # noqa: F401
+from .file_handlers import FileEventHandlers
+from .history_handlers import HistoryEventHandlers
+from .settings_handlers import SettingsEventHandlers
 
-def register_class_based_handlers(app_instance):
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+
+
+def register_class_based_handlers(app_instance: BaseApplication) -> None:
     """
     Initializes and registers all class-based event handlers for the application.
     """
-    app_instance.history_handlers = HistoryEventHandlers(app_instance, app_instance.event_dispatcher, app_instance.undo_manager)
-    app_instance.file_handlers = FileEventHandlers(app_instance, app_instance.event_dispatcher)
-    app_instance.settings_handlers = SettingsEventHandlers(app_instance.event_dispatcher, app_instance.settings_manager)
+    app_instance.history_handlers = HistoryEventHandlers(app_instance, app_instance.event_dispatcher, app_instance.undo_manager) # type: ignore
+    app_instance.file_handlers = FileEventHandlers(app_instance, app_instance.event_dispatcher) # type: ignore
+    app_instance.settings_handlers = SettingsEventHandlers(app_instance.event_dispatcher, app_instance.settings_manager) # type: ignore
 
-# --- Application Entry Point ---
-import tkinter as tk
-from tkinter import messagebox
-import os
-import sys
-import socket
-import traceback
 
-from src.utils.logging_config import setup_logging
-from src.core.application_builder import ApplicationBuilder
-
-def start_app():
+def start_app() -> None:
     lock_socket = None
     try:
         # --- Single Instance Check ---
@@ -37,14 +43,14 @@ def start_app():
 
         # --- Path Definitions ---
         if sys.platform == "win32":
-            APP_DATA_DIR = os.path.join(os.environ['USERPROFILE'], '.clipWatcher')
+            app_data_dir = os.path.join(os.environ['USERPROFILE'], '.clipWatcher')
         else:
-            APP_DATA_DIR = os.path.join(os.path.expanduser('~'), '.clipwatcher')
-        os.makedirs(APP_DATA_DIR, exist_ok=True)
-        
-        HISTORY_FILE_PATH = os.path.join(APP_DATA_DIR, 'history.json')
-        SETTINGS_FILE_PATH = os.path.join(APP_DATA_DIR, 'settings.json')
-        FIXED_PHRASES_FILE_PATH = os.path.join(APP_DATA_DIR, 'fixed_phrases.json')
+            app_data_dir = os.path.join(os.path.expanduser('~'), '.clipwatcher')
+        os.makedirs(app_data_dir, exist_ok=True)
+
+        history_file_path = os.path.join(app_data_dir, 'history.json')
+        settings_file_path = os.path.join(app_data_dir, 'settings.json')
+        fixed_phrases_file_path = os.path.join(app_data_dir, 'fixed_phrases.json')
 
         # --- Logging ---
         logger = setup_logging()
@@ -52,20 +58,20 @@ def start_app():
 
         # --- Application Setup ---
         root = tk.Tk()
-        
+
         builder = ApplicationBuilder()
         app = builder.with_event_dispatcher() \
             .with_dependency_check() \
-            .with_settings(SETTINGS_FILE_PATH) \
+            .with_settings(settings_file_path) \
             .with_translator() \
             .with_theme_manager(root) \
-            .with_fixed_phrases_manager(FIXED_PHRASES_FILE_PATH) \
+            .with_fixed_phrases_manager(fixed_phrases_file_path) \
             .with_plugin_manager() \
-            .with_clipboard_monitor(root, HISTORY_FILE_PATH) \
+            .with_clipboard_monitor(root, history_file_path) \
             .build(root)
-               
+
         logger.info("アプリケーションの初期化が完了しました")
-        
+
         root.mainloop()
 
     except Exception as e:

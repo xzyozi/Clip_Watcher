@@ -3,7 +3,8 @@ import os
 import sys
 from datetime import datetime
 
-def setup_logging():
+
+def setup_logging() -> logging.Logger:
     """アプリケーション全体のロギング設定"""
     # ログディレクトリの設定
     if sys.platform == "win32":
@@ -35,7 +36,7 @@ def setup_logging():
     root_logger = logging.getLogger()
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
-        
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',

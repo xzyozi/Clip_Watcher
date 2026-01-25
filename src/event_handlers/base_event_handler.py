@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Callable, TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.core.event_dispatcher import EventDispatcher
 
 class BaseEventHandler(ABC):
     """A base class for event handlers to standardize subscription and cleanup."""
-    
-    def __init__(self, dispatcher: 'EventDispatcher'):
+
+    def __init__(self, dispatcher: 'EventDispatcher') -> None:
         """
         Initializes the event handler.
 
@@ -15,7 +16,7 @@ class BaseEventHandler(ABC):
             dispatcher: The event dispatcher to subscribe to.
         """
         self.dispatcher = dispatcher
-        self._subscriptions = []
+        self._subscriptions: list[tuple[str, Callable[..., Any]]] = []
         self._register_handlers()
 
     @abstractmethod
@@ -26,7 +27,7 @@ class BaseEventHandler(ABC):
         """
         pass
 
-    def subscribe(self, event_name: str, handler: Callable) -> None:
+    def subscribe(self, event_name: str, handler: Callable[..., Any]) -> None:
         """
         Subscribes a handler to an event and tracks the subscription.
 

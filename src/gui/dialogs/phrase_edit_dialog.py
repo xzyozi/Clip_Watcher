@@ -1,15 +1,24 @@
+from __future__ import annotations
+
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox, ttk
+from typing import TYPE_CHECKING, Any
+
 from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.gui.custom_widgets import CustomText
+
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+    from src.core.fixed_phrases_manager import FixedPhrasesManager
+
 
 class PhraseEditDialog(BaseToplevelGUI):
     """
     A dialog for adding or editing a fixed phrase.
     """
-    def __init__(self, master, app_instance, phrase_manager, phrase_key=None, **kwargs):
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication, phrase_manager: FixedPhrasesManager, phrase_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(master, app_instance, **kwargs)
-        self.transient(master)
+        self.transient(master) # type: ignore
         self.grab_set()
 
         self.phrase_manager = phrase_manager
@@ -20,14 +29,14 @@ class PhraseEditDialog(BaseToplevelGUI):
             self.title("定型文の編集")
         else:
             self.title("定型文の追加")
-            
+
         self.geometry("450x250")
 
         self._create_widgets()
-        
+
         master.wait_window(self)
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         container = ttk.Frame(self, padding=10)
         container.pack(fill=tk.BOTH, expand=True)
         container.grid_columnconfigure(0, weight=1)
@@ -36,7 +45,7 @@ class PhraseEditDialog(BaseToplevelGUI):
         # Content
         content_label = ttk.Label(container, text="内容 (Content):")
         content_label.grid(row=0, column=0, pady=(0, 5), sticky="nw")
-        
+
         text_frame = ttk.Frame(container)
         text_frame.grid(row=1, column=0, sticky="nsew")
         text_frame.grid_rowconfigure(0, weight=1)
@@ -61,7 +70,7 @@ class PhraseEditDialog(BaseToplevelGUI):
         cancel_button = ttk.Button(button_frame, text="キャンセル (Cancel)", command=self.destroy)
         cancel_button.pack(side=tk.RIGHT)
 
-    def _on_save(self):
+    def _on_save(self) -> None:
         new_phrase = self.content_text.get("1.0", tk.END).strip()
         if not new_phrase:
             messagebox.showwarning("入力エラー", "内容を入力してください。", parent=self)
@@ -79,7 +88,7 @@ class PhraseEditDialog(BaseToplevelGUI):
                 if not success:
                     messagebox.showerror("エラー", "定型文の追加に失敗しました。\n同じ内容が既に存在する可能性があります。", parent=self)
                     return
-            
+
             self.result = True
             self.destroy()
 

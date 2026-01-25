@@ -1,5 +1,7 @@
-from .base_plugin import Plugin
 import html
+
+from .base_plugin import Plugin
+
 
 class HTMLEscapePlugin(Plugin):
     @property
@@ -20,6 +22,6 @@ class HTMLEscapePlugin(Plugin):
             unescaped_text = html.unescape(text)
             if unescaped_text != text:
                 return unescaped_text
-        
+
         # If no entities found or unescaping didn't change, escape
         return html.escape(text)

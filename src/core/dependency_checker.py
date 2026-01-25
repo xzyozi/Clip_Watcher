@@ -19,7 +19,7 @@ class DependencyChecker:
         すべてのオプション依存関係をチェックし、その利用可能性を含むステータスオブジェクトを返します。
         """
         status = DependencyStatus()
-        
+
         # win32clipboardの利用可能性を確認
         try:
             importlib.import_module("win32clipboard")
@@ -29,5 +29,5 @@ class DependencyChecker:
         except ImportError:
             status.win32_available = False
             logger.warning("win32clipboardモジュールが見つかりません。一部の機能が制限される可能性があります。")
-            
+
         return status

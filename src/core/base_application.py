@@ -1,7 +1,8 @@
 """Application interface for type hints"""
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from enum import Enum, auto
-from typing import Callable
+
 
 class ApplicationState(Enum):
     """Defines the possible states of the application's lifecycle."""
@@ -13,8 +14,8 @@ class ApplicationState(Enum):
 
 class BaseApplication(ABC):
     """Interface definition for the main application."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self._state = ApplicationState.INITIALIZING
         self._state_listeners: list[Callable[[ApplicationState], None]] = []
 

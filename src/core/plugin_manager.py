@@ -1,18 +1,21 @@
+from __future__ import annotations
+
+import importlib
 import inspect
 import logging
 import pkgutil
-import importlib
+
 import src.plugins as plugins_package
 from src.plugins.base_plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
 class PluginManager:
-    def __init__(self):
-        self.plugins = []
+    def __init__(self) -> None:
+        self.plugins: list[Plugin] = []
         self.load_plugins()
 
-    def load_plugins(self):
+    def load_plugins(self) -> None:
         """Dynamically load all plugins from the plugins package."""
         self.plugins = []
         plugin_path = plugins_package.__path__
@@ -28,19 +31,19 @@ class PluginManager:
             except Exception as e:
                 logger.error(f"Failed to load plugin from {name}: {e}", exc_info=True)
 
-    def get_available_plugins(self):
+    def get_available_plugins(self) -> list[Plugin]:
         """Return a list of all available plugin instances."""
         return self.plugins
 
-    def get_text_plugins(self):
+    def get_text_plugins(self) -> list[Plugin]:
         """Return plugins that can process text."""
-        text_plugins = []
+        text_plugins: list[Plugin] = []
         for plugin in self.plugins:
             # A plugin is a text plugin if its `process` method is different from the base class's.
-            if plugin.process.__func__ is not Plugin.process.__func__:
+            if plugin.process.__func__ is not Plugin.process.__func__: # type: ignore
                 text_plugins.append(plugin)
         return text_plugins
 
-    def get_gui_plugins(self):
+    def get_gui_plugins(self) -> list[Plugin]:
         """Return plugins that have a GUI component."""
         return [p for p in self.plugins if p.has_gui_component()]
