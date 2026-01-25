@@ -127,7 +127,7 @@ class ApplicationBuilder:
 
 
 
-    def build(self, master: tk.Tk) -> MainApplication:
+    def build(self, master: tk.Tk) -> "MainApplication":
         """アプリケーションのビルド"""
         if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
