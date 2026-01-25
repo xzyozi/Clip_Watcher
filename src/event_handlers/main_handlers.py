@@ -1,24 +1,31 @@
+from __future__ import annotations
+
+import logging
 import tkinter as tk
 from tkinter import messagebox
-from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
-from src.core.fixed_phrases_manager import FixedPhrasesManager
-from src.core.config import defaults
-import logging
+from typing import TYPE_CHECKING, Any
 
+from src.core.config import defaults
+from src.core.fixed_phrases_manager import FixedPhrasesManager
+from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.utils.error_handler import log_and_show_error
+
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+
 
 logger = logging.getLogger(__name__)
 
-def handle_about():
+def handle_about() -> None:
     messagebox.showinfo(
         "バージョン情報 (About)",
         f"ClipWatcher\nバージョン: {defaults.APP_VERSION}\n開発者: xx\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。"
     )
 
-def handle_how_to_use():
+def handle_how_to_use() -> None:
     messagebox.showinfo(
         "使い方 (How to Use)",
-        "ClipWatcherの基本的な使い方:\n\n" 
+        "ClipWatcherの基本的な使い方:\n\n"
         "1. アプリケーションを起動すると、自動的にクリップボードの監視を開始します。\n"
         "2. 何かテキストをコピーすると、メインウィンドウの「Current Clipboard Content」に表示され、履歴リストに追加されます。\n"
         "3. 履歴リストの項目をダブルクリックするか、「Copy Selected to Clipboard」ボタンをクリックすると、その項目がクリップボードにコピーされます。\n"
@@ -30,7 +37,7 @@ def handle_how_to_use():
         "\nご不明な点があれば、[SPECIFICATION.md](SPECIFICATION.md) を参照してください。"
     )
 
-def handle_copy_fixed_phrase(gui_instance, phrase):
+def handle_copy_fixed_phrase(gui_instance: Any, phrase: str) -> None:
     try:
         gui_instance.master.clipboard_clear()
         gui_instance.master.clipboard_append(phrase)
@@ -38,17 +45,17 @@ def handle_copy_fixed_phrase(gui_instance, phrase):
     except Exception as e:
         log_and_show_error("エラー",f"Error copying fixed phrase: {e}")
 
-def handle_manage_fixed_phrases(master, fixed_phrases_manager):
-    fixed_phrases_window = FixedPhrasesManager(master, fixed_phrases_manager)
-    fixed_phrases_window.grab_set()
-    master.wait_window(fixed_phrases_window)
+def handle_manage_fixed_phrases(master: tk.Tk, fixed_phrases_manager: FixedPhrasesManager) -> None:
+    fixed_phrases_window = FixedPhrasesFrame(master, fixed_phrases_manager) # type: ignore
+    fixed_phrases_window.grab_set() # type: ignore
+    master.wait_window(fixed_phrases_window) # type: ignore
 
 
-def handle_show_schedule_helper_tool(app_instance):
+def handle_show_schedule_helper_tool(app_instance: BaseApplication) -> None:
     """ Switch to the Schedule Helper Tool tab in the main notebook """
     try:
         # The tab index should be 2 (0: Clipboard, 1: Fixed Phrases, 2: Schedule Helper)
-        app_instance.gui.notebook.select(2)
+        app_instance.gui.notebook.select(2) # type: ignore
         logger.info("Switched to Schedule Helper Tool tab.")
     except tk.TclError as e:
         logger.error(f"Failed to switch to Schedule Helper Tool tab. It might not exist. {e}")

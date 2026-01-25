@@ -1,6 +1,8 @@
-from .base_plugin import Plugin
-import io
 import csv
+import io
+
+from .base_plugin import Plugin
+
 
 class TableFormatterPlugin(Plugin):
 
@@ -50,7 +52,7 @@ class TableFormatterPlugin(Plugin):
                 while len(formatted_row) < num_columns:
                     formatted_row.append(''.ljust(col_widths[len(formatted_row)]))
                 formatted_table.append(' | '.join(formatted_row))
-            
+
             return '\n'.join(formatted_table)
         except Exception:
             return text # Return original text if formatting fails

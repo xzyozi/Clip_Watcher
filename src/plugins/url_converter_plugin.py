@@ -1,5 +1,7 @@
-from .base_plugin import Plugin
 import urllib.parse
+
+from .base_plugin import Plugin
+
 
 class URLConverterPlugin(Plugin):
     @property

@@ -1,34 +1,35 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+
 from src.core.event_dispatcher import EventDispatcher
+
 
 class UndoableCommand(ABC):
     """An interface for a command that can be undone."""
     @abstractmethod
-    def execute(self):
+    def execute(self) -> None:
         """Executes the command."""
         pass
 
     @abstractmethod
-    def undo(self):
+    def undo(self) -> None:
         """Undoes the command."""
         pass
 
 class UndoManager:
     """Manages undo and redo operations using command objects."""
     def __init__(self, event_dispatcher: EventDispatcher):
-        self.undo_stack: List[UndoableCommand] = []
-        self.redo_stack: List[UndoableCommand] = []
+        self.undo_stack: list[UndoableCommand] = []
+        self.redo_stack: list[UndoableCommand] = []
         self.event_dispatcher = event_dispatcher
 
-    def execute_command(self, command: UndoableCommand):
+    def execute_command(self, command: UndoableCommand) -> None:
         """Executes a command and adds it to the undo stack."""
         command.execute()
         self.undo_stack.append(command)
         self.redo_stack.clear()
         self._dispatch_update()
 
-    def undo(self):
+    def undo(self) -> None:
         """Undoes the last command."""
         if not self.can_undo():
             return
@@ -37,7 +38,7 @@ class UndoManager:
         self.redo_stack.append(command)
         self._dispatch_update()
 
-    def redo(self):
+    def redo(self) -> None:
         """Redoes the last undone command."""
         if not self.can_redo():
             return
@@ -54,7 +55,7 @@ class UndoManager:
         """Checks if there are any actions to redo."""
         return bool(self.redo_stack)
 
-    def _dispatch_update(self):
+    def _dispatch_update(self) -> None:
         """Dispatches an event to notify UI about stack changes."""
         self.event_dispatcher.dispatch(
             "UNDO_REDO_STACK_CHANGED",

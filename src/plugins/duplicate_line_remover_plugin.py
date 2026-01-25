@@ -1,5 +1,6 @@
 from .base_plugin import Plugin
 
+
 class DuplicateLineRemoverPlugin(Plugin):
     @property
     def name(self) -> str:

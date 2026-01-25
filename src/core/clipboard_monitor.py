@@ -1,43 +1,51 @@
-import time
-import threading
-import tkinter as tk
-import json
-import os
+from __future__ import annotations
+
 import ctypes
 import ctypes.wintypes
+import json
 import logging
+import os
+import threading
+import time
+import tkinter as tk
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
 
 try:
-    import win32clipboard
     import pywintypes
+    import win32clipboard
 except ImportError:
     # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
     pass
 
-from .notification_manager import NotificationManager
 from .event_dispatcher import EventDispatcher
+from .notification_manager import NotificationManager
+
+if TYPE_CHECKING:
+    pass  # For settings object
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root, event_dispatcher: EventDispatcher, history_file_path, win32_available: bool, history_limit=50, excluded_apps=None):
+    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, history_limit: int = 50, excluded_apps: list[str] | None = None) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
         self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
-        self.update_callback = None
-        self.error_callback = None
-        self.last_clipboard_data = ""
-        self._running = False
-        self.monitor_thread = None
-        self.history_file_path = history_file_path
-        self.history = self._load_history_from_file()
-        self.history_limit = history_limit
-        self.excluded_apps = excluded_apps if excluded_apps is not None else []
+        self.update_callback: Callable[[str, list[tuple[str, bool, float]]], None] | None = None
+        self.error_callback: Callable[[str, str], None] | None = None
+        self.last_clipboard_data: str = ""
+        self._running: bool = False
+        self.monitor_thread: threading.Thread | None = None
+        self.history_file_path: str = history_file_path
+        self.history: list[tuple[str, bool, float]] = self._load_history_from_file()
+        self.history_limit: int = history_limit
+        self.excluded_apps: list[str] = excluded_apps if excluded_apps is not None else []
 
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
 
-    def on_settings_changed(self, settings):
+    def on_settings_changed(self, settings: dict[str, Any]) -> None:
         self.history_limit = settings.get("history_limit", 50)
         self.excluded_apps = settings.get("excluded_apps", [])
         self.notification_manager.update_settings(settings)
@@ -45,10 +53,10 @@ class ClipboardMonitor:
             self.history = self.history[:self.history_limit]
             self._trigger_gui_update()
 
-    def set_error_callback(self, callback):
+    def set_error_callback(self, callback: Callable[[str, str], None]) -> None:
         self.error_callback = callback
 
-    def get_active_process_name(self):
+    def get_active_process_name(self) -> str | None:
         user32 = ctypes.windll.user32
         kernel32 = ctypes.windll.kernel32
         psapi = ctypes.windll.psapi
@@ -70,10 +78,10 @@ class ClipboardMonitor:
 
         return exe_name.value.decode(errors="ignore")
 
-    def set_gui_update_callback(self, callback):
+    def set_gui_update_callback(self, callback: Callable[[str, list[tuple[str, bool, float]]], None]) -> None:
         self.update_callback = callback
 
-    def update_clipboard(self, text: str):
+    def update_clipboard(self, text: str) -> None:
         """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
         if not text:
             return
@@ -93,7 +101,7 @@ class ClipboardMonitor:
 
         # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.last_clipboard_data = text
-        
+
         existing_item_index = -1
         # The history tuple is now (content, is_pinned, timestamp)
         for i, (content, _, _) in enumerate(self.history):
@@ -114,11 +122,11 @@ class ClipboardMonitor:
                 unpinned_indices = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
                 if unpinned_indices:
                     del self.history[unpinned_indices[-1]]
-        
+
         # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
-    def _monitor_clipboard(self):
+    def _monitor_clipboard(self) -> None:
         logging.info("クリップボード監視を開始します")
         while self._running:
             try:
@@ -127,11 +135,11 @@ class ClipboardMonitor:
             except RuntimeError as e:
                 logging.warning(f"Tkinterランタイムエラー: {e}")
                 time.sleep(1)
-            except Exception as e:
+            except Exception:
                 logging.error("クリップボード監視ループで予期せぬエラーが発生しました。", exc_info=True)
                 time.sleep(5)
 
-    def _decode_clipboard_data(self, data):
+    def _decode_clipboard_data(self, data: Any) -> str:
         if isinstance(data, bytes):
             encodings = ['utf-8', 'shift-jis', 'cp932', 'euc-jp', 'latin1']
             for encoding in encodings:
@@ -147,7 +155,7 @@ class ClipboardMonitor:
                 return data
         return str(data)
 
-    def _get_clipboard_content(self):
+    def _get_clipboard_content(self) -> str | None:
         """
         tkinterを使用してクリップボードのコンテンツを取得し、失敗した場合はwin32clipboardにフォールバックします。
         コンテンツを文字列として返すか、失敗した場合やコンテンツがテキストでない場合はNoneを返します。
@@ -165,9 +173,9 @@ class ClipboardMonitor:
 
         try:
             win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
-                return win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
+            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT): # type: ignore
+                return cast(str, win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT))
+            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT): # type: ignore
                 data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
                 return self._decode_clipboard_data(data)
             return "" # 処理できないテキスト形式です
@@ -186,16 +194,16 @@ class ClipboardMonitor:
             except Exception:
                 pass # すでに閉じられているか、開けませんでした。
 
-    def _update_history_with_new_entry(self, clipboard_data):
+    def _update_history_with_new_entry(self, clipboard_data: str) -> None:
         """新しいクリップボードエントリで履歴を更新します。"""
         self.last_clipboard_data = clipboard_data
         active_process = self.get_active_process_name()
         logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
-        
+
         if active_process in self.excluded_apps:
             logging.info(f"除外アプリからのコピーのため無視: {active_process}")
             return
-        
+
         # 既存の項目を一番上に移動するか、新しい項目を追加します
         existing_item_index = -1
         # The history tuple is now (content, is_pinned, timestamp)
@@ -213,14 +221,15 @@ class ClipboardMonitor:
             self.history.insert(0, (clipboard_data, False, time.time()))
             # 制限を超えた場合、履歴を整理します
             if len(self.history) > self.history_limit:
-                unpinned = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
-                if unpinned:
-                    del self.history[unpinned[-1]]
+                # 削除するために最後のピン留めされていない項目を見つけます
+                unpinned_indices = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
+                if unpinned_indices:
+                    del self.history[unpinned_indices[-1]]
 
-        self.notification_manager.play_notification_sound()
+        # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
-    def _check_clipboard(self):
+    def _check_clipboard(self) -> None:
         try:
             # 1. 堅牢な方法でクリップボードのコンテンツを取得します
             raw_content = self._get_clipboard_content()
@@ -244,55 +253,55 @@ class ClipboardMonitor:
             if clipboard_data != self.last_clipboard_data:
                 self._update_history_with_new_entry(clipboard_data)
 
-        except Exception as e:
+        except Exception:
             logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
 
-    def update_history_item_by_id(self, item_id: float, new_text: str):
+    def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
         """Finds a history item by its ID and updates its content."""
         for i, (content, is_pinned, timestamp) in enumerate(self.history):
             if timestamp == item_id:
                 # To be safe, check if we are updating the most recent item
                 is_last_item = (self.last_clipboard_data == content)
-                
+
                 self.history[i] = (new_text, is_pinned, timestamp)
-                
+
                 if is_last_item:
                     self.last_clipboard_data = new_text
-                    
+
                 self._trigger_gui_update()
                 return
 
-    def _trigger_gui_update(self):
+    def _trigger_gui_update(self) -> None:
         if self.update_callback:
             self.tk_root.after(0, self.update_callback, self.last_clipboard_data, self.get_history())
 
-    def start(self):
+    def start(self) -> None:
         if not self._running:
             self._running = True
-            self.monitor_thread = threading.Thread(target=self._monitor_clipboard, daemon=True)
-            self.monitor_thread.start()
+            self.monitor_thread = threading.Thread(target=self._monitor_clipboard, daemon=True) # type: ignore
+            self.monitor_thread.start() # type: ignore
 
-    def stop(self):
+    def stop(self) -> None:
         self._running = False
         if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=2)
 
-    def get_history(self):
+    def get_history(self) -> list[tuple[str, bool, float]]:
         # The tuple is (content, is_pinned, timestamp)
         pinned = [item for item in self.history if item[1]]
         unpinned = [item for item in self.history if not item[1]]
         return pinned + unpinned
 
-    def clear_history(self):
+    def clear_history(self) -> None:
         self.history.clear()
         self.last_clipboard_data = ""
         self._trigger_gui_update()
 
-    def delete_history_item_by_id(self, item_id: float):
+    def delete_history_item_by_id(self, item_id: float) -> None:
         """Deletes a history item using its unique timestamp ID."""
         original_len = len(self.history)
         self.history = [item for item in self.history if item[2] != item_id]
-        
+
         if len(self.history) < original_len:
             if not self.history:
                 self.last_clipboard_data = ""
@@ -301,7 +310,7 @@ class ClipboardMonitor:
         else:
             logging.warning(f"ID {item_id} の履歴項目が見つかりませんでした。")
 
-    def pin_item_by_id(self, item_id: float):
+    def pin_item_by_id(self, item_id: float) -> None:
         """Pins an item using its unique ID."""
         for i, (content, is_pinned, timestamp) in enumerate(self.history):
             if timestamp == item_id:
@@ -310,7 +319,7 @@ class ClipboardMonitor:
                     self._trigger_gui_update()
                 return
 
-    def unpin_item_by_id(self, item_id: float):
+    def unpin_item_by_id(self, item_id: float) -> None:
         """Unpins an item using its unique ID."""
         for i, (content, is_pinned, timestamp) in enumerate(self.history):
             if timestamp == item_id:
@@ -319,12 +328,12 @@ class ClipboardMonitor:
                     self._trigger_gui_update()
                 return
 
-    def delete_all_unpinned_history(self):
+    def delete_all_unpinned_history(self) -> None:
         self.history = [item for item in self.history if item[1]]
         self._trigger_gui_update()
         logging.info("モニター: ピン留めされていないすべての履歴を削除しました。")
 
-    def import_history(self, new_history_items):
+    def import_history(self, new_history_items: list[str]) -> None:
         for item_content in reversed(new_history_items):
             # Check for existing item based on content
             existing_item_index = -1
@@ -332,7 +341,7 @@ class ClipboardMonitor:
                 if content == item_content:
                     existing_item_index = i
                     break
-            
+
             if existing_item_index != -1:
                 # If item exists, move it to the top
                 item_to_move = self.history.pop(existing_item_index)
@@ -348,42 +357,42 @@ class ClipboardMonitor:
                         del self.history[unpinned[-1]]
         self._trigger_gui_update()
 
-    def get_filtered_history(self, query):
+    def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:
         # The tuple is (content, is_pinned, timestamp)
         filtered_raw = [item for item in self.history if query.lower() in item[0].lower()]
-        
+
         pinned = [item for item in filtered_raw if item[1]]
         unpinned = [item for item in filtered_raw if not item[1]]
         return pinned + unpinned
 
-    def _load_history_from_file(self):
+    def _load_history_from_file(self) -> list[tuple[str, bool, float]]:
         if os.path.exists(self.history_file_path):
             try:
-                with open(self.history_file_path, 'r', encoding='utf-8') as f:
-                    loaded_data = json.load(f)
-                    history = []
+                with open(self.history_file_path, encoding='utf-8') as f:
+                    loaded_data: list[list[Any]] = json.load(f)
+                    history: list[tuple[str, bool, float]] = []
                     for i, item in enumerate(loaded_data):
                         if isinstance(item, list):
                             if len(item) == 2:
                                 # Legacy format, add a synthetic timestamp
-                                history.append((item[0], item[1], time.time() - i))
+                                history.append((item[0], item[1], time.time() - i)) # type: ignore
                             elif len(item) == 3:
                                 # New format, just convert to tuple
-                                history.append((item[0], item[1], item[2]))
+                                history.append((item[0], item[1], item[2])) # type: ignore
                     return history
             except (json.JSONDecodeError, FileNotFoundError) as e:
                 logging.error(f"履歴ファイルの読み込みに失敗しました: {e}", exc_info=True)
                 return []
         return []
 
-    def save_history_to_file(self):
+    def save_history_to_file(self) -> None:
         self._save_history_to_file()
 
-    def _save_history_to_file(self):
+    def _save_history_to_file(self) -> None:
         try:
             with open(self.history_file_path, 'w', encoding='utf-8') as f:
                 json.dump(self.history, f, ensure_ascii=False, indent=4)
-        except IOError as e:
+        except OSError as e:
             logging.error(f"履歴ファイルの保存に失敗しました: {e}", exc_info=True)
             if self.error_callback:
                 self.error_callback("履歴保存エラー", f"履歴ファイル '{self.history_file_path}' の保存に失敗しました。")

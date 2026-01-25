@@ -1,5 +1,6 @@
 from .base_plugin import Plugin
 
+
 class WhitespaceNormalizerPlugin(Plugin):
     @property
     def name(self) -> str:
@@ -23,6 +24,6 @@ class WhitespaceNormalizerPlugin(Plugin):
             # Replace tabs with spaces
             line = line.replace('	', ' ')
             normalized_lines.append(line)
-        
+
         # Join lines with normalized line endings
         return '\n'.join(normalized_lines)

@@ -1,6 +1,8 @@
-from .base_plugin import Plugin
 import csv
 import io
+
+from .base_plugin import Plugin
+
 
 class CSVFormatterPlugin(Plugin):
     @property
@@ -29,7 +31,7 @@ class CSVFormatterPlugin(Plugin):
         # Use StringIO to treat string as a file
         f = io.StringIO(text)
         reader = csv.reader(f, delimiter=delimiter)
-        
+
         rows = []
         try:
             for row in reader:
@@ -56,5 +58,5 @@ class CSVFormatterPlugin(Plugin):
                 if i < num_columns:
                     formatted_row_parts.append(cell.ljust(column_widths[i]))
             formatted_lines.append(delimiter.join(formatted_row_parts))
-        
+
         return '\n'.join(formatted_lines)

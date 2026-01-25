@@ -1,18 +1,25 @@
-import tkinter as tk
-from tkinter import ttk
+from __future__ import annotations
+
 import hashlib
 import logging
+import tkinter as tk
+from tkinter import Event, ttk
+from typing import TYPE_CHECKING
 
-from src.plugins.base_plugin import Plugin
-from src.gui.base.base_frame_gui import BaseFrameGUI
 from src.core.config import defaults as config
+from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.plugins.base_plugin import Plugin
+
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+
 
 # The GUI Component implementation, moved from gui/components
 class HashCalculatorComponent(BaseFrameGUI):
     """
     A GUI component for calculating hash values of text.
     """
-    def __init__(self, master, app_instance):
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing HashCalculatorComponent.")
@@ -22,7 +29,7 @@ class HashCalculatorComponent(BaseFrameGUI):
 
         self._create_widgets()
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         # Input frame
         input_frame = ttk.LabelFrame(self, text="Input Text")
         input_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -41,7 +48,7 @@ class HashCalculatorComponent(BaseFrameGUI):
 
         calculate_button = ttk.Button(control_frame, text="Calculate", command=self._calculate_hash)
         calculate_button.pack(side=tk.LEFT, padx=5)
-        
+
         self.input_text.bind("<KeyRelease>", self._on_text_change)
 
 
@@ -52,10 +59,10 @@ class HashCalculatorComponent(BaseFrameGUI):
         self.output_text = tk.Text(output_frame, wrap=tk.WORD, height=5, state=tk.DISABLED)
         self.output_text.pack(fill=tk.BOTH, expand=True)
 
-    def _on_text_change(self, event=None):
+    def _on_text_change(self, event: Event | None = None) -> None:
         self._calculate_hash()
 
-    def _calculate_hash(self, event=None):
+    def _calculate_hash(self, event: Event | None = None) -> None:
         input_data = self.input_text.get("1.0", "end-1c").encode('utf-8')
         algorithm = self.algorithm_var.get()
 
@@ -95,13 +102,13 @@ class HashCalculatorPlugin(Plugin):
     def has_gui_component(self) -> bool:
         return True
 
-    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
+    def create_gui_component(self, parent: ttk.Notebook, app_instance: BaseApplication) -> ttk.Frame | None:
         # Create a container frame with padding, similar to the original implementation
         tool_frame = ttk.Frame(parent, padding=config.FRAME_PADDING)
-        
+
         # Create the actual component inside the container frame
         component = HashCalculatorComponent(tool_frame, app_instance)
         component.pack(fill=tk.BOTH, expand=True)
-        
+
         # Return the container frame, which will be added as a tab
         return tool_frame

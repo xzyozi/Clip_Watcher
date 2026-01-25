@@ -1,21 +1,28 @@
-import tkinter as tk
-from tkinter import ttk
-import logging
-from datetime import datetime
+from __future__ import annotations
 
-from src.plugins.base_plugin import Plugin
+import logging
+import tkinter as tk
+from datetime import datetime
+from tkinter import ttk
+from typing import TYPE_CHECKING, Any
+
 from src.gui.base.base_frame_gui import BaseFrameGUI
+from src.plugins.base_plugin import Plugin
+
+if TYPE_CHECKING:
+    from src.core.base_application import BaseApplication
+
 
 class UnitConverterComponent(BaseFrameGUI):
     """
     A GUI component for converting units, including time.
     """
-    def __init__(self, master, app_instance):
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         self.logger.info("Initializing UnitConverterComponent.")
 
-        self.conversions = {
+        self.conversions: dict[str, dict[str, Any]] = {
             "Length": {
                 "Meter": 1,
                 "Centimeter": 0.01,
@@ -51,7 +58,7 @@ class UnitConverterComponent(BaseFrameGUI):
         self._create_widgets()
         self._on_category_change()
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         # Main frame
         main_frame = ttk.Frame(self, padding=5)
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -73,7 +80,7 @@ class UnitConverterComponent(BaseFrameGUI):
         self.from_unit_combo = ttk.Combobox(from_frame, textvariable=self.from_unit_var)
         self.from_unit_combo.pack(fill=tk.X, padx=5, pady=5)
         self.from_unit_combo.bind("<<ComboboxSelected>>", self._convert)
-        
+
         input_entry = ttk.Entry(from_frame, textvariable=self.input_var)
         input_entry.pack(fill=tk.X, padx=5, pady=5)
         input_entry.bind("<KeyRelease>", self._convert)
@@ -84,13 +91,13 @@ class UnitConverterComponent(BaseFrameGUI):
         self.to_unit_combo = ttk.Combobox(to_frame, textvariable=self.to_unit_var)
         self.to_unit_combo.pack(fill=tk.X, padx=5, pady=5)
         self.to_unit_combo.bind("<<ComboboxSelected>>", self._convert)
-        
+
         output_label = ttk.Label(to_frame, textvariable=self.output_var, anchor="w")
         output_label.pack(fill=tk.X, padx=5, pady=5)
 
-    def _on_category_change(self, event=None):
+    def _on_category_change(self, event: tk.Event | None = None) -> None:
         category = self.category_var.get()
-        units = list(self.conversions[category].keys())
+        units = list(self.conversions[category].keys()) # type: ignore
         self.from_unit_combo['values'] = units
         self.to_unit_combo['values'] = units
         if units:
@@ -98,7 +105,7 @@ class UnitConverterComponent(BaseFrameGUI):
             self.to_unit_var.set(units[1] if len(units) > 1 else units[0])
         self._convert()
 
-    def _convert(self, event=None):
+    def _convert(self, event: tk.Event | None = None) -> None:
         category = self.category_var.get()
         from_unit = self.from_unit_var.get()
         to_unit = self.to_unit_var.get()
@@ -122,11 +129,11 @@ class UnitConverterComponent(BaseFrameGUI):
             result = self._convert_temperature(value, from_unit, to_unit)
             self.output_var.set(f"Result: {result:.4f}")
         else: # Length and Weight
-            base_value = value * self.conversions[category][from_unit]
-            result = base_value / self.conversions[category][to_unit]
+            base_value = value * self.conversions[category][from_unit] # type: ignore
+            result = base_value / self.conversions[category][to_unit] # type: ignore
             self.output_var.set(f"Result: {result:.4f}")
 
-    def _convert_temperature(self, value, from_unit, to_unit):
+    def _convert_temperature(self, value: float, from_unit: str, to_unit: str) -> float:
         if from_unit == to_unit:
             return value
         # Convert to Celsius first
@@ -144,7 +151,7 @@ class UnitConverterComponent(BaseFrameGUI):
         else: # to_unit is Celsius
             return celsius
 
-    def _convert_time(self, input_str, from_unit, to_unit):
+    def _convert_time(self, input_str: str, from_unit: str, to_unit: str) -> None:
         if from_unit == to_unit:
             self.output_var.set(f"Result: {input_str}")
             return
@@ -174,14 +181,14 @@ class UnitConverterComponent(BaseFrameGUI):
                         break
                     except ValueError:
                         continue
-                
+
                 if dt_obj is None:
                     raise ValueError("Invalid datetime format")
 
-                result = dt_obj.timestamp()
+                result: float = dt_obj.timestamp() # type: ignore
                 self.output_var.set(f"Result: {result}")
         except (ValueError, TypeError) as e:
-            self.output_var.set(f"Result: Error")
+            self.output_var.set("Result: Error")
             self.logger.error(f"Time conversion error: {e}")
 
 class UnitConverterPlugin(Plugin):
@@ -199,5 +206,5 @@ class UnitConverterPlugin(Plugin):
     def has_gui_component(self) -> bool:
         return True
 
-    def create_gui_component(self, parent: ttk.Notebook, app_instance) -> ttk.Frame | None:
-        return UnitConverterComponent(parent, app_instance)
+    def create_gui_component(self, parent: ttk.Notebook, app_instance: BaseApplication) -> ttk.Frame | None:
+        return UnitConverterComponent(parent, app_instance) # type: ignore

@@ -1,18 +1,20 @@
-from .base_plugin import Plugin
 import re
 
-def to_snake_case(name):
+from .base_plugin import Plugin
+
+
+def to_snake_case(name: str) -> str:
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower().replace('-', '_')
 
-def to_camel_case(name):
+def to_camel_case(name: str) -> str:
     s = to_snake_case(name).split('_')
     return s[0] + ''.join(word.capitalize() for word in s[1:])
 
-def to_pascal_case(name):
+def to_pascal_case(name: str) -> str:
     return ''.join(word.capitalize() for word in to_snake_case(name).split('_'))
 
-def to_kebab_case(name):
+def to_kebab_case(name: str) -> str:
     return to_snake_case(name).replace('_', '-')
 
 class GeneralCaseConverterPlugin(Plugin):
