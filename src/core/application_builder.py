@@ -1,8 +1,8 @@
+from __future__ import annotations
+
 import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
-
-from typing_extensions import Self
 
 from src.gui.theme_manager import ThemeManager
 from src.utils.error_handler import log_and_show_error
@@ -36,7 +36,7 @@ class ApplicationBuilder:
         self.translator: Translator | None = None
         self.app_status: AppStatus | None = None
 
-    def with_event_dispatcher(self) -> Self:
+    def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
         try:
             self.event_dispatcher = EventDispatcher()
@@ -46,7 +46,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"イベントディスパッチャの初期化に失敗: {str(e)}")
             raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}") from e
 
-    def with_dependency_check(self) -> Self:
+    def with_dependency_check(self) -> ApplicationBuilder:
         """依存関係のチェック"""
         try:
             dependency_status = DependencyChecker.check_dependencies()
@@ -57,7 +57,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"依存関係のチェック中にエラーが発生: {str(e)}")
             raise ConfigError(f"依存関係のチェックに失敗しました: {str(e)}") from e
 
-    def with_settings(self, settings_file_path: str = "settings.json") -> Self:
+    def with_settings(self, settings_file_path: str = "settings.json") -> ApplicationBuilder:
         """設定マネージャーの初期化"""
         if not self.event_dispatcher:
             raise ConfigError("イベントディスパッチャが初期化されていません")
@@ -69,7 +69,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"設定マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}") from e
 
-    def with_translator(self) -> Self:
+    def with_translator(self) -> ApplicationBuilder:
         """翻訳サービスの初期化"""
         if not self.settings_manager:
             raise ConfigError("設定マネージャーが初期化されていません")
@@ -81,7 +81,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"翻訳サービスの初期化に失敗: {str(e)}")
             raise ConfigError(f"翻訳サービスの初期化に失敗しました: {str(e)}") from e
 
-    def with_theme_manager(self, root: tk.Tk) -> Self:
+    def with_theme_manager(self, root: tk.Tk) -> ApplicationBuilder:
         """テーママネージャーの初期化"""
         try:
             self.theme_manager = ThemeManager(root)
@@ -91,7 +91,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}") from e
 
-    def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> Self:
+    def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> ApplicationBuilder:
         """クリップボードモニターの初期化"""
         if not self.event_dispatcher or not self.app_status:
             raise ConfigError("イベントディスパッチャまたはアプリケーションステータスが初期化されていません")
@@ -105,7 +105,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"クリップボードモニターの初期化に失敗: {str(e)}")
             raise ConfigError(f"クリップボードモニターの初期化に失敗しました: {str(e)}") from e
 
-    def with_fixed_phrases_manager(self, file_path: str = "fixed_phrases.json") -> Self:
+    def with_fixed_phrases_manager(self, file_path: str = "fixed_phrases.json") -> ApplicationBuilder:
         """定型文マネージャーの初期化"""
         try:
             self.fixed_phrases_manager = FixedPhrasesManager(file_path)
@@ -115,7 +115,7 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"定型文マネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"定型文マネージャーの初期化に失敗しました: {str(e)}") from e
 
-    def with_plugin_manager(self) -> Self:
+    def with_plugin_manager(self) -> ApplicationBuilder:
         """プラグインマネージャーの初期化"""
         try:
             self.plugin_manager = PluginManager()
@@ -127,7 +127,7 @@ class ApplicationBuilder:
 
 
 
-    def build(self, master: tk.Tk) -> "MainApplication":
+    def build(self, master: tk.Tk) -> MainApplication:
         """アプリケーションのビルド"""
         if not all([self.settings_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
