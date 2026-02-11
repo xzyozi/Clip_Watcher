@@ -36,7 +36,8 @@ DEFAULT_USER_SETTINGS = {
     "show_notifications_settings_tab": True,
     "show_font_settings_tab": True,
     "show_excluded_apps_settings_tab": True,
-    "show_modules_settings_tab": True
+    "show_modules_settings_tab": True,
+    "quick_task_delete_on_copy": True
 }
 
 # Define themes
