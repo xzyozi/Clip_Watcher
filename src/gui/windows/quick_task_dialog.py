@@ -8,14 +8,17 @@ from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
+    from src.core.config.settings_manager import SettingsManager
 
 
 class QuickTaskDialog(BaseToplevelGUI):
-    def __init__(self, master: tk.Misc, app_instance: BaseApplication, tasks: list[str] | None = None) -> None:
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication, settings_manager: SettingsManager, tasks: list[str] | None = None) -> None:
         super().__init__(master, app_instance)
+        self.settings_manager = settings_manager
         self.title("クイックタスク")
         self.tasks = tasks or []
         self.task_vars: list[tk.StringVar] = []
+        self.delete_on_copy = tk.BooleanVar(value=self.settings_manager.get_setting("quick_task_delete_on_copy"))
         self._setup_gui()
 
     def _setup_gui(self) -> None:
@@ -41,6 +44,15 @@ class QuickTaskDialog(BaseToplevelGUI):
         # コピーボタン
         copy_btn = ttk.Button(button_frame, text="コピー", command=self._copy_selected)
         copy_btn.pack(side='left', padx=5)
+
+        # 削除チェックボックス
+        delete_check = ttk.Checkbutton(
+            button_frame,
+            text="コピー後に削除",
+            variable=self.delete_on_copy,
+            command=self._save_delete_on_copy_setting
+        )
+        delete_check.pack(side='left', padx=5)
 
         # 閉じるボタン
         close_btn = ttk.Button(button_frame, text="閉じる", command=self.destroy)
@@ -84,8 +96,13 @@ class QuickTaskDialog(BaseToplevelGUI):
                 # これにより、ユーザーはUI上で各タスクを個別の行として見ることができます。
                 self.task_list.insert('', 'end', values=(task.strip(),))
 
+    def _save_delete_on_copy_setting(self) -> None:
+        """チェックボックスの状態を保存"""
+        self.settings_manager.set_setting("quick_task_delete_on_copy", self.delete_on_copy.get())
+        self.settings_manager.save_settings()
+
     def _copy_selected(self) -> None:
-        """選択されたタスクをコピーして削除"""
+        """選択されたタスクをコピーし、設定に応じて削除"""
         selection = self.task_list.selection()
         if not selection:
             return
@@ -98,12 +115,13 @@ class QuickTaskDialog(BaseToplevelGUI):
         self.clipboard_clear()
         self.clipboard_append(content)
 
-        # 項目を削除
-        self.task_list.delete(selection[0])
+        # 設定が有効な場合のみ項目を削除
+        if self.delete_on_copy.get():
+            self.task_list.delete(selection[0])
 
-        # すべてのタスクが完了したら自動的にダイアログを閉じる
-        if not self.task_list.get_children():
-            self.destroy()
+            # すべてのタスクが完了したら自動的にダイアログを閉じる
+            if not self.task_list.get_children():
+                self.destroy()
 
     def add_tasks(self, tasks: list[str]) -> None:
         """タスクを追加"""

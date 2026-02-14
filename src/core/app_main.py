@@ -59,6 +59,10 @@ class MainApplication(BaseApplication):
     def on_ready(self) -> None:
         """Called when the application is fully initialized and ready to run."""
         self._set_state(ApplicationState.READY)
+  
+        # Populate GUI with initial history loaded from file
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        
         self.monitor.start()
         self._set_state(ApplicationState.RUNNING)
 

@@ -42,6 +42,8 @@ class ClipboardMonitor:
         self.history: list[tuple[str, bool, float]] = self._load_history_from_file()
         self.history_limit: int = history_limit
         self.excluded_apps: list[str] = excluded_apps if excluded_apps is not None else []
+        self._dirty: bool = False
+        self._auto_save_interval_ms: int = 5000
 
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
 
@@ -51,6 +53,7 @@ class ClipboardMonitor:
         self.notification_manager.update_settings(settings)
         if len(self.history) > self.history_limit:
             self.history = self.history[:self.history_limit]
+            self._dirty = True
             self._trigger_gui_update()
 
     def set_error_callback(self, callback: Callable[[str, str], None]) -> None:
@@ -123,6 +126,7 @@ class ClipboardMonitor:
                 if unpinned_indices:
                     del self.history[unpinned_indices[-1]]
 
+        self._dirty = True
         # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
@@ -226,6 +230,7 @@ class ClipboardMonitor:
                 if unpinned_indices:
                     del self.history[unpinned_indices[-1]]
 
+        self._dirty = True
         # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
@@ -268,6 +273,7 @@ class ClipboardMonitor:
                 if is_last_item:
                     self.last_clipboard_data = new_text
 
+                self._dirty = True
                 self._trigger_gui_update()
                 return
 
@@ -280,6 +286,22 @@ class ClipboardMonitor:
             self._running = True
             self.monitor_thread = threading.Thread(target=self._monitor_clipboard, daemon=True) # type: ignore
             self.monitor_thread.start() # type: ignore
+            self._schedule_auto_save_check()
+
+    def _schedule_auto_save_check(self) -> None:
+        if self._running:
+            self.tk_root.after(self._auto_save_interval_ms, self._auto_save_check)
+
+    def _auto_save_check(self) -> None:
+        if not self._running:
+            return
+
+        if self._dirty:
+            logging.debug("Auto-saving history...")
+            self._save_history_to_file()
+            self._dirty = False
+        
+        self._schedule_auto_save_check()
 
     def stop(self) -> None:
         self._running = False
@@ -295,6 +317,7 @@ class ClipboardMonitor:
     def clear_history(self) -> None:
         self.history.clear()
         self.last_clipboard_data = ""
+        self._dirty = True
         self._trigger_gui_update()
 
     def delete_history_item_by_id(self, item_id: float) -> None:
@@ -305,6 +328,7 @@ class ClipboardMonitor:
         if len(self.history) < original_len:
             if not self.history:
                 self.last_clipboard_data = ""
+            self._dirty = True
             self._trigger_gui_update()
             logging.info(f"ID {item_id} の履歴項目を削除しました。")
         else:
@@ -316,6 +340,7 @@ class ClipboardMonitor:
             if timestamp == item_id:
                 if not is_pinned:
                     self.history[i] = (content, True, timestamp)
+                    self._dirty = True
                     self._trigger_gui_update()
                 return
 
@@ -325,11 +350,13 @@ class ClipboardMonitor:
             if timestamp == item_id:
                 if is_pinned:
                     self.history[i] = (content, False, timestamp)
+                    self._dirty = True
                     self._trigger_gui_update()
                 return
 
     def delete_all_unpinned_history(self) -> None:
         self.history = [item for item in self.history if item[1]]
+        self._dirty = True
         self._trigger_gui_update()
         logging.info("モニター: ピン留めされていないすべての履歴を削除しました。")
 
@@ -355,6 +382,7 @@ class ClipboardMonitor:
                     unpinned = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
                     if unpinned:
                         del self.history[unpinned[-1]]
+        self._dirty = True
         self._trigger_gui_update()
 
     def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:

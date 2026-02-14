@@ -80,7 +80,7 @@ class HistoryEventHandlers(BaseEventHandler):
 
         if tasks:
             from src.gui.windows.quick_task_dialog import QuickTaskDialog
-            QuickTaskDialog(self.app.master, self.app, tasks) # type: ignore
+            QuickTaskDialog(self.app.master, self.app, self.app.settings_manager, tasks) # type: ignore
 
     def handle_copy_selected_history(self, item_ids: list[float]) -> None:
         if not item_ids:
