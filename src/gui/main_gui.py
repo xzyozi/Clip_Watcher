@@ -12,6 +12,7 @@ from src.gui.components import HistoryListComponent
 # from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomEntry, CustomText
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
+from src.gui.windows.meta_management_window import MetaManagementFrame
 
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
@@ -94,6 +95,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.notebook.add(self.fixed_phrases_tab_frame, text="") # Text set in _update_widget_text
         self.fixed_phrases_frame = FixedPhrasesFrame(self.fixed_phrases_tab_frame, self.app)
         self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.meta_management_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
+        self.notebook.add(self.meta_management_tab_frame, text="") # Text set in _update_widget_text
+        self.meta_management_frame = MetaManagementFrame(self.meta_management_tab_frame, self.app)
+        self.meta_management_frame.pack(fill=tk.BOTH, expand=True)
 
         self.plugin_tab_frames: list[tk.Frame] = [] # Keep track of created frames
 
@@ -179,6 +185,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.format_button.config(text=translator("format_button"))
         self.quit_button.config(text=translator("quit_button"))
         self.notebook.tab(self.fixed_phrases_tab_frame, text=translator("fixed_phrases_tab"))
+        self.notebook.tab(self.meta_management_tab_frame, text=translator("meta_management_tab"))
 
     def _destroy_plugin_tabs(self) -> None:
         for frame in self.plugin_tab_frames:

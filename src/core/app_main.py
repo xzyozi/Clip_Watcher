@@ -19,17 +19,19 @@ if TYPE_CHECKING:
     from src.core.event_dispatcher import EventDispatcher
     from src.core.fixed_phrases_manager import FixedPhrasesManager
     from src.core.plugin_manager import PluginManager
+    from src.db.database_manager import DatabaseManager
     from src.gui.theme_manager import ThemeManager
     from src.utils.i18n import Translator
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master: tk.Tk, settings_manager: SettingsManager, monitor: ClipboardMonitor, fixed_phrases_manager: FixedPhrasesManager, plugin_manager: PluginManager, event_dispatcher: EventDispatcher, theme_manager: ThemeManager, translator: Translator, app_status: Any) -> None:
+    def __init__(self, master: tk.Tk, settings_manager: SettingsManager, db_manager: DatabaseManager, monitor: ClipboardMonitor, fixed_phrases_manager: FixedPhrasesManager, plugin_manager: PluginManager, event_dispatcher: EventDispatcher, theme_manager: ThemeManager, translator: Translator, app_status: Any) -> None:
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.settings_manager = settings_manager
+        self.db_manager = db_manager
         self.monitor = monitor
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager

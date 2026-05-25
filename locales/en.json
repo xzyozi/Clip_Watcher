@@ -56,5 +56,20 @@
     "days_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     "weekdays_full": ["Mon", "Tue", "Wed", "Thu", "Fri", "Satur", "Sun"],
     "status_saved": "Saved.",
-    "status_added_new": "Added as new item."
+    "status_added_new": "Added as new item.",
+    "meta_management_tab": "Meta Management",
+    "meta_category_title": "Categories",
+    "meta_phrase_title": "Meta Phrases",
+    "add_category": "Add Category",
+    "edit_category": "Edit Category",
+    "delete_category": "Delete Category",
+    "category_name_label": "Category Name:",
+    "add_phrase": "Add Phrase",
+    "edit_phrase": "Edit Phrase",
+    "delete_phrase": "Delete Phrase",
+    "phrase_title_label": "Title:",
+    "phrase_content_label": "Content:",
+    "all_categories": "[All]",
+    "confirm_category_delete_title": "Confirm Category Deletion",
+    "confirm_category_delete_msg": "This category contains {count} phrases. Deleting the category will also delete all of these phrases. Are you sure you want to proceed?"
 }

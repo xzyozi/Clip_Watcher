@@ -38,7 +38,8 @@ class ClipboardHistoryDAO(BaseDAO):
                     row = cursor.fetchone()
 
                     if row:
-                        existing_id, existing_pinned = row
+                        existing_id = int(row[0])
+                        existing_pinned = int(row[1])
                         merged_pinned = 1 if (existing_pinned or pinned_val) else 0
                         cursor.execute(
                             "UPDATE t_clipboard_history SET is_pinned = ?, created_at = ? WHERE id = ?",
@@ -63,7 +64,8 @@ class ClipboardHistoryDAO(BaseDAO):
     def get_items(self, limit: int | None = None, query: str | None = None) -> list[ClipboardHistoryDTO]:
         """履歴項目を取得します。ピン留めされている項目を優先し、次に created_at DESC でソートします。"""
         sql = "SELECT id, content, content_hash, is_pinned, created_at FROM t_clipboard_history"
-        params = []
+        from typing import Any
+        params: list[Any] = []
 
         if query:
             sql += " WHERE content LIKE ?"

@@ -56,5 +56,20 @@
     "days_short": ["日", "月", "火", "水", "木", "金", "土"],
     "weekdays_full": ["月", "火", "水", "木", "金", "土", "日"],
     "status_saved": "保存しました",
-    "status_added_new": "新しい項目として追加しました"
+    "status_added_new": "新しい項目として追加しました",
+    "meta_management_tab": "メタ管理",
+    "meta_category_title": "カテゴリ一覧",
+    "meta_phrase_title": "メタ定型文一覧",
+    "add_category": "カテゴリ追加",
+    "edit_category": "カテゴリ編集",
+    "delete_category": "カテゴリ削除",
+    "category_name_label": "カテゴリ名:",
+    "add_phrase": "定型文追加",
+    "edit_phrase": "定型文編集",
+    "delete_phrase": "定型文削除",
+    "phrase_title_label": "タイトル:",
+    "phrase_content_label": "内容:",
+    "all_categories": "[すべて]",
+    "confirm_category_delete_title": "カテゴリ削除の確認",
+    "confirm_category_delete_msg": "このカテゴリには {count} 件の定型文が登録されています。カテゴリを削除すると、これらの定型文もすべて削除されます。本当によろしいですか？"
 }
