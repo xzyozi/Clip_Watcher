@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
-from src.core.dao.base_dao import BaseDAO
-from src.core.dto import MetaPhraseDTO
+from src.db.dao.base_dao import BaseDAO
+from src.db.dto import MetaPhraseDTO
 
 logger = logging.getLogger(__name__)
 

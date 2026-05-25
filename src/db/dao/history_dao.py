@@ -6,8 +6,8 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
-from src.core.dao.base_dao import BaseDAO
-from src.core.dto import ClipboardHistoryDTO
+from src.db.dao.base_dao import BaseDAO
+from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
     pass

@@ -9,10 +9,10 @@ import sqlite3
 import threading
 import time
 
-from src.core.dao.category_dao import CategoryDAO
-from src.core.dao.history_dao import ClipboardHistoryDAO
-from src.core.dao.meta_phrase_dao import MetaPhraseDAO
-from src.core.dto import ClipboardHistoryDTO
+from src.db.dao.category_dao import CategoryDAO
+from src.db.dao.history_dao import ClipboardHistoryDAO
+from src.db.dao.meta_phrase_dao import MetaPhraseDAO
+from src.db.dto import ClipboardHistoryDTO
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class DatabaseManager:
 
     def check_and_migrate_json(self, history_file_path: str) -> None:
         """
-        既存の history.json からデータをインポートします。
+        既存 of history.json からデータをインポートします。
         全体のインポート処理は単一トランザクションで行われ、失敗時はロールバックされます。
         """
         if not os.path.exists(history_file_path):
