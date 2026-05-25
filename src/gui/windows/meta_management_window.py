@@ -19,7 +19,7 @@ class CategoryEditDialog(tk.Toplevel):
     """カテゴリ作成/編集用のダイアログ"""
     def __init__(self, parent: tk.Widget, app: BaseApplication, category_dto: CategoryDTO | None = None) -> None:
         super().__init__(parent)
-        self.app = cast(MainApplication, app)
+        self.app = cast("MainApplication", app)
         self.category_dto = category_dto
         self.result: str | None = None
 
@@ -74,7 +74,7 @@ class MetaPhraseEditDialog(tk.Toplevel):
     """メタ定型文作成/編集用のダイアログ"""
     def __init__(self, parent: tk.Widget, app: BaseApplication, phrase_dto: MetaPhraseDTO | None = None, default_category_id: int | None = None) -> None:
         super().__init__(parent)
-        self.app = cast(MainApplication, app)
+        self.app = cast("MainApplication", app)
         self.phrase_dto = phrase_dto
         self.result: tuple[str, str, int] | None = None
 
@@ -162,7 +162,7 @@ class MetaManagementFrame(ttk.Frame):
     """メタ管理タブのメインフレーム"""
     def __init__(self, parent: tk.Widget, app: BaseApplication) -> None:
         super().__init__(parent)
-        self.app = cast(MainApplication, app)
+        self.app = cast("MainApplication", app)
         self.category_list: list[CategoryDTO] = []
         self.phrase_list: list[MetaPhraseDTO] = []
         self.selected_category_id: int | None = None # None means All
