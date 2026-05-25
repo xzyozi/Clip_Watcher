@@ -70,8 +70,8 @@ sequenceDiagram
         FS-->>DBM: JSONデータ (list)
         Note over DBM: トランザクション開始 (BEGIN TRANSACTION)
         loop 各履歴項目
-            DBM->>DBM: SHA-256 ハッシュ値を計算
-            DBM->>DBM: t_clipboard_history に INSERT
+            DBM->>DBM: DTOの生成 & SHA-256ハッシュ計算
+            DBM->>DBM: t_clipboard_history に INSERT (重複時は更新)
         end
         alt すべてのインサートが成功
             DBM->>DBM: コミット (COMMIT)
@@ -88,7 +88,7 @@ sequenceDiagram
 ### 重複排除ロジック
 移行および新規コピー登録時、`content_hash` （SHA-256）を用いて同一テキストの重複を防ぎます。
 *   既に同一ハッシュの項目が存在する場合：
-    *   **ピン留め状態**: 元のピン留め状態を維持。
+    *   **ピン留め状態**: 元のピン留め状態と新規ピン留め状態を論理和 (OR) マージ。
     *   **日時**: `created_at` を最新日時に更新し、履歴の最上位に移動させます。
 
 ---
@@ -124,7 +124,7 @@ sequenceDiagram
     *   下部に「追加 (Add Category)」「編集 (Edit Category)」「削除 (Delete Category)」ボタンを配置。
 2.  **右側（メタ定型文管理）**:
     *   `ttk.Treeview`（複数列表示）を使用し、選択されたカテゴリに属する定型文の `タイトル` と `内容（プレビュー）` を表形式で表示。
-    *   リストをダブルクリックした際、対象 of 定型文内容をクリップボードにコピーし、通知を表示。
+    *   リストをダブルクリックした際、対象の定型文内容をクリップボードにコピーし、通知を表示。
     *   下部に「コピー (Copy)」「追加 (Add)」「編集 (Edit)」「削除 (Delete)」ボタンを配置。
 
 ### 3.2 ダイアログ設計
@@ -143,22 +143,25 @@ sequenceDiagram
 
 ## 4. イベント・データフロー
 
-UI操作によるデータベースの変更は、すべて `DatabaseManager` を通じて即時に永続化され、`EventDispatcher` により他のコンポーネントへ通知されます。
+UI操作によるデータベースの変更は、すべて `DatabaseManager` の各種 DAO を通じて即時に永続化され、`EventDispatcher` により他のコンポーネントへ通知されます。
 
 ```mermaid
 sequenceDiagram
     participant UI as MetaManagementFrame
     participant ED as EventDispatcher
     participant DBM as DatabaseManager
+    participant DAO as CategoryDAO
     participant DB as SQLite DB
 
-    UI->>DBM: add_category("SQLクエリ")
-    DBM->>DB: INSERT INTO t_category
-    DB-->>DBM: Success
+    UI->>DBM: category_dao.add(dto)
+    DBM->>DAO: add(dto)
+    DAO->>DB: INSERT INTO t_category
+    DB-->>DAO: Success
+    DAO-->>DBM: category_id
     DBM->>ED: dispatch("META_CATEGORIES_CHANGED")
     ED-->>UI: (Trigger Refresh)
-    UI->>DBM: get_all_categories()
-    DBM-->>UI: カテゴリリスト
+    UI->>DBM: category_dao.get_all()
+    DBM-->>UI: カテゴリDTOリスト
     UI->>UI: カテゴリ一覧の再描画
 ```
 
@@ -168,39 +171,68 @@ sequenceDiagram
 
 `ClipboardMonitor` のバックグラウンド監視スレッド（`monitor_thread`）と、メインUIスレッド（Tkinter GUI）の双方からデータベースに同時アクセスされるため、スレッド競合とデータベースロックの回避が必須です。
 
-### 5.1 `threading.Lock` によるクエリ同期
-`DatabaseManager` クラスの内部に `threading.Lock` インスタンスを保持させ、すべての接続とCRUD操作メソッド（書き込み・読み込み含む）をこのロックで保護します。
+### 5.1 DAO / DTO パターンによる責務分離
+本アプリケーションでは、保守性・堅牢性を最大化するために **DAO (Data Access Object)** と **DTO (Data Transfer Object)** のアーキテクチャを採用し、モジュールを `/src/db/` 配下に完全分離しています。
+
+*   **DTO (`src/db/dto.py`)**: SQLiteのレコード行データをカプセル化する Python Dataclasses。データの整合性保証（SHA-256ハッシュの自動生成等）を担当。
+*   **BaseDAO (`src/db/dao/base_dao.py`)**: `threading.Lock` を保持し、すべてのクエリ実行を排他制御ブロックで保護する共通の基底データアクセス層。
+*   **各種DAO (`src/db/dao/...`)**: 各テーブル専用のSQL構築およびDTOマッピング。
+*   **DatabaseManager (`src/db/database_manager.py`)**: 初期化、トランザクションマイグレーション、およびDAOインスタンスの生成・公開のみに集中。
+
+```mermaid
+classDiagram
+    class DatabaseManager {
+        +db_path: str
+        -_lock: threading.Lock
+        +history_dao: ClipboardHistoryDAO
+        +category_dao: CategoryDAO
+        +meta_phrase_dao: MetaPhraseDAO
+        +check_and_migrate_json()
+    }
+    class BaseDAO {
+        +db_path: str
+        -_lock: threading.Lock
+        #_get_connection()
+        +execute_write()
+        +execute_read()
+    }
+    class ClipboardHistoryDAO {
+        +add_item(dto)
+        +get_items()
+    }
+    BaseDAO <|-- ClipboardHistoryDAO
+    DatabaseManager *-- ClipboardHistoryDAO
+```
+
+### 5.2 `threading.Lock` によるクエリ排他制御 (`BaseDAO`)
+SQLiteは同一接続インスタンスへの同時並行書き込みに制限があるため、`BaseDAO` においてクエリの同期化（`execute_write` と `execute_read` 内でのロック確保）を行っています。
 
 ```python
 import threading
 import sqlite3
+from typing import Any
 
-class DatabaseManager:
-    def __init__(self, db_path: str):
+class BaseDAO:
+    def __init__(self, db_path: str, lock: threading.Lock) -> None:
         self.db_path = db_path
-        self._lock = threading.Lock()
-        self._initialize_tables()
+        self._lock = lock
 
-    def execute_write(self, query: str, params: tuple = ()) -> None:
-        """書き込みクエリをスレッドセーフに実行"""
-        with self._lock:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.execute("PRAGMA foreign_keys = ON")
-                conn.execute(query, params)
-                conn.commit()
+    def _get_connection(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
-    def execute_read(self, query: str, params: tuple = ()) -> list:
-        """読み込みクエリをスレッドセーフに実行"""
-        with self._lock:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.execute("PRAGMA foreign_keys = ON")
+    def execute_write(self, query: str, params: tuple[Any, ...] = ()) -> int:
+        with self._lock:  # マルチスレッド間での完全同期化
+            with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
-                return cursor.fetchall()
+                conn.commit()
+                return cursor.lastrowid or cursor.rowcount
 ```
 
-### 5.2 コネクションプーリングの回避
-接続を保持し続けると別スレッドから共有した際に問題が起きるため、各クエリ実行時に `with sqlite3.connect(...)` を用い、都度オープン＆クローズを行う、あるいはスレッドローカル（`threading.local()`）でコネクションを管理します。
+### 5.3 コネクションプーリングの回避
+接続を保持し続けると別スレッドから共有した際に ProgrammingError が発生するため、各クエリ実行時に `with sqlite3.connect(...)` を用い、都度オープン＆クローズを行う設計とします。
 
 ---
 
@@ -212,7 +244,7 @@ class DatabaseManager:
 `ON DELETE CASCADE` 制約により、カテゴリを削除すると紐づくすべての `t_meta_phrase` 項目がSQLiteによって自動削除されます。このデータ消失を防ぐため、以下のフローを実装します。
 
 1.  ユーザーがカテゴリ「開発用」の削除ボタンを押下。
-2.  `DatabaseManager` の `get_meta_phrase_count_by_category(category_id)` を呼び出し、該当カテゴリに属する定型文の件数 `N` を確認。
+2.  `DatabaseManager.category_dao.get_meta_phrase_count(category_id)` を呼び出し、該当カテゴリに属する定型文の件数 `N` を確認。
 3.  `N > 0` の場合、Tkinter の `messagebox.askyesno` で警告を表示。
     *   *表示メッセージ*: 「このカテゴリには `N` 件の定型文が登録されています。カテゴリを削除すると、これらの定型文もすべて削除されます。本当によろしいですか？」
 4.  ユーザーが「いいえ」を選択した場合は、処理を完全にキャンセルします。
