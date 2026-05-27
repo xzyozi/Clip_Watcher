@@ -71,5 +71,6 @@
     "phrase_content_label": "Content:",
     "all_categories": "[All]",
     "confirm_category_delete_title": "Confirm Category Deletion",
-    "confirm_category_delete_msg": "This category contains {count} phrases. Deleting the category will also delete all of these phrases. Are you sure you want to proceed?"
+    "confirm_category_delete_msg": "This category contains {count} phrases. Deleting the category will also delete all of these phrases. Are you sure you want to proceed?",
+    "no_title": "(No Title)"
 }

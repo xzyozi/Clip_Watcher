@@ -140,9 +140,6 @@ class MetaPhraseEditDialog(tk.Toplevel):
         content = self.content_text.get("1.0", "end-1c").strip()
         cat_index = self.cat_combobox.current()
 
-        if not title:
-            messagebox.showerror("Error", "Title cannot be empty.", parent=self)
-            return
         if not content:
             messagebox.showerror("Error", "Content cannot be empty.", parent=self)
             return
@@ -278,7 +275,8 @@ class MetaManagementFrame(ttk.Frame):
         for phrase in self.phrase_list:
             # プレビュー表示用
             preview_content = phrase.content.replace("\n", " ")
-            self.phrase_tree.insert("", tk.END, iid=str(phrase.id), values=(phrase.title, preview_content))
+            display_title = phrase.title if phrase.title.strip() else self.app.translator("no_title")
+            self.phrase_tree.insert("", tk.END, iid=str(phrase.id), values=(display_title, preview_content))
 
     def on_category_select(self, event: tk.Event | None = None) -> None:
         selection = self.cat_listbox.curselection()
