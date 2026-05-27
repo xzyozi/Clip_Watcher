@@ -19,6 +19,7 @@ from .plugin_manager import PluginManager
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
+    from src.core.history_service import HistoryService
     from src.db.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ class ApplicationBuilder:
     def __init__(self) -> None:
         self.settings_manager: SettingsManager | None = None
         self.db_manager: DatabaseManager | None = None
+        self.history_service: HistoryService | None = None
         self.monitor: ClipboardMonitor | None = None
         self.fixed_phrases_manager: FixedPhrasesManager | None = None
         self.plugin_manager: PluginManager | None = None
@@ -104,14 +106,31 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}") from e
 
+    def with_history_service(self) -> ApplicationBuilder:
+        """履歴サービスの初期化"""
+        if not self.event_dispatcher or not self.db_manager:
+            raise ConfigError("イベントディスパッチャまたはデータベースマネージャーが初期化されていません")
+        try:
+            from src.core.history_service import HistoryService
+            # デフォルト設定から履歴数上限を取得（後でSETTINGS_CHANGEDでも同期されます）
+            limit = 50
+            if self.settings_manager:
+                limit = self.settings_manager.get_setting("history_limit", 50)
+            self.history_service = HistoryService(self.db_manager, self.event_dispatcher, history_limit=limit)
+            logger.info("履歴サービスを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"履歴サービスの初期化に失敗: {str(e)}")
+            raise ConfigError(f"履歴サービスの初期化に失敗しました: {str(e)}") from e
+
     def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> ApplicationBuilder:
         """クリップボードモニターの初期化"""
-        if not self.event_dispatcher or not self.app_status or not self.db_manager:
-            raise ConfigError("イベントディスパッチャ、アプリケーションステータス、またはデータベースマネージャーが初期化されていません")
+        if not self.event_dispatcher or not self.app_status or not self.db_manager or not self.history_service:
+            raise ConfigError("イベントディスパッチャ、アプリケーションステータス、データベースマネージャー、または履歴サービスが初期化されていません")
 
         try:
             win32_available = self.app_status.dependencies.win32_available
-            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path, win32_available, self.db_manager)
+            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path, win32_available, self.db_manager, self.history_service)
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
@@ -142,7 +161,7 @@ class ApplicationBuilder:
 
     def build(self, master: tk.Tk) -> MainApplication:
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.db_manager, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
+        if not all([self.settings_manager, self.db_manager, self.history_service, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
 
         try:
@@ -151,6 +170,7 @@ class ApplicationBuilder:
                 master=master,
                 settings_manager=self.settings_manager, # type: ignore
                 db_manager=self.db_manager, # type: ignore
+                history_service=self.history_service, # type: ignore
                 monitor=self.monitor, # type: ignore
                 fixed_phrases_manager=self.fixed_phrases_manager, # type: ignore
                 plugin_manager=self.plugin_manager, # type: ignore
