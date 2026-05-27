@@ -51,10 +51,18 @@ def start_app() -> None:
         history_file_path = os.path.join(app_data_dir, 'history.json')
         settings_file_path = os.path.join(app_data_dir, 'settings.json')
         fixed_phrases_file_path = os.path.join(app_data_dir, 'fixed_phrases.json')
+        db_path = os.path.join(app_data_dir, 'clip_watcher.db')
 
         # --- Logging ---
         logger = setup_logging()
         logger.info("アプリケーションを開始します")
+
+        # --- Migration ---
+        try:
+            from scripts.migrate_json_to_sqlite import main as run_migration
+            run_migration()
+        except Exception as e:
+            logger.error("マイグレーションの実行中にエラーが発生しました: %s", str(e), exc_info=True)
 
         # --- Application Setup ---
         root = tk.Tk()
@@ -63,6 +71,7 @@ def start_app() -> None:
         app = builder.with_event_dispatcher() \
             .with_dependency_check() \
             .with_settings(settings_file_path) \
+            .with_database(db_path) \
             .with_translator() \
             .with_theme_manager(root) \
             .with_fixed_phrases_manager(fixed_phrases_file_path) \

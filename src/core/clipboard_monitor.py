@@ -20,6 +20,8 @@ except ImportError:
 
 from .event_dispatcher import EventDispatcher
 from .notification_manager import NotificationManager
+from src.db.database_manager import DatabaseManager
+from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
     pass  # For settings object
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, history_limit: int = 50, excluded_apps: list[str] | None = None) -> None:
+    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, db_manager: DatabaseManager, history_limit: int = 50, excluded_apps: list[str] | None = None) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
@@ -39,9 +41,11 @@ class ClipboardMonitor:
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
         self.history_file_path: str = history_file_path
-        self.history: list[tuple[str, bool, float]] = self._load_history_from_file()
+        self.db_manager: DatabaseManager = db_manager
+        
         self.history_limit: int = history_limit
         self.excluded_apps: list[str] = excluded_apps if excluded_apps is not None else []
+        self.history: list[tuple[str, bool, float]] = self._load_history_from_db()
         self._dirty: bool = False
         self._auto_save_interval_ms: int = 5000
 
@@ -105,28 +109,12 @@ class ClipboardMonitor:
         # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.last_clipboard_data = text
 
-        existing_item_index = -1
-        # The history tuple is now (content, is_pinned, timestamp)
-        for i, (content, _, _) in enumerate(self.history):
-            if content == text:
-                existing_item_index = i
-                break
+        dto = ClipboardHistoryDTO(content=text, is_pinned=False)
+        self.db_manager.history_dao.add_item(dto)
+        self.db_manager.history_dao.cleanup_old(self.history_limit)
+        
+        self.history = self._load_history_from_db()
 
-        if existing_item_index != -1:
-            # 項目が存在する場合、一番上に移動します
-            item_to_move = self.history.pop(existing_item_index)
-            self.history.insert(0, item_to_move)
-        else:
-            # 新しい項目の場合、一番上に追加します
-            self.history.insert(0, (text, False, time.time()))
-            # 制限を超えた場合、履歴を整理します
-            if len(self.history) > self.history_limit:
-                # 削除するために最後のピン留めされていない項目を見つけます
-                unpinned_indices = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
-                if unpinned_indices:
-                    del self.history[unpinned_indices[-1]]
-
-        self._dirty = True
         # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
@@ -208,29 +196,12 @@ class ClipboardMonitor:
             logging.info(f"除外アプリからのコピーのため無視: {active_process}")
             return
 
-        # 既存の項目を一番上に移動するか、新しい項目を追加します
-        existing_item_index = -1
-        # The history tuple is now (content, is_pinned, timestamp)
-        for i, (content, _, _) in enumerate(self.history):
-            if content == clipboard_data:
-                existing_item_index = i
-                break
+        dto = ClipboardHistoryDTO(content=clipboard_data, is_pinned=False)
+        self.db_manager.history_dao.add_item(dto)
+        self.db_manager.history_dao.cleanup_old(self.history_limit)
 
-        if existing_item_index != -1:
-            # Preserve the existing item's data, including timestamp
-            item_to_move = self.history.pop(existing_item_index)
-            self.history.insert(0, item_to_move)
-        else:
-            # Add new item with a new timestamp
-            self.history.insert(0, (clipboard_data, False, time.time()))
-            # 制限を超えた場合、履歴を整理します
-            if len(self.history) > self.history_limit:
-                # 削除するために最後のピン留めされていない項目を見つけます
-                unpinned_indices = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
-                if unpinned_indices:
-                    del self.history[unpinned_indices[-1]]
+        self.history = self._load_history_from_db()
 
-        self._dirty = True
         # GUIの更新をトリガーして新しい履歴を表示します
         self._trigger_gui_update()
 
@@ -263,19 +234,16 @@ class ClipboardMonitor:
 
     def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
         """Finds a history item by its ID and updates its content."""
-        for i, (content, is_pinned, timestamp) in enumerate(self.history):
-            if timestamp == item_id:
-                # To be safe, check if we are updating the most recent item
-                is_last_item = (self.last_clipboard_data == content)
-
-                self.history[i] = (new_text, is_pinned, timestamp)
-
-                if is_last_item:
-                    self.last_clipboard_data = new_text
-
-                self._dirty = True
-                self._trigger_gui_update()
-                return
+        db_id = int(item_id)
+        import hashlib
+        new_hash = hashlib.sha256(new_text.encode('utf-8')).hexdigest()
+        
+        success = self.db_manager.history_dao.update_content(db_id, new_text, new_hash)
+        if success:
+            if self.history and self.history[0][2] == item_id:
+                self.last_clipboard_data = new_text
+            self.history = self._load_history_from_db()
+            self._trigger_gui_update()
 
     def _trigger_gui_update(self) -> None:
         if self.update_callback:
@@ -295,12 +263,7 @@ class ClipboardMonitor:
     def _auto_save_check(self) -> None:
         if not self._running:
             return
-
-        if self._dirty:
-            logging.debug("Auto-saving history...")
-            self._save_history_to_file()
-            self._dirty = False
-        
+        # DBに都度保存しているため、ここでは何もしません
         self._schedule_auto_save_check()
 
     def stop(self) -> None:
@@ -309,26 +272,25 @@ class ClipboardMonitor:
             self.monitor_thread.join(timeout=2)
 
     def get_history(self) -> list[tuple[str, bool, float]]:
-        # The tuple is (content, is_pinned, timestamp)
+        # The tuple is (content, is_pinned, db_id)
         pinned = [item for item in self.history if item[1]]
         unpinned = [item for item in self.history if not item[1]]
         return pinned + unpinned
 
     def clear_history(self) -> None:
+        self.db_manager.history_dao.clear_all()
         self.history.clear()
         self.last_clipboard_data = ""
-        self._dirty = True
         self._trigger_gui_update()
 
     def delete_history_item_by_id(self, item_id: float) -> None:
-        """Deletes a history item using its unique timestamp ID."""
-        original_len = len(self.history)
-        self.history = [item for item in self.history if item[2] != item_id]
-
-        if len(self.history) < original_len:
+        """Deletes a history item using its unique ID."""
+        db_id = int(item_id)
+        success = self.db_manager.history_dao.delete_item(db_id)
+        if success:
+            self.history = self._load_history_from_db()
             if not self.history:
                 self.last_clipboard_data = ""
-            self._dirty = True
             self._trigger_gui_update()
             logging.info(f"ID {item_id} の履歴項目を削除しました。")
         else:
@@ -336,91 +298,60 @@ class ClipboardMonitor:
 
     def pin_item_by_id(self, item_id: float) -> None:
         """Pins an item using its unique ID."""
-        for i, (content, is_pinned, timestamp) in enumerate(self.history):
-            if timestamp == item_id:
-                if not is_pinned:
-                    self.history[i] = (content, True, timestamp)
-                    self._dirty = True
-                    self._trigger_gui_update()
-                return
+        db_id = int(item_id)
+        success = self.db_manager.history_dao.pin_item(db_id, True)
+        if success:
+            self.history = self._load_history_from_db()
+            self._trigger_gui_update()
 
     def unpin_item_by_id(self, item_id: float) -> None:
         """Unpins an item using its unique ID."""
-        for i, (content, is_pinned, timestamp) in enumerate(self.history):
-            if timestamp == item_id:
-                if is_pinned:
-                    self.history[i] = (content, False, timestamp)
-                    self._dirty = True
-                    self._trigger_gui_update()
-                return
+        db_id = int(item_id)
+        success = self.db_manager.history_dao.pin_item(db_id, False)
+        if success:
+            self.history = self._load_history_from_db()
+            self._trigger_gui_update()
 
     def delete_all_unpinned_history(self) -> None:
-        self.history = [item for item in self.history if item[1]]
-        self._dirty = True
+        self.db_manager.history_dao.delete_unpinned()
+        self.history = self._load_history_from_db()
         self._trigger_gui_update()
         logging.info("モニター: ピン留めされていないすべての履歴を削除しました。")
 
     def import_history(self, new_history_items: list[str]) -> None:
         for item_content in reversed(new_history_items):
-            # Check for existing item based on content
-            existing_item_index = -1
-            for i, (content, _, _) in enumerate(self.history):
-                if content == item_content:
-                    existing_item_index = i
-                    break
-
-            if existing_item_index != -1:
-                # If item exists, move it to the top
-                item_to_move = self.history.pop(existing_item_index)
-                self.history.insert(0, item_to_move)
-            else:
-                # If new, add with a timestamp
-                new_item = (item_content, False, time.time())
-                self.history.insert(0, new_item)
-                # Trim history if it exceeds the limit
-                if len(self.history) > self.history_limit:
-                    unpinned = [i for i, (_, is_pinned, _) in enumerate(self.history) if not is_pinned]
-                    if unpinned:
-                        del self.history[unpinned[-1]]
-        self._dirty = True
+            dto = ClipboardHistoryDTO(content=item_content, is_pinned=False)
+            self.db_manager.history_dao.add_item(dto)
+        self.db_manager.history_dao.cleanup_old(self.history_limit)
+        self.history = self._load_history_from_db()
         self._trigger_gui_update()
 
     def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:
-        # The tuple is (content, is_pinned, timestamp)
-        filtered_raw = [item for item in self.history if query.lower() in item[0].lower()]
+        try:
+            dtos = self.db_manager.history_dao.get_items(limit=self.history_limit, query=query)
+            return [(dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos]
+        except Exception as e:
+            logging.error(f"履歴のフィルタリング取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            return []
 
-        pinned = [item for item in filtered_raw if item[1]]
-        unpinned = [item for item in filtered_raw if not item[1]]
-        return pinned + unpinned
+    def _load_history_from_db(self) -> list[tuple[str, bool, float]]:
+        try:
+            dtos = self.db_manager.history_dao.get_items(limit=self.history_limit)
+            history = [(dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos]
+            if history:
+                self.last_clipboard_data = history[0][0]
+            return history
+        except Exception as e:
+            logging.error(f"データベースからの履歴読み込みに失敗しました: %s", str(e), exc_info=True)
+            return []
 
     def _load_history_from_file(self) -> list[tuple[str, bool, float]]:
-        if os.path.exists(self.history_file_path):
-            try:
-                with open(self.history_file_path, encoding='utf-8') as f:
-                    loaded_data: list[list[Any]] = json.load(f)
-                    history: list[tuple[str, bool, float]] = []
-                    for i, item in enumerate(loaded_data):
-                        if isinstance(item, list):
-                            if len(item) == 2:
-                                # Legacy format, add a synthetic timestamp
-                                history.append((item[0], item[1], time.time() - i)) # type: ignore
-                            elif len(item) == 3:
-                                # New format, just convert to tuple
-                                history.append((item[0], item[1], item[2])) # type: ignore
-                    return history
-            except (json.JSONDecodeError, FileNotFoundError) as e:
-                logging.error(f"履歴ファイルの読み込みに失敗しました: {e}", exc_info=True)
-                return []
+        # 後方互換性のために残していますが、移行後は空を返します
         return []
 
     def save_history_to_file(self) -> None:
         self._save_history_to_file()
 
     def _save_history_to_file(self) -> None:
-        try:
-            with open(self.history_file_path, 'w', encoding='utf-8') as f:
-                json.dump(self.history, f, ensure_ascii=False, indent=4)
-        except OSError as e:
-            logging.error(f"履歴ファイルの保存に失敗しました: {e}", exc_info=True)
-            if self.error_callback:
-                self.error_callback("履歴保存エラー", f"履歴ファイル '{self.history_file_path}' の保存に失敗しました。")
+        # DBに都度保存しているため、何もしません
+        pass
