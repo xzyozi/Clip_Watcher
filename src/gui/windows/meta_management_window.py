@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -190,8 +191,11 @@ class MetaManagementFrame(ttk.Frame):
         self.cat_menu = tk.Menu(self, tearoff=0)
         self.cat_menu.add_command(label=self.app.translator("add_category"), command=self.add_category)
         self.cat_menu.add_command(label=self.app.translator("edit_category"), command=self.edit_category)
-        self.cat_menu.add_command(label=self.app.translator("delete_category"), command=self.delete_category)
-        self.cat_listbox.bind("<Button-3>", self.show_context_menu)
+        # プラットフォームに応じた右クリックのバインド (macOSはButton-2, Windows/LinuxはButton-3)
+        if sys.platform == "darwin":
+            self.cat_listbox.bind("<Button-2>", self.show_context_menu)
+        else:
+            self.cat_listbox.bind("<Button-3>", self.show_context_menu)
 
         # カテゴリボタン群
         cat_btn_frame = ttk.Frame(self.left_frame)
