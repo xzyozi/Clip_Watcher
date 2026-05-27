@@ -186,17 +186,24 @@ class MetaManagementFrame(ttk.Frame):
         self.cat_listbox.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
         self.cat_listbox.bind("<<ListboxSelect>>", self.on_category_select)
 
+        # 右クリックコンテキストメニュー
+        self.cat_menu = tk.Menu(self, tearoff=0)
+        self.cat_menu.add_command(label=self.app.translator("add_category"), command=self.add_category)
+        self.cat_menu.add_command(label=self.app.translator("edit_category"), command=self.edit_category)
+        self.cat_menu.add_command(label=self.app.translator("delete_category"), command=self.delete_category)
+        self.cat_listbox.bind("<Button-3>", self.show_context_menu)
+
         # カテゴリボタン群
         cat_btn_frame = ttk.Frame(self.left_frame)
         cat_btn_frame.pack(fill=tk.X)
 
-        self.add_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("add_category"), command=self.add_category, width=8)
+        self.add_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("add"), command=self.add_category, width=6)
         self.add_cat_btn.pack(side=tk.LEFT, padx=1, fill=tk.X, expand=True)
 
-        self.edit_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("edit_category"), command=self.edit_category, width=8)
+        self.edit_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("edit"), command=self.edit_category, width=6)
         self.edit_cat_btn.pack(side=tk.LEFT, padx=1, fill=tk.X, expand=True)
 
-        self.del_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("delete_category"), command=self.delete_category, width=8)
+        self.del_cat_btn = ttk.Button(cat_btn_frame, text=self.app.translator("delete"), command=self.delete_category, width=6)
         self.del_cat_btn.pack(side=tk.LEFT, padx=1, fill=tk.X, expand=True)
 
         # ================= 右側：定型文管理 =================
@@ -405,12 +412,43 @@ class MetaManagementFrame(ttk.Frame):
         self.app.db_manager.meta_phrase_dao.delete(phrase_id)
         self.refresh_phrases()
 
+    def show_context_menu(self, event: tk.Event) -> None:
+        """右クリック時にコンテキストメニューを表示します。"""
+        clicked_idx = self.cat_listbox.nearest(event.y)
+        
+        # 項目がある場合のみ処理（無効な位置を右クリックした場合は選択を変えない）
+        bbox = self.cat_listbox.bbox(clicked_idx)
+        if bbox and event.y <= bbox[1] + bbox[3]:
+            self.cat_listbox.selection_clear(0, tk.END)
+            self.cat_listbox.selection_set(clicked_idx)
+            self.cat_listbox.activate(clicked_idx)
+            self.on_category_select() # 定型文リストの更新をトリガー
+
+            # [すべて] (インデックス0) では編集・削除を無効化
+            if clicked_idx == 0:
+                self.cat_menu.entryconfig(1, state="disabled")
+                self.cat_menu.entryconfig(2, state="disabled")
+            else:
+                self.cat_menu.entryconfig(1, state="normal")
+                self.cat_menu.entryconfig(2, state="normal")
+        else:
+            # 項目外をクリックした場合は追加のみ有効
+            self.cat_menu.entryconfig(1, state="disabled")
+            self.cat_menu.entryconfig(2, state="disabled")
+
+        self.cat_menu.tk_popup(event.x_root, event.y_root)
+
     # ================= 多言語対応 =================
     def on_language_changed(self, event: Any = None) -> None:
         self.category_label.config(text=self.app.translator("meta_category_title"))
-        self.add_cat_btn.config(text=self.app.translator("add_category"))
-        self.edit_cat_btn.config(text=self.app.translator("edit_category"))
-        self.del_cat_btn.config(text=self.app.translator("delete_category"))
+        self.add_cat_btn.config(text=self.app.translator("add"))
+        self.edit_cat_btn.config(text=self.app.translator("edit"))
+        self.del_cat_btn.config(text=self.app.translator("delete"))
+
+        # コンテキストメニューの再翻訳
+        self.cat_menu.entryconfig(0, label=self.app.translator("add_category"))
+        self.cat_menu.entryconfig(1, label=self.app.translator("edit_category"))
+        self.cat_menu.entryconfig(2, label=self.app.translator("delete_category"))
 
         self.phrase_label.config(text=self.app.translator("meta_phrase_title"))
         self.phrase_tree.heading("title", text=self.app.translator("phrase_title_label"))
