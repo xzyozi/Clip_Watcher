@@ -115,13 +115,14 @@ erDiagram
 
 ## 3. 移行・実装に関する考慮事項
 
-1.  **データ型のマッピング**:
-    *   SQLiteには日付型がないため、`TEXT` (ISO8601文字列) または `INTEGER` (Unix Time) を使用します。可読性とデバッグの容易さから `TEXT` を推奨します。
-    *   Booleanは `INTEGER` (0/1) で管理します。
+1.  **データ型のマッピング**:
+    *   SQLiteには日付型がないため、`TEXT` (ISO8601文字列) または `REAL` (Unix Time) を使用します。履歴データのタイムスタンプ互換性の観点から、Unix Epoch Timeを表す `REAL` を採用します。
+    *   Booleanは `INTEGER` (0: false, 1: true) で管理します。
 
-2.  **既存データからの移行**:
-    *   `history.json` -> `t_clipboard_history`: 単純な文字列リストをインポートし、`created_at` はインポート実行時刻、`content_hash` は計算して生成します。
-    *   `fixed_phrases.json` -> `t_fixed_phrase`: 文字列を `content` に格納し、`title` はNULLまたは `content` の先頭20文字等を設定します。
+2.  **既存データからの移行**:
+    *   `history.json` -> `t_clipboard_history`: 旧履歴データをインポートし、`created_at` は元のタイムスタンプ（存在しない場合はインポート実行時刻）を保持し、`content_hash` は SHA-256 で計算して自動生成します。移行後、`history.json` は `history.json.bak` としてバックアップ化されます。
+    *   `fixed_phrases.json` -> `t_fixed_phrase` / `t_meta_phrase`: 本移行フェーズでは、既存の定型文（JSONベース）は後方互換性のためにそのまま残し、新設する「メタ管理」タブ用のカテゴリと定型文データを `t_category` および `t_meta_phrase` としてSQLite上で新規構築・管理します。
 
-3.  **パフォーマンスチューニング**:
-    *   `t_clipboard_history` は肥大化しやすいため、定期的に古いデータ（`is_pinned=0` のもの）を削除する `VACUUM` 処理や自動削除ロジックの実装が必要です。
+3.  **パフォーマンスチューニング**:
+    *   `t_clipboard_history` は肥大化しやすいため、上限数（`history_limit`）を超えた場合に自動的にピン留めされていない古い項目をクリーンアップする機能を実装します。
+    *   トランザクションとインデックス（`idx_history_hash`, `idx_history_created`）を適切に使用し、UI描画へのブロッキングを防ぎます。
