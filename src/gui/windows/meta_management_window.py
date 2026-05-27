@@ -181,8 +181,8 @@ class MetaManagementFrame(ttk.Frame):
         self.category_label = ttk.Label(self.left_frame, text=self.app.translator("meta_category_title"), font=("", 10, "bold"))
         self.category_label.pack(anchor=tk.W, pady=(0, 5))
 
-        # カテゴリ一覧リストボックス（内部余白を設定し美観を向上）
-        self.cat_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE, exportselection=False, padx=5, pady=5, activestyle="none") # type: ignore
+        # カテゴリ一覧リストボックス（美観向上のためのスタイル設定）
+        self.cat_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE, exportselection=False, activestyle="none")
         self.cat_listbox.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
         self.cat_listbox.bind("<<ListboxSelect>>", self.on_category_select)
 
@@ -249,13 +249,13 @@ class MetaManagementFrame(ttk.Frame):
         """データベースからカテゴリ一覧を取得し、リストボックスを更新します。"""
         self.cat_listbox.delete(0, tk.END)
 
-        # すべて特殊項目を追加
+        # すべて特殊項目を追加（左側余白として半角スペースを追加）
         all_text = self.app.translator("all_categories")
-        self.cat_listbox.insert(tk.END, all_text)
+        self.cat_listbox.insert(tk.END, f"  {all_text}")
 
         self.category_list = self.app.db_manager.category_dao.get_all()
         for cat in self.category_list:
-            self.cat_listbox.insert(tk.END, cat.name)
+            self.cat_listbox.insert(tk.END, f"  {cat.name}")
 
         # 選択状態を復元
         if self.selected_category_id is None:
