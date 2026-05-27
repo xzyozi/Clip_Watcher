@@ -181,8 +181,8 @@ class MetaManagementFrame(ttk.Frame):
         self.category_label = ttk.Label(self.left_frame, text=self.app.translator("meta_category_title"), font=("", 10, "bold"))
         self.category_label.pack(anchor=tk.W, pady=(0, 5))
 
-        # カテゴリ一覧リストボックス
-        self.cat_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE, exportselection=False)
+        # カテゴリ一覧リストボックス（内部余白を設定し美観を向上）
+        self.cat_listbox = tk.Listbox(self.left_frame, selectmode=tk.SINGLE, exportselection=False, padx=5, pady=5, activestyle="none") # type: ignore
         self.cat_listbox.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
         self.cat_listbox.bind("<<ListboxSelect>>", self.on_category_select)
 
@@ -214,9 +214,9 @@ class MetaManagementFrame(ttk.Frame):
         self.phrase_tree.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
         tree_scroll.config(command=self.phrase_tree.yview)
 
-        # ヘッダー設定
-        self.phrase_tree.heading("title", text=self.app.translator("phrase_title_label"))
-        self.phrase_tree.heading("content", text=self.app.translator("phrase_content_label"))
+        # ヘッダー設定（ヘッダーとデータのアライメントを左揃えで統一）
+        self.phrase_tree.heading("title", text=self.app.translator("phrase_title_label"), anchor=tk.W)
+        self.phrase_tree.heading("content", text=self.app.translator("phrase_content_label"), anchor=tk.W)
         self.phrase_tree.column("title", width=100, anchor=tk.W)
         self.phrase_tree.column("content", width=220, anchor=tk.W)
 
