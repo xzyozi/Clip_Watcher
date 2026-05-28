@@ -90,9 +90,12 @@ sequenceDiagram
 ```python
 # 改善後のイメージ
 def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
-    # 完全に同じデータなら何もしない（スクロールと選択状態が完璧に保護される）
-    if self.displayed_history == history:
+    # 履歴データと現在のテーマ（色設定）が両方完全に同じなら何もしない
+    # ※テーマ変更時（ダーク/ライト切り替え時）は再描画してピン留め背景色などを適用する必要があるため、テーマの比較も必須です。
+    if getattr(self, "displayed_history", None) == history and getattr(self, "current_theme", None) == theme:
         return
+    
+    self.current_theme = theme
     ...
 ```
 
@@ -119,7 +122,12 @@ def _on_history_select(self, event: tk.Event) -> None:
 ```python
 # 改善後のイメージ
 current_area_text = self.clipboard_text_widget.get("1.0", "end-1c")
-if current_area_text != new_insert_content:  # 差分があるときだけ上書き
+
+# ① もしユーザーがテキストエリア内の文字を「ドラッグ選択中」であれば、上書きを強制キャンセルする（コピー操作の保護）
+is_text_selected = bool(self.clipboard_text_widget.tag_ranges(tk.SEL))
+
+# ② テキストに差分がある、かつユーザーが選択操作中でない場合のみ上書きする
+if current_area_text != new_insert_content and not is_text_selected:
     self.clipboard_text_widget.delete(1.0, tk.END)
     self.clipboard_text_widget.insert(tk.END, new_insert_content)
 ```
