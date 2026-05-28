@@ -13,6 +13,8 @@ class HistoryListComponent(tk.Frame):
         super().__init__(master)
         self.app = app_instance
         self.displayed_history: list[tuple[str, bool, float]] = []  # Will store the full (content, is_pinned, timestamp) tuples
+        self.current_theme: dict[str, str] = {}
+        self._updating_history: bool = False
 
         self._create_widgets()
         self._bind_events()
@@ -45,6 +47,8 @@ class HistoryListComponent(tk.Frame):
             self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", item_ids) # type: ignore
 
     def _on_history_select(self, event: tk.Event) -> None:
+        if self._updating_history:
+            return
         # This event is now handled by the parent (main_gui) to update the text widget
         self.app.event_dispatcher.dispatch("HISTORY_SELECTION_CHANGED", { # type: ignore
             "selected_indices": self.listbox.curselection()
@@ -55,27 +59,36 @@ class HistoryListComponent(tk.Frame):
         return [self.displayed_history[i][2] for i in indices if 0 <= i < len(self.displayed_history)]
 
     def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
-        self.displayed_history = history  # Store the full data
+        # 履歴データとテーマが両方完全に同一の場合は何もしない（スクロールと選択状態を100%保護）
+        if self.displayed_history == history and self.current_theme == theme:
+            return
 
-        selected_indices = self.listbox.curselection()
-        scroll_pos = self.listbox.yview()
+        self._updating_history = True
+        try:
+            self.displayed_history = history  # Store the full data
+            self.current_theme = theme        # テーマを記録
 
-        self.listbox.delete(0, tk.END)
+            selected_indices = self.listbox.curselection()
+            scroll_pos = self.listbox.yview()
 
-        pinned_bg_color = theme["pinned_bg"]
+            self.listbox.delete(0, tk.END)
 
-        for i, (content, is_pinned, _timestamp) in enumerate(history):
-            display_text = content.replace('\n', ' ').replace('\r', '')
-            prefix = "📌 " if is_pinned else ""
-            # The displayed number is still based on visual order (1-based index)
-            self.listbox.insert(tk.END, f"{prefix}{i+1}. {display_text[:100]}...")
-            if is_pinned:
-                self.listbox.itemconfig(i, {'bg': pinned_bg_color})
+            pinned_bg_color = theme["pinned_bg"]
 
-        for index in selected_indices:
-            if index < self.listbox.size():
-                self.listbox.selection_set(index)
-        self.listbox.yview_moveto(scroll_pos[0])
+            for i, (content, is_pinned, _timestamp) in enumerate(history):
+                display_text = content.replace('\n', ' ').replace('\r', '')
+                prefix = "📌 " if is_pinned else ""
+                # The displayed number is still based on visual order (1-based index)
+                self.listbox.insert(tk.END, f"{prefix}{i+1}. {display_text[:100]}...")
+                if is_pinned:
+                    self.listbox.itemconfig(i, {'bg': pinned_bg_color})
+
+            for index in selected_indices:
+                if index < self.listbox.size():
+                    self.listbox.selection_set(index)
+            self.listbox.yview_moveto(scroll_pos[0])
+        finally:
+            self._updating_history = False
 
     def apply_theme(self, theme: dict[str, str]) -> None:
         self.listbox.config(bg=theme["listbox_bg"], fg=theme["listbox_fg"], selectbackground=theme["select_bg"], selectforeground=theme["select_fg"])
