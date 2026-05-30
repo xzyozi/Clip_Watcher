@@ -152,9 +152,11 @@ class HistoryService:
 
     def import_history(self, new_history_items: list[str]) -> None:
         """外部からテキスト配列を履歴項目として一括インポートします。"""
+        import time
         try:
-            for item_content in reversed(new_history_items):
-                dto = ClipboardHistoryDTO(content=item_content, is_pinned=False)
+            for i, item_content in enumerate(reversed(new_history_items)):
+                # 高速なループでも並び順が確実になるよう、わずかに時間をずらしてインサートします
+                dto = ClipboardHistoryDTO(content=item_content, is_pinned=False, created_at=time.time() - i * 0.01)
                 self.db_manager.history_dao.add_item(dto)
             self.db_manager.history_dao.cleanup_old(self.history_limit)
             self.load_history()
