@@ -268,28 +268,17 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self.history_component.update_history(history, theme)
 
-        # テキストエリアの上書き防止（差分チェックおよび選択操作状態の保護）
         selected_indices: tuple[int, ...] = self.history_component.listbox.curselection()
-
-        # 挿入すべき新しい文字列を決定
-        new_insert_content = ""
+        self.clipboard_text_widget.config(state=tk.NORMAL)
+        self.clipboard_text_widget.delete(1.0, tk.END)
         if selected_indices:
             index: int = selected_indices[0]
             if 0 <= index < len(self.history_data):
-                new_insert_content, _, _ = self.history_data[index]
+                content, _, _ = self.history_data[index]
+                self.clipboard_text_widget.insert(tk.END, content)
         else:
-            new_insert_content = current_content
-
-        current_area_text = self.clipboard_text_widget.get("1.0", "end-1c")
-
-        # ① もしユーザーがテキストエリア内の文字を「ドラッグ選択中」であれば、上書きを強制キャンセルする（コピー操作の保護）
-        is_text_selected = bool(self.clipboard_text_widget.tag_ranges(tk.SEL))
-
-        # ② テキストに差分がある、かつユーザーが選択操作中でない場合のみ上書きする
-        if current_area_text != new_insert_content and not is_text_selected:
+            self.clipboard_text_widget.insert(tk.END, current_content)
             self.clipboard_text_widget.config(state=tk.NORMAL)
-            self.clipboard_text_widget.delete(1.0, tk.END)
-            self.clipboard_text_widget.insert(tk.END, new_insert_content)
 
     def select_tool_tab(self, plugin_name: str) -> None:
         """Selects a notebook tab corresponding to the given plugin name."""
