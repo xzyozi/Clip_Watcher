@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -25,12 +24,12 @@ class DatabaseManager:
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
         self._lock = threading.Lock()
-        
+
         # 各DAOの初期化
         self.history_dao = ClipboardHistoryDAO(db_path, self._lock)
         self.category_dao = CategoryDAO(db_path, self._lock)
         self.meta_phrase_dao = MetaPhraseDAO(db_path, self._lock)
-        
+
         logger.info("DatabaseManager を初期化します。DBパス: %s", db_path)
         self._initialize_tables()
 
@@ -55,7 +54,7 @@ class DatabaseManager:
                             created_at REAL NOT NULL
                         )
                     """)
-                    
+
                     # 2. カテゴリテーブル
                     conn.execute("""
                         CREATE TABLE IF NOT EXISTS t_category (
@@ -82,7 +81,7 @@ class DatabaseManager:
                     conn.execute("CREATE INDEX IF NOT EXISTS idx_history_hash ON t_clipboard_history(content_hash)")
                     conn.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON t_clipboard_history(created_at DESC)")
                     conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_phrase_category ON t_meta_phrase(category_id, sort_order)")
-                    
+
                     conn.commit()
                 logger.info("データベーステーブルおよびインデックスの初期化が完了しました。")
             except sqlite3.Error as e:
@@ -136,7 +135,7 @@ class DatabaseManager:
                         is_pinned=is_pinned,
                         created_at=created_at
                     )
-                    
+
                     # 既に存在するかチェック
                     cursor = conn.cursor()
                     cursor.execute(

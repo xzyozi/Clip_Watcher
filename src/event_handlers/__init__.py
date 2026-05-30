@@ -74,6 +74,7 @@ def start_app() -> None:
             .with_database(db_path) \
             .with_translator() \
             .with_theme_manager(root) \
+            .with_history_service() \
             .with_fixed_phrases_manager(fixed_phrases_file_path) \
             .with_plugin_manager() \
             .with_clipboard_monitor(root, history_file_path) \

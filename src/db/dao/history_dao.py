@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
-import time
 from typing import TYPE_CHECKING
 
 from src.db.dao.base_dao import BaseDAO
@@ -163,7 +162,7 @@ class ClipboardHistoryDAO(BaseDAO):
                         (excess,)
                     )
                     rows = cursor.fetchall()
-                    
+
                     if rows:
                         ids_to_delete = [row[0] for row in rows]
                         placeholders = ",".join("?" for _ in ids_to_delete)
