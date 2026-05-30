@@ -49,7 +49,8 @@ class MainApplication(BaseApplication):
 
         self.gui = ClipWatcherGUI(master, self)
 
-        self.monitor.set_gui_update_callback(self.update_gui)
+        # コールバックではなく、EventDispatcherによるイベント駆動（Pub/Sub）でGUIの更新を受け取ります
+        self.event_dispatcher.subscribe("HISTORY_UPDATED", self._on_history_updated_event)
         self.monitor.set_error_callback(self.show_error_message)
 
         self._rebuild_menu(event=None) # Call with dummy event
@@ -93,6 +94,12 @@ class MainApplication(BaseApplication):
     def update_gui(self, current_content: str, history: list[tuple[str, bool, float]]) -> None:
         """Wrapper to pass sort order to the GUI."""
         self.gui.update_clipboard_display(current_content, history, self.history_sort_ascending)
+
+    def _on_history_updated_event(self, data: dict[str, Any]) -> None:
+        """履歴更新イベント（HISTORY_UPDATED）受信時のハンドラー。"""
+        last_content = data.get("last_content", "")
+        history = data.get("history", [])
+        self.update_gui(last_content, history)
 
     def on_focus_in(self, event: tk.Event | None = None) -> None:
         self.reassert_topmost()
