@@ -4,7 +4,6 @@ import sqlite3
 import threading
 from typing import Any
 
-
 class BaseDAO:
     """すべてのDAOクラスの共通基底クラス。排他ロックと接続の取得を管理します。"""
 

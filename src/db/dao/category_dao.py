@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
-
 from src.db.dao.base_dao import BaseDAO
 from src.db.dto import CategoryDTO
 
