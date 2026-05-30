@@ -33,7 +33,6 @@ class ClipboardMonitor:
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
         self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
-        self.update_callback: Callable[[str, list[tuple[str, bool, float]]], None] | None = None
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
@@ -68,8 +67,6 @@ class ClipboardMonitor:
         self.history_limit = settings.get("history_limit", 50)
         self.excluded_apps = settings.get("excluded_apps", [])
         self.notification_manager.update_settings(settings)
-        # 履歴件数の制御と通知は HistoryService 側に委譲されていますが、後方互換コールバックのためにトリガー
-        self._trigger_gui_update()
 
     def set_error_callback(self, callback: Callable[[str, str], None]) -> None:
         self.error_callback = callback
@@ -96,9 +93,6 @@ class ClipboardMonitor:
 
         return exe_name.value.decode(errors="ignore")
 
-    def set_gui_update_callback(self, callback: Callable[[str, list[tuple[str, bool, float]]], None]) -> None:
-        self.update_callback = callback
-
     def update_clipboard(self, text: str) -> None:
         """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
         if not text:
@@ -119,7 +113,6 @@ class ClipboardMonitor:
 
         # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.history_service.add_history_item(text)
-        self._trigger_gui_update()
 
     def _monitor_clipboard(self) -> None:
         logging.info("クリップボード監視を開始します")
@@ -200,7 +193,6 @@ class ClipboardMonitor:
             return
 
         self.history_service.add_history_item(clipboard_data)
-        self._trigger_gui_update()
 
     def _check_clipboard(self) -> None:
         try:
@@ -232,11 +224,8 @@ class ClipboardMonitor:
     def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
         """Finds a history item by its ID and updates its content."""
         self.history_service.update_history_item_by_id(item_id, new_text)
-        self._trigger_gui_update()
 
-    def _trigger_gui_update(self) -> None:
-        if self.update_callback:
-            self.tk_root.after(0, self.update_callback, self.last_clipboard_data, self.get_history())
+
 
     def start(self) -> None:
         if not self._running:
@@ -265,30 +254,24 @@ class ClipboardMonitor:
 
     def clear_history(self) -> None:
         self.history_service.clear_history()
-        self._trigger_gui_update()
 
     def delete_history_item_by_id(self, item_id: float) -> None:
         """Deletes a history item using its unique ID."""
         self.history_service.delete_history_item_by_id(item_id)
-        self._trigger_gui_update()
 
     def pin_item_by_id(self, item_id: float) -> None:
         """Pins an item using its unique ID."""
         self.history_service.pin_item_by_id(item_id)
-        self._trigger_gui_update()
 
     def unpin_item_by_id(self, item_id: float) -> None:
         """Unpins an item using its unique ID."""
         self.history_service.unpin_item_by_id(item_id)
-        self._trigger_gui_update()
 
     def delete_all_unpinned_history(self) -> None:
         self.history_service.delete_all_unpinned_history()
-        self._trigger_gui_update()
 
     def import_history(self, new_history_items: list[str]) -> None:
         self.history_service.import_history(new_history_items)
-        self._trigger_gui_update()
 
     def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:
         return self.history_service.get_filtered_history(query)
