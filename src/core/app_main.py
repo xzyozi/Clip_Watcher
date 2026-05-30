@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from src.core.config.settings_manager import SettingsManager
     from src.core.event_dispatcher import EventDispatcher
     from src.core.fixed_phrases_manager import FixedPhrasesManager
+    from src.core.history_service import HistoryService
     from src.core.plugin_manager import PluginManager
     from src.db.database_manager import DatabaseManager
     from src.gui.theme_manager import ThemeManager
@@ -25,13 +26,14 @@ if TYPE_CHECKING:
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master: tk.Tk, settings_manager: SettingsManager, db_manager: DatabaseManager, monitor: ClipboardMonitor, fixed_phrases_manager: FixedPhrasesManager, plugin_manager: PluginManager, event_dispatcher: EventDispatcher, theme_manager: ThemeManager, translator: Translator, app_status: Any) -> None:
+    def __init__(self, master: tk.Tk, settings_manager: SettingsManager, db_manager: DatabaseManager, history_service: HistoryService, monitor: ClipboardMonitor, fixed_phrases_manager: FixedPhrasesManager, plugin_manager: PluginManager, event_dispatcher: EventDispatcher, theme_manager: ThemeManager, translator: Translator, app_status: Any) -> None:
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.settings_manager = settings_manager
         self.db_manager = db_manager
+        self.history_service = history_service
         self.monitor = monitor
         self.fixed_phrases_manager = fixed_phrases_manager
         self.plugin_manager = plugin_manager
@@ -47,7 +49,8 @@ class MainApplication(BaseApplication):
 
         self.gui = ClipWatcherGUI(master, self)
 
-        self.monitor.set_gui_update_callback(self.update_gui)
+        # コールバックではなく、EventDispatcherによるイベント駆動（Pub/Sub）でGUIの更新を受け取ります
+        self.event_dispatcher.subscribe("HISTORY_UPDATED", self._on_history_updated_event)
         self.monitor.set_error_callback(self.show_error_message)
 
         self._rebuild_menu(event=None) # Call with dummy event
@@ -61,10 +64,10 @@ class MainApplication(BaseApplication):
     def on_ready(self) -> None:
         """Called when the application is fully initialized and ready to run."""
         self._set_state(ApplicationState.READY)
-  
+
         # Populate GUI with initial history loaded from file
         self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
-        
+
         self.monitor.start()
         self._set_state(ApplicationState.RUNNING)
 
@@ -91,6 +94,12 @@ class MainApplication(BaseApplication):
     def update_gui(self, current_content: str, history: list[tuple[str, bool, float]]) -> None:
         """Wrapper to pass sort order to the GUI."""
         self.gui.update_clipboard_display(current_content, history, self.history_sort_ascending)
+
+    def _on_history_updated_event(self, data: dict[str, Any]) -> None:
+        """履歴更新イベント（HISTORY_UPDATED）受信時のハンドラー。"""
+        last_content = data.get("last_content", "")
+        history = data.get("history", [])
+        self.update_gui(last_content, history)
 
     def on_focus_in(self, event: tk.Event | None = None) -> None:
         self.reassert_topmost()
