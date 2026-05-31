@@ -80,28 +80,28 @@ src/plugins/
 
 ```mermaid
 graph TD
-    subgraph 【旧アーキテクチャ】 coreの肥大化
-        A[src/core/clipboard_monitor] -- 直接呼び出し -- B[src/core/app_main]
-        C[src/core/history_service] -- 同一フォルダ -- B
-        D[src/core/plugin_manager] -- 同一フォルダ -- B
+    subgraph OLD["【旧アーキテクチャ】 coreの肥大化"]
+        A[src/core/clipboard_monitor] -- "直接呼び出し" --> B[src/core/app_main]
+        C[src/core/history_service] -- "同一フォルダ" --> B
+        D[src/core/plugin_manager] -- "同一フォルダ" --> B
     end
 
-    subgraph 【新アーキテクチャ】 関心の分離とクリーンな階層化
-        GUI[src/gui/ UI層] --> MAIN[src/core/app_main]
+    subgraph NEW["【新アーキテクチャ】 関心の分離とクリーンな階層化"]
+        GUI["src/gui/ UI層"] --> MAIN["src/core/app_main"]
         
-        subgraph core サブモジュール
-            MAIN --> BOOT[core.bootstrap]
-            MAIN --> EV[core.events]
-            MAIN --> CLIP[core.clipboard]
+        subgraph core["core サブモジュール"]
+            MAIN --> BOOT["core.bootstrap"]
+            MAIN --> EV["core.events"]
+            MAIN --> CLIP["core.clipboard"]
         end
         
-        subgraph services サービス層 (ドメイン)
-            MAIN --> SERV[src/services/history_service]
+        subgraph services["services サービス層 (ドメイン)"]
+            MAIN --> SERV["src/services/history_service"]
         end
         
-        subgraph plugins プラグイン層 (拡張)
-            MAIN --> PLUG[src/plugins/manager]
-            PLUG --> PLUG_IMPL[src/plugins/implementations]
+        subgraph plugins["plugins プラグイン層 (拡張)"]
+            MAIN --> PLUG["src/plugins/manager"]
+            PLUG --> PLUG_IMPL["src/plugins/implementations"]
         end
     end
 ```
