@@ -1,6 +1,6 @@
 import urllib.parse
 
-from .base_plugin import Plugin
+from src.plugins.base_plugin import Plugin
 
 
 class URLConverterPlugin(Plugin):

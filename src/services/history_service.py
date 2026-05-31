@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.events.event_dispatcher import EventDispatcher
     from src.db.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -154,9 +154,10 @@ class HistoryService:
         """外部からテキスト配列を履歴項目として一括インポートします。"""
         import time
         try:
+            base_time = time.time()
             for i, item_content in enumerate(reversed(new_history_items)):
-                # 高速なループでも並び順が確実になるよう、わずかに時間をずらしてインサートします
-                dto = ClipboardHistoryDTO(content=item_content, is_pinned=False, created_at=time.time() - i * 0.01)
+                # 基準時間を固定し、そこからデクリメントすることで、DBの書き込み遅延に影響されず正しい順序を保ちます
+                dto = ClipboardHistoryDTO(content=item_content, is_pinned=False, created_at=base_time - i * 0.01)
                 self.db_manager.history_dao.add_item(dto)
             self.db_manager.history_dao.cleanup_old(self.history_limit)
             self.load_history()

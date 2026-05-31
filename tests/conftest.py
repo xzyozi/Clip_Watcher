@@ -4,9 +4,9 @@ from collections.abc import Generator
 
 import pytest
 
-from src.core.event_dispatcher import EventDispatcher
-from src.core.history_service import HistoryService
+from src.core.events.event_dispatcher import EventDispatcher
 from src.db.database_manager import DatabaseManager
+from src.services.history_service import HistoryService
 
 
 @pytest.fixture

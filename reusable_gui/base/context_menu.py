@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
     from src.core.event_dispatcher import EventDispatcher
+
     from src.gui.components.history_list_component import HistoryListComponent
     from src.gui.components.phrase_edit_component import PhraseEditComponent
     from src.gui.components.phrase_list_component import PhraseListComponent

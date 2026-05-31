@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.core.event_dispatcher import EventDispatcher
-from src.core.history_service import HistoryService
+from src.core.events.event_dispatcher import EventDispatcher
+from src.services.history_service import HistoryService
 
 
 def test_initial_history_is_empty(history_service: HistoryService) -> None:

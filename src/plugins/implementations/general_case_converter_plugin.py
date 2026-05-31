@@ -1,6 +1,6 @@
 import re
 
-from .base_plugin import Plugin
+from src.plugins.base_plugin import Plugin
 
 
 def to_snake_case(name: str) -> str:

@@ -12,7 +12,7 @@ from src.gui.custom_widgets import CustomText
 from src.plugins.base_plugin import Plugin
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
 
 class ScheduleHelperComponent(BaseFrameGUI):

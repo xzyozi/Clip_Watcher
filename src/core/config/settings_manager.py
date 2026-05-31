@@ -2,7 +2,8 @@ import json
 import os
 from typing import Any, cast
 
-from ..event_dispatcher import EventDispatcher
+from src.core.events.event_dispatcher import EventDispatcher
+
 from . import defaults
 
 

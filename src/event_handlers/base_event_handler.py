@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.events.event_dispatcher import EventDispatcher
 
 class BaseEventHandler(ABC):
     """A base class for event handlers to standardize subscription and cleanup."""

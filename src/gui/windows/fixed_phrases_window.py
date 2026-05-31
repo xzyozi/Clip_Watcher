@@ -11,7 +11,7 @@ from src.gui.components import PhraseEditComponent, PhraseListComponent
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
 
 class FixedPhrasesFrame(BaseFrameGUI):
