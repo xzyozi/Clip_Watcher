@@ -20,7 +20,7 @@ class HistoryListComponent(tk.Frame):
         self._bind_events()
 
     def _create_widgets(self) -> None:
-        self.listbox = tk.Listbox(self, height=10, selectmode=tk.EXTENDED)
+        self.listbox = tk.Listbox(self, height=10, selectmode=tk.EXTENDED, exportselection=False)
         self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.listbox.yview)
         self.listbox.config(yscrollcommand=self.scrollbar.set)
 
