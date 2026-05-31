@@ -5,6 +5,7 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 
 from src.gui.theme_manager import ThemeManager
+from src.plugins.manager import PluginManager
 from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
@@ -15,7 +16,6 @@ from .config.settings_manager import SettingsManager
 from .dependency_checker import DependencyChecker
 from .event_dispatcher import EventDispatcher
 from .exceptions import ConfigError
-from .plugin_manager import PluginManager
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication

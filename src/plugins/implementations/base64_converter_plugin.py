@@ -1,6 +1,6 @@
 import base64
 
-from .base_plugin import Plugin
+from src.plugins.base_plugin import Plugin
 
 
 class Base64ConverterPlugin(Plugin):
