@@ -5,14 +5,14 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import TYPE_CHECKING, cast
 
-from src.core.exceptions import PhraseError
+from src.core.bootstrap.exceptions import PhraseError
 from src.gui.base import context_menu
 from src.gui.base.base_frame_gui import BaseFrameGUI
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
     from src.gui.base.context_menu import PhraseListContextMenu
     from src.gui.components.phrase_edit_component import PhraseEditComponent
 

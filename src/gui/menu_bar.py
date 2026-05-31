@@ -9,7 +9,7 @@ from src.event_handlers import main_handlers as event_handlers
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
     from src.plugins.base_plugin import Plugin  # Added this import
     from src.utils.i18n import Translator
 

@@ -7,16 +7,16 @@ from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
 from src import event_handlers
-from src.core.base_application import ApplicationState, BaseApplication
+from src.core.bootstrap.base_application import ApplicationState, BaseApplication
 from src.gui import menu_bar
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui.windows.settings_window import SettingsWindow
 from src.utils.undo_manager import UndoManager
 
 if TYPE_CHECKING:
-    from src.core.clipboard_monitor import ClipboardMonitor
+    from src.core.clipboard.clipboard_monitor import ClipboardMonitor
     from src.core.config.settings_manager import SettingsManager
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.events.event_dispatcher import EventDispatcher
     from src.db.database_manager import DatabaseManager
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager

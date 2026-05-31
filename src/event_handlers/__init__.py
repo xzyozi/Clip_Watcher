@@ -8,7 +8,7 @@ import traceback
 from tkinter import messagebox
 from typing import TYPE_CHECKING
 
-from src.core.application_builder import ApplicationBuilder
+from src.core.bootstrap.application_builder import ApplicationBuilder
 from src.utils.logging_config import setup_logging
 
 # Import standalone handlers so they can be accessed via the package
@@ -18,7 +18,7 @@ from .history_handlers import HistoryEventHandlers
 from .settings_handlers import SettingsEventHandlers
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
 
 def register_class_based_handlers(app_instance: BaseApplication) -> None:

@@ -11,6 +11,7 @@ from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
+
     from src.core.config.settings_manager import SettingsManager
     from src.plugins.base_plugin import Plugin
 

@@ -16,10 +16,9 @@ except ImportError:
     # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
     pass
 
+from src.core.events.event_dispatcher import EventDispatcher
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
-
-from .event_dispatcher import EventDispatcher
 
 if TYPE_CHECKING:
     from src.services.history_service import HistoryService

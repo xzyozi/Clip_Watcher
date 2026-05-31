@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.events.event_dispatcher import EventDispatcher
     from src.db.database_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)

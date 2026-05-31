@@ -15,7 +15,7 @@ from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.windows.meta_management_window import MetaManagementFrame
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
     from src.plugins.base_plugin import Plugin
 
 
@@ -154,7 +154,7 @@ class ClipWatcherGUI(BaseFrameGUI):
                 original_text, _, item_id = self.history_data[index]
 
                 if edited_text != original_text:
-                    from src.core.commands import UpdateHistoryCommand
+                    from src.core.events.commands import UpdateHistoryCommand
                     command = UpdateHistoryCommand(
                         monitor=self.app.monitor, # type: ignore
                         item_id=item_id,

@@ -1,6 +1,5 @@
+from src.core.clipboard.clipboard_monitor import ClipboardMonitor
 from src.utils.undo_manager import UndoableCommand
-
-from .clipboard_monitor import ClipboardMonitor
 
 
 class UpdateHistoryCommand(UndoableCommand):

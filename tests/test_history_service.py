@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.core.event_dispatcher import EventDispatcher
+from src.core.events.event_dispatcher import EventDispatcher
 from src.services.history_service import HistoryService
 
 

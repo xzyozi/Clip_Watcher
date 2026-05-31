@@ -4,18 +4,17 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from src.core.bootstrap.dependency_checker import DependencyChecker
+from src.core.bootstrap.exceptions import ConfigError
+from src.core.clipboard.clipboard_monitor import ClipboardMonitor
+from src.core.config.app_status import AppStatus
+from src.core.config.settings_manager import SettingsManager
+from src.core.events.event_dispatcher import EventDispatcher
 from src.gui.theme_manager import ThemeManager
 from src.plugins.manager import PluginManager
 from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
-
-from .clipboard_monitor import ClipboardMonitor
-from .config.app_status import AppStatus
-from .config.settings_manager import SettingsManager
-from .dependency_checker import DependencyChecker
-from .event_dispatcher import EventDispatcher
-from .exceptions import ConfigError
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
