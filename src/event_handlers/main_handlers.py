@@ -6,8 +6,8 @@ from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
 from src.core.config import defaults
-from src.core.fixed_phrases_manager import FixedPhrasesManager
 from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
+from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:

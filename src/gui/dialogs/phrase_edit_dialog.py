@@ -9,7 +9,7 @@ from src.gui.custom_widgets import CustomText
 
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
-    from src.core.fixed_phrases_manager import FixedPhrasesManager
+    from src.services.fixed_phrases_manager import FixedPhrasesManager
 
 
 class PhraseEditDialog(BaseToplevelGUI):

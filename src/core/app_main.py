@@ -17,11 +17,11 @@ if TYPE_CHECKING:
     from src.core.clipboard_monitor import ClipboardMonitor
     from src.core.config.settings_manager import SettingsManager
     from src.core.event_dispatcher import EventDispatcher
-    from src.core.fixed_phrases_manager import FixedPhrasesManager
-    from src.core.history_service import HistoryService
     from src.core.plugin_manager import PluginManager
     from src.db.database_manager import DatabaseManager
     from src.gui.theme_manager import ThemeManager
+    from src.services.fixed_phrases_manager import FixedPhrasesManager
+    from src.services.history_service import HistoryService
     from src.utils.i18n import Translator
 
 

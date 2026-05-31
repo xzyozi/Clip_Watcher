@@ -17,12 +17,12 @@ except ImportError:
     pass
 
 from src.db.database_manager import DatabaseManager
+from src.services.notification_manager import NotificationManager
 
 from .event_dispatcher import EventDispatcher
-from .notification_manager import NotificationManager
 
 if TYPE_CHECKING:
-    from src.core.history_service import HistoryService
+    from src.services.history_service import HistoryService
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
