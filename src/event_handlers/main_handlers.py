@@ -11,7 +11,7 @@ from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
 
 logger = logging.getLogger(__name__)
