@@ -41,6 +41,7 @@ class ClipboardMonitor:
 
         self.history_limit: int = history_limit
         self.excluded_apps: list[str] = excluded_apps if excluded_apps is not None else []
+        self.history: list[tuple[str, bool, float]] = self._load_history_from_db()
         self._dirty: bool = False
         self._auto_save_interval_ms: int = 5000
 
