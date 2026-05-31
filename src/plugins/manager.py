@@ -5,7 +5,7 @@ import inspect
 import logging
 import pkgutil
 
-import src.plugins as plugins_package
+import src.plugins.implementations as plugins_package
 from src.plugins.base_plugin import Plugin
 
 logger = logging.getLogger(__name__)

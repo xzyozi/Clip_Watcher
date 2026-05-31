@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import Any
 
 import pytest
 
-from src.core.event_dispatcher import EventDispatcher
-from src.core.history_service import HistoryService
+from src.core.events.event_dispatcher import EventDispatcher
 from src.db.database_manager import DatabaseManager
+from src.services.history_service import HistoryService
+from src.utils.undo_manager import UndoManager
 
 
 @pytest.fixture
@@ -46,3 +48,17 @@ def history_service(db_manager: DatabaseManager, event_dispatcher: EventDispatch
         event_dispatcher=event_dispatcher,
         history_limit=5
     )
+
+
+
+@pytest.fixture
+def undo_manager(event_dispatcher: EventDispatcher) -> UndoManager:
+    """テスト用のクリーンな UndoManager インスタンスを提供します。"""
+    return UndoManager(event_dispatcher)
+
+
+@pytest.fixture
+def mock_monitor(mocker: Any) -> Any:
+    """ClipboardMonitor のモックを提供し、OS依存の処理をスキップさせます。"""
+    monitor = mocker.Mock()
+    return monitor

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.core.base_application import BaseApplication
+
     from src.gui.base.context_menu import HistoryContextMenu
 
 
@@ -18,7 +19,7 @@ class HistoryListComponent(tk.Frame):
         self._bind_events()
 
     def _create_widgets(self) -> None:
-        self.listbox = tk.Listbox(self, height=10, selectmode=tk.EXTENDED)
+        self.listbox = tk.Listbox(self, height=10, selectmode=tk.EXTENDED, exportselection=False)
         self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.listbox.yview)
         self.listbox.config(yscrollcommand=self.scrollbar.set)
 

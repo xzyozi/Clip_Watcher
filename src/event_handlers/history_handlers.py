@@ -4,15 +4,15 @@ import logging
 from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
-from src.core.commands import UpdateHistoryCommand
-from src.core.event_dispatcher import EventDispatcher
+from src.core.events.commands import UpdateHistoryCommand
+from src.core.events.event_dispatcher import EventDispatcher
 from src.utils.error_handler import log_and_show_error
 from src.utils.undo_manager import UndoManager
 
 from .base_event_handler import BaseEventHandler
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
     from src.gui.components.history_list_component import HistoryListComponent
     from src.plugins.base_plugin import Plugin
 

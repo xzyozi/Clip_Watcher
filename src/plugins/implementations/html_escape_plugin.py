@@ -1,6 +1,6 @@
 import html
 
-from .base_plugin import Plugin
+from src.plugins.base_plugin import Plugin
 
 
 class HTMLEscapePlugin(Plugin):

@@ -6,7 +6,7 @@ from .base_event_handler import BaseEventHandler
 
 if TYPE_CHECKING:
     from src.core.config.settings_manager import SettingsManager
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.events.event_dispatcher import EventDispatcher
 
 
 class SettingsEventHandlers(BaseEventHandler):

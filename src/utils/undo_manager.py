@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.core.event_dispatcher import EventDispatcher
+from src.core.events.event_dispatcher import EventDispatcher
 
 
 class UndoableCommand(ABC):

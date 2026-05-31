@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from .base_event_handler import BaseEventHandler
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.bootstrap.base_application import BaseApplication
+    from src.core.events.event_dispatcher import EventDispatcher
 
 
 class FileEventHandlers(BaseEventHandler):

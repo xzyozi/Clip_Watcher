@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from src.gui.base.base_toplevel_gui import BaseToplevelGUI
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
     from src.core.config.settings_manager import SettingsManager
     from src.plugins.base_plugin import Plugin
 

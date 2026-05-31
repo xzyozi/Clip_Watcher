@@ -1,7 +1,7 @@
 import csv
 import io
 
-from .base_plugin import Plugin
+from src.plugins.base_plugin import Plugin
 
 
 class TableFormatterPlugin(Plugin):

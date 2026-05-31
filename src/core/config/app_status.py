@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.core.dependency_checker import DependencyStatus
+from src.core.bootstrap.dependency_checker import DependencyStatus
 
 
 @dataclass

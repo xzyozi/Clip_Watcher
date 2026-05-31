@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from src.core.config.defaults import THEMES
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
 
 class BaseToplevelGUI(tk.Toplevel):

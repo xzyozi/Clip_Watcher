@@ -4,23 +4,23 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from src.core.bootstrap.dependency_checker import DependencyChecker
+from src.core.bootstrap.exceptions import ConfigError
+from src.core.clipboard.clipboard_monitor import ClipboardMonitor
+from src.core.config.app_status import AppStatus
+from src.core.config.settings_manager import SettingsManager
+from src.core.events.event_dispatcher import EventDispatcher
 from src.gui.theme_manager import ThemeManager
+from src.plugins.manager import PluginManager
+from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
-
-from .clipboard_monitor import ClipboardMonitor
-from .config.app_status import AppStatus
-from .config.settings_manager import SettingsManager
-from .dependency_checker import DependencyChecker
-from .event_dispatcher import EventDispatcher
-from .exceptions import ConfigError
-from .fixed_phrases_manager import FixedPhrasesManager
-from .plugin_manager import PluginManager
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
     from src.core.history_service import HistoryService
     from src.db.database_manager import DatabaseManager
+    from src.services.history_service import HistoryService
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class ApplicationBuilder:
         if not self.event_dispatcher or not self.db_manager:
             raise ConfigError("イベントディスパッチャまたはデータベースマネージャーが初期化されていません")
         try:
-            from src.core.history_service import HistoryService
+            from src.services.history_service import HistoryService
             # デフォルト設定から履歴数上限を取得（後でSETTINGS_CHANGEDでも同期されます）
             limit = 50
             if self.settings_manager:
