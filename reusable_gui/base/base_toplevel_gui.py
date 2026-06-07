@@ -4,12 +4,12 @@ import tkinter as tk
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
 
 
 class BaseToplevelGUI(tk.Toplevel):
     def __init__(
-        self, master: tk.Misc, app_instance: GUIContextProto, **kwargs: Any
+        self, master: tk.Misc, app_instance: BaseApplication, **kwargs: Any
     ) -> None:
         super().__init__(master, **kwargs)
         self.master = master

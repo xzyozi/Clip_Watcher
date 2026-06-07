@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
 
 
 class BaseFrameGUI(tk.Frame):
     def __init__(
-        self, master: tk.Misc, app_instance: GUIContextProto, **kwargs: Any
+        self, master: tk.Misc, app_instance: BaseApplication, **kwargs: Any
     ) -> None:
         super().__init__(master, **kwargs)
         self.master = master

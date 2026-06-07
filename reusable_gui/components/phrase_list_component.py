@@ -10,14 +10,14 @@ from reusable_gui.base.base_frame_gui import BaseFrameGUI
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
     from reusable_gui.base.context_menu import PhraseListContextMenu
 
 
 class PhraseListComponent(BaseFrameGUI):
     """定型文リスト表示コンポーネント (汎用版)"""
 
-    def __init__(self, master: tk.Misc, app_instance: GUIContextProto) -> None:
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
         

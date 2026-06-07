@@ -1,0 +1,53 @@
+from abc import ABC, abstractmethod
+from typing import Any
+
+
+class BaseSettingsManager(ABC):
+    """Abstract Settings Manager for configuring the application."""
+
+    @property
+    @abstractmethod
+    def settings(self) -> dict[str, Any]:
+        """Gets settings dictionary."""
+        pass
+
+    @settings.setter
+    @abstractmethod
+    def settings(self, val: dict[str, Any]) -> None:
+        """Sets settings dictionary."""
+        pass
+
+    @abstractmethod
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        """Gets specific setting value by key."""
+        pass
+
+    @abstractmethod
+    def set_setting(self, key: str, value: Any) -> None:
+        """Sets specific setting value by key."""
+        pass
+
+    @abstractmethod
+    def save_settings(self) -> None:
+        """Saves settings to the default storage."""
+        pass
+
+    @abstractmethod
+    def load_settings_from_file(self, filepath: str) -> bool:
+        """Loads settings from a specified JSON file."""
+        pass
+
+    @abstractmethod
+    def save_settings_to_file(self, filepath: str) -> None:
+        """Saves settings to a specified JSON file."""
+        pass
+
+    @abstractmethod
+    def notify_listeners(self) -> None:
+        """Notifies event listeners about the settings change."""
+        pass
+
+    @abstractmethod
+    def _get_default_settings(self) -> dict[str, Any]:
+        """Gets the default dictionary of settings."""
+        pass

@@ -4,12 +4,12 @@ import tkinter as tk
 from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
     from reusable_gui.base.context_menu import HistoryContextMenu, MenuState
 
 
 class HistoryListComponent(tk.Frame):
-    def __init__(self, master: tk.Misc, app_instance: GUIContextProto) -> None:
+    def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master)
         self.app = app_instance
         self.displayed_history: list[tuple[str, bool, float]] = []  # Will store the full (content, is_pinned, timestamp) tuples

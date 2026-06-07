@@ -10,15 +10,16 @@ from reusable_gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto, SettingsManagerProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
+    from reusable_gui.core.config.settings_manager import BaseSettingsManager
 
 
 class SettingsWindow(BaseToplevelGUI):
     def __init__(
         self,
         master: tk.Misc,
-        app_instance: GUIContextProto,
-        settings_manager: SettingsManagerProto,
+        app_instance: BaseApplication,
+        settings_manager: BaseSettingsManager,
     ) -> None:
         super().__init__(master, app_instance)
         self.title("Settings")

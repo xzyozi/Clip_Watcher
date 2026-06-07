@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, NamedTuple, Callable
 
 if TYPE_CHECKING:
-    from reusable_gui.interfaces import GUIContextProto, EventDispatcherProto, TranslatorProto
+    from reusable_gui.core.bootstrap.base_application import BaseApplication
+    from reusable_gui.core.events.event_dispatcher import EventDispatcher
 
 
 # --- State Management ---
@@ -24,7 +25,7 @@ class MenuState(NamedTuple):
 
 class BaseContextMenu(ABC):
     """Base class for context menus."""
-    def __init__(self, master: tk.Misc, translator: TranslatorProto, dispatcher: EventDispatcherProto | None = None) -> None:
+    def __init__(self, master: tk.Misc, translator: Callable[..., str], dispatcher: EventDispatcher | None = None) -> None:
         self.master = master
         self.menu = tk.Menu(master, tearoff=0)
         self.translator = translator
@@ -58,7 +59,7 @@ class HistoryContextMenu(BaseContextMenu):
     def __init__(
         self,
         master: tk.Misc,
-        app_instance: GUIContextProto,
+        app_instance: BaseApplication,
         listbox: tk.Listbox,
         get_state_cb: Callable[[], MenuState],
         action_cb: Callable[[str, Any], None]
@@ -139,7 +140,7 @@ class PhraseListContextMenu(BaseContextMenu):
     def __init__(
         self,
         master: tk.Misc,
-        app: GUIContextProto,
+        app: BaseApplication,
         listbox: tk.Listbox,
         copy_cb: Callable[[], None],
         add_cb: Callable[[], None],
