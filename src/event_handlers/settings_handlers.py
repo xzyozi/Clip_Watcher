@@ -1,15 +1,30 @@
-from src.event_dispatcher import EventDispatcher
+from __future__ import annotations
 
-class SettingsEventHandlers:
-    def __init__(self, event_dispatcher: EventDispatcher):
-        self.event_dispatcher = event_dispatcher
+from typing import TYPE_CHECKING
 
-        # Subscribe to events
-        self.event_dispatcher.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_always_on_top)
-        self.event_dispatcher.subscribe("SETTINGS_SET_THEME", self.handle_set_theme)
+from .base_event_handler import BaseEventHandler
 
-    def handle_always_on_top(self, always_on_top):
-        self.event_dispatcher.dispatch("REQUEST_ALWAYS_ON_TOP", always_on_top)
+if TYPE_CHECKING:
+    from src.core.config.settings_manager import SettingsManager
+    from src.core.events.event_dispatcher import EventDispatcher
 
-    def handle_set_theme(self, theme_name):
-        self.event_dispatcher.dispatch("REQUEST_SET_THEME", theme_name)
+
+class SettingsEventHandlers(BaseEventHandler):
+    def __init__(self, event_dispatcher: EventDispatcher, settings_manager: SettingsManager) -> None:
+        self.settings_manager = settings_manager
+        super().__init__(event_dispatcher)
+
+    def _register_handlers(self) -> None:
+        self.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
+        self.subscribe("SETTINGS_SET_THEME", self.handle_set_theme) # Added this missing subscription
+
+    def handle_set_always_on_top(self, value: bool) -> None:
+        self.settings_manager.set_setting("always_on_top", value)
+        self.settings_manager.save_settings()
+
+    def handle_set_theme(self, theme_name: str, save: bool = True) -> None:
+        self.settings_manager.set_setting("theme", theme_name)
+        if save:
+            self.settings_manager.save_settings()
+        else:
+            self.settings_manager.notify_listeners()

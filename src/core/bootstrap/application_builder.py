@@ -1,0 +1,193 @@
+from __future__ import annotations
+
+import logging
+import tkinter as tk
+from typing import TYPE_CHECKING
+
+from src.core.bootstrap.dependency_checker import DependencyChecker
+from src.core.bootstrap.exceptions import ConfigError
+from src.core.clipboard.clipboard_monitor import ClipboardMonitor
+from src.core.config.app_status import AppStatus
+from src.core.config.settings_manager import SettingsManager
+from src.core.events.event_dispatcher import EventDispatcher
+from src.gui.theme_manager import ThemeManager
+from src.plugins.manager import PluginManager
+from src.services.fixed_phrases_manager import FixedPhrasesManager
+from src.utils.error_handler import log_and_show_error
+from src.utils.i18n import Translator
+
+if TYPE_CHECKING:
+    from src.core.app_main import MainApplication
+    from src.db.database_manager import DatabaseManager
+    from src.services.history_service import HistoryService
+
+logger = logging.getLogger(__name__)
+
+class ApplicationBuilder:
+    """アプリケーションの構築を担当するクラス"""
+
+    def __init__(self) -> None:
+        self.settings_manager: SettingsManager | None = None
+        self.db_manager: DatabaseManager | None = None
+        self.history_service: HistoryService | None = None
+        self.monitor: ClipboardMonitor | None = None
+        self.fixed_phrases_manager: FixedPhrasesManager | None = None
+        self.plugin_manager: PluginManager | None = None
+        self.event_dispatcher: EventDispatcher | None = None
+        self.theme_manager: ThemeManager | None = None
+
+        self.translator: Translator | None = None
+        self.app_status: AppStatus | None = None
+
+    def with_event_dispatcher(self) -> ApplicationBuilder:
+        """イベントディスパッチャの初期化"""
+        try:
+            self.event_dispatcher = EventDispatcher()
+            logger.info("イベントディスパッチャを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"イベントディスパッチャの初期化に失敗: {str(e)}")
+            raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}") from e
+
+    def with_database(self, db_path: str) -> ApplicationBuilder:
+        """データベースマネージャーの初期化"""
+        try:
+            from src.db.database_manager import DatabaseManager
+            self.db_manager = DatabaseManager(db_path)
+            logger.info("データベースマネージャーを初期化しました: %s", db_path)
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"データベースの初期化に失敗: {str(e)}")
+            raise ConfigError(f"データベースの初期化に失敗しました: {str(e)}") from e
+
+    def with_dependency_check(self) -> ApplicationBuilder:
+        """依存関係のチェック"""
+        try:
+            dependency_status = DependencyChecker.check_dependencies()
+            self.app_status = AppStatus(dependencies=dependency_status)
+            logger.info("依存関係のチェックが完了しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"依存関係のチェック中にエラーが発生: {str(e)}")
+            raise ConfigError(f"依存関係のチェックに失敗しました: {str(e)}") from e
+
+    def with_settings(self, settings_file_path: str = "settings.json") -> ApplicationBuilder:
+        """設定マネージャーの初期化"""
+        if not self.event_dispatcher:
+            raise ConfigError("イベントディスパッチャが初期化されていません")
+        try:
+            self.settings_manager = SettingsManager(self.event_dispatcher, settings_file_path)
+            logger.info("設定マネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"設定マネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}") from e
+
+    def with_translator(self) -> ApplicationBuilder:
+        """翻訳サービスの初期化"""
+        if not self.settings_manager:
+            raise ConfigError("設定マネージャーが初期化されていません")
+        try:
+            self.translator = Translator(self.settings_manager)
+            logger.info("翻訳サービスを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"翻訳サービスの初期化に失敗: {str(e)}")
+            raise ConfigError(f"翻訳サービスの初期化に失敗しました: {str(e)}") from e
+
+    def with_theme_manager(self, root: tk.Tk) -> ApplicationBuilder:
+        """テーママネージャーの初期化"""
+        try:
+            self.theme_manager = ThemeManager(root)
+            logger.info("テーママネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}") from e
+
+    def with_history_service(self) -> ApplicationBuilder:
+        """履歴サービスの初期化"""
+        if not self.event_dispatcher or not self.db_manager:
+            raise ConfigError("イベントディスパッチャまたはデータベースマネージャーが初期化されていません")
+        try:
+            from src.services.history_service import HistoryService
+            # デフォルト設定から履歴数上限を取得（後でSETTINGS_CHANGEDでも同期されます）
+            limit = 50
+            if self.settings_manager:
+                limit = self.settings_manager.get_setting("history_limit", 50)
+            self.history_service = HistoryService(self.db_manager, self.event_dispatcher, history_limit=limit)
+            logger.info("履歴サービスを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"履歴サービスの初期化に失敗: {str(e)}")
+            raise ConfigError(f"履歴サービスの初期化に失敗しました: {str(e)}") from e
+
+    def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> ApplicationBuilder:
+        """クリップボードモニターの初期化"""
+        if not self.event_dispatcher or not self.app_status or not self.db_manager or not self.history_service:
+            raise ConfigError("イベントディスパッチャ、アプリケーションステータス、データベースマネージャー、または履歴サービスが初期化されていません")
+
+        try:
+            win32_available = self.app_status.dependencies.win32_available
+            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path, win32_available, self.db_manager, self.history_service)
+            logger.info("クリップボードモニターを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"クリップボードモニターの初期化に失敗: {str(e)}")
+            raise ConfigError(f"クリップボードモニターの初期化に失敗しました: {str(e)}") from e
+
+    def with_fixed_phrases_manager(self, file_path: str = "fixed_phrases.json") -> ApplicationBuilder:
+        """定型文マネージャーの初期化"""
+        try:
+            self.fixed_phrases_manager = FixedPhrasesManager(file_path)
+            logger.info("定型文マネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"定型文マネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"定型文マネージャーの初期化に失敗しました: {str(e)}") from e
+
+    def with_plugin_manager(self) -> ApplicationBuilder:
+        """プラグインマネージャーの初期化"""
+        try:
+            self.plugin_manager = PluginManager()
+            logger.info("プラグインマネージャーを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"プラグインマネージャーの初期化に失敗: {str(e)}")
+            raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}") from e
+
+
+
+    def build(self, master: tk.Tk) -> MainApplication:
+        """アプリケーションのビルド"""
+        if not all([self.settings_manager, self.db_manager, self.history_service, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
+            raise ConfigError("必要なコンポーネントが初期化されていません")
+
+        try:
+            from src.core.app_main import MainApplication
+            app = MainApplication(
+                master=master,
+                settings_manager=self.settings_manager, # type: ignore
+                db_manager=self.db_manager, # type: ignore
+                history_service=self.history_service, # type: ignore
+                monitor=self.monitor, # type: ignore
+                fixed_phrases_manager=self.fixed_phrases_manager, # type: ignore
+                plugin_manager=self.plugin_manager, # type: ignore
+                event_dispatcher=self.event_dispatcher, # type: ignore
+                theme_manager=self.theme_manager, # type: ignore
+
+                translator=self.translator, # type: ignore
+                app_status=self.app_status # type: ignore
+            )
+            logger.info("アプリケーションのビルドが完了しました")
+
+            # Load settings and notify all components
+            self.settings_manager.load_and_notify() # type: ignore
+
+            # Signal that the application is ready
+            app.on_ready()
+
+            return app
+        except Exception as e:
+            log_and_show_error(title="エラー", message=f"アプリケーションのビルドに失敗: {str(e)}")
+            raise ConfigError(f"アプリケーションの構築に失敗しました: {str(e)}") from e
