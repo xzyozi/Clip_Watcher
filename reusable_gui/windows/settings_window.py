@@ -6,11 +6,11 @@ from tkinter import filedialog, font, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING
 
 from src.core.config import defaults as config
-from src.gui.base.base_toplevel_gui import BaseToplevelGUI
+from reusable_gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
+    from src.core.bootstrap.base_application import BaseApplication
 
     from src.core.config.settings_manager import SettingsManager
     from src.plugins.base_plugin import Plugin

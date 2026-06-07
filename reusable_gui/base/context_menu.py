@@ -5,12 +5,12 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
-    from src.core.base_application import BaseApplication
-    from src.core.event_dispatcher import EventDispatcher
+    from src.core.bootstrap.base_application import BaseApplication
+    from src.core.events.event_dispatcher import EventDispatcher
 
-    from src.gui.components.history_list_component import HistoryListComponent
+    from reusable_gui.components.history_list_component import HistoryListComponent
     from src.gui.components.phrase_edit_component import PhraseEditComponent
-    from src.gui.components.phrase_list_component import PhraseListComponent
+    from reusable_gui.components.phrase_list_component import PhraseListComponent
     from src.utils.i18n import Translator
 
 
