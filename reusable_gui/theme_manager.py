@@ -1,6 +1,9 @@
+import logging
 import tkinter as tk
 from tkinter import Tk, Toplevel, ttk
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_THEMES = {
     "light": {
@@ -48,7 +51,7 @@ class ThemeManager:
 
     def apply_theme(self, theme_name: str) -> None:
         if theme_name not in self.themes:
-            print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
+            logger.warning(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
         self.current_theme = theme_name
         theme = self.themes[theme_name]

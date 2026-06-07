@@ -1,27 +1,31 @@
 from __future__ import annotations
 
 import copy
+import logging
 import tkinter as tk
 from tkinter import filedialog, font, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING, Any
 
-from src.core.config import defaults as config
-from reusable_gui.base.base_toplevel_gui import BaseToplevelGUI
-from src.utils.error_handler import log_and_show_error
+from reusable_gui.core.config import defaults as config
 
 if TYPE_CHECKING:
     from reusable_gui.core.bootstrap.base_application import BaseApplication
     from reusable_gui.core.config.settings_manager import BaseSettingsManager
 
+logger = logging.getLogger(__name__)
 
-class SettingsWindow(BaseToplevelGUI):
+
+class SettingsWindow(tk.Toplevel):
     def __init__(
         self,
         master: tk.Misc,
         app_instance: BaseApplication,
         settings_manager: BaseSettingsManager,
     ) -> None:
-        super().__init__(master, app_instance)
+        super().__init__(master)
+        self.app = app_instance
+        if hasattr(app_instance, "theme_manager") and hasattr(app_instance.theme_manager, "apply_theme_to_toplevel"):
+            app_instance.theme_manager.apply_theme_to_toplevel(self)  # type: ignore
         self.title("Settings")
         self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
         self.settings_manager = settings_manager
@@ -381,7 +385,8 @@ class SettingsWindow(BaseToplevelGUI):
                 messagebox.showinfo("Import Successful", "Settings imported successfully.")
                 return True
             else:
-                log_and_show_error("Import Failed", "Could not load settings from the selected file.")
+                logger.error("Could not load settings from the selected file.")
+                messagebox.showerror("Import Failed", "Could not load settings from the selected file.")
         return False
 
     def _restore_defaults(self) -> None:

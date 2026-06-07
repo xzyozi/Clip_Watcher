@@ -1,8 +1,11 @@
 """Application interface for type hints (generalized version)"""
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+import logging
 from enum import Enum, auto
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from reusable_gui.core.events.event_dispatcher import EventDispatcher
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
@@ -52,7 +55,7 @@ class BaseApplication(ABC):
                 try:
                     listener(new_state)
                 except Exception as e:
-                    print(f"Error in state listener for state {new_state}: {e}")
+                    logger.error(f"Error in state listener for state {new_state}: {e}", exc_info=True)
 
     @property
     @abstractmethod
