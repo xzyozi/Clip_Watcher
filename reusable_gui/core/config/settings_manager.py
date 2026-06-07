@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from reusable_gui.core.config.schema import SettingField
+
 
 class BaseSettingsManager(ABC):
     """Abstract Settings Manager for configuring the application."""
@@ -50,4 +52,13 @@ class BaseSettingsManager(ABC):
     @abstractmethod
     def _get_default_settings(self) -> dict[str, Any]:
         """Gets the default dictionary of settings."""
+        pass
+
+    @abstractmethod
+    def get_settings_schema(self) -> list[SettingField]:
+        """設定画面に表示する全項目のスキーマを返す。
+
+        SettingsWindow はこの戻り値のみを使って UI を動的生成する。
+        タブ・グループ・ウィジェット種別・初期値などを SettingField で定義すること。
+        """
         pass
