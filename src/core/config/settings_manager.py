@@ -3,6 +3,7 @@ import os
 from typing import Any, cast
 
 from src.core.events.event_dispatcher import EventDispatcher
+from reusable_gui.core.config.schema import SettingField, WidgetType
 
 from . import defaults
 
@@ -63,3 +64,119 @@ class SettingsManager:
                 except (json.JSONDecodeError, TypeError):
                     return False
         return False
+
+    def get_settings_schema(self) -> list[SettingField]:
+        """Clip Watcher の設定項目スキーマを返す。
+
+        タブ・グループ・ウィジェット種別を定義することで
+        SettingsWindow がUIを動的に生成する。
+        """
+        d = defaults
+
+        return [
+            # ── General / Appearance ───────────────────────────────────
+            SettingField(
+                key="theme", label="Theme",
+                widget_type=WidgetType.OPTION_MENU,
+                tab="General", group="Appearance",
+                default="light", choices=["light", "dark"],
+            ),
+            SettingField(
+                key="language", label="Language",
+                widget_type=WidgetType.OPTION_MENU,
+                tab="General", group="Appearance",
+                default="en", choices=["en", "ja"],
+            ),
+
+            # ── General / Window Behavior ──────────────────────────────
+            SettingField(
+                key="always_on_top", label="Always on Top",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="General", group="Window Behavior",
+                default=False,
+            ),
+
+            # ── General / Startup ──────────────────────────────────────
+            SettingField(
+                key="startup_on_boot", label="Start with Windows",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="General", group="Startup",
+                default=False,
+            ),
+
+            # ── History ───────────────────────────────────────────────
+            SettingField(
+                key="history_limit", label="History Limit",
+                widget_type=WidgetType.SPINBOX,
+                tab="History", group="History Options",
+                default=50,
+                min_value=d.HISTORY_LIMIT_MIN,
+                max_value=d.HISTORY_LIMIT_MAX,
+                increment=d.HISTORY_LIMIT_INCREMENT,
+                width=10,
+            ),
+
+            # ── Notifications / Behavior ───────────────────────────────
+            SettingField(
+                key="notifications_enabled", label="Enable Notifications",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="Notifications", group="Notification Behavior",
+                default=True,
+            ),
+            SettingField(
+                key="notification_show_app_name", label="Show App Name in Notification",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="Notifications", group="Notification Behavior",
+                default=True,
+            ),
+            SettingField(
+                key="notification_sound_enabled", label="Enable Notification Sound",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="Notifications", group="Notification Behavior",
+                default=False,
+            ),
+
+            # ── Notifications / Content ────────────────────────────────
+            SettingField(
+                key="notification_content_length", label="Notification Content Length",
+                widget_type=WidgetType.SPINBOX,
+                tab="Notifications", group="Notification Content",
+                default=50, min_value=10, max_value=200, increment=10, width=10,
+            ),
+
+            # ── Font / Clipboard Content ───────────────────────────────
+            SettingField(
+                key="clipboard_content_font_family", label="Clipboard Content Font",
+                widget_type=WidgetType.FONT_PICKER,
+                tab="Font", group="Clipboard Content Font",
+                default="TkDefaultFont",
+            ),
+            SettingField(
+                key="clipboard_content_font_size", label="Size",
+                widget_type=WidgetType.SPINBOX,
+                tab="Font", group="Clipboard Content Font",
+                default=10, min_value=8, max_value=24, increment=1, width=5,
+            ),
+
+            # ── Font / History ─────────────────────────────────────────
+            SettingField(
+                key="history_font_family", label="History Font",
+                widget_type=WidgetType.FONT_PICKER,
+                tab="Font", group="History Font",
+                default="TkDefaultFont",
+            ),
+            SettingField(
+                key="history_font_size", label="Size",
+                widget_type=WidgetType.SPINBOX,
+                tab="Font", group="History Font",
+                default=10, min_value=8, max_value=24, increment=1, width=5,
+            ),
+
+            # ── Excluded Apps ──────────────────────────────────────────
+            SettingField(
+                key="excluded_apps", label="Excluded Applications",
+                widget_type=WidgetType.LISTBOX_EDIT,
+                tab="Excluded Apps", group="",
+                default=[],
+            ),
+        ]

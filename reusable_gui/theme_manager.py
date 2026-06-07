@@ -1,25 +1,60 @@
+import logging
 import tkinter as tk
 from tkinter import Tk, Toplevel, ttk
 from typing import Any
 
-from src.core.config.defaults import THEMES
+logger = logging.getLogger(__name__)
+
+DEFAULT_THEMES = {
+    "light": {
+        "bg": "#f0f0f0",
+        "fg": "#000000",
+        "frame_bg": "#f0f0f0",
+        "label_fg": "#000000",
+        "button_bg": "#e1e1e1",
+        "button_fg": "#000000",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "listbox_bg": "#ffffff",
+        "listbox_fg": "#000000",
+        "select_bg": "#0078d7",
+        "select_fg": "#ffffff",
+        "pinned_bg": "#ffeb3b",
+    },
+    "dark": {
+        "bg": "#2d2d2d",
+        "fg": "#ffffff",
+        "frame_bg": "#2d2d2d",
+        "label_fg": "#ffffff",
+        "button_bg": "#3d3d3d",
+        "button_fg": "#ffffff",
+        "entry_bg": "#1e1e1e",
+        "entry_fg": "#ffffff",
+        "listbox_bg": "#1e1e1e",
+        "listbox_fg": "#ffffff",
+        "select_bg": "#0f5b9e",
+        "select_fg": "#ffffff",
+        "pinned_bg": "#5c5c00",
+    }
+}
 
 
 class ThemeManager:
-    def __init__(self, root: Tk) -> None:
+    def __init__(self, root: Tk, themes: dict[str, dict[str, str]] | None = None) -> None:
         self.root = root
         self.current_theme = "light"
         self.menubar: tk.Menu | None = None
+        self.themes = themes or DEFAULT_THEMES
 
     def set_menubar(self, menubar: tk.Menu) -> None:
         self.menubar = menubar
 
     def apply_theme(self, theme_name: str) -> None:
-        if theme_name not in THEMES:
-            print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
+        if theme_name not in self.themes:
+            logger.warning(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
         self.current_theme = theme_name
-        theme = THEMES[theme_name]
+        theme = self.themes[theme_name]
 
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
@@ -65,15 +100,21 @@ class ThemeManager:
             self._apply_theme_to_menu(self.menubar, theme)
 
     def _apply_theme_to_menu(self, menu: tk.Menu, theme: dict[str, str]) -> None:
+        menu_config: dict[str, Any] = {
+            "relief": tk.FLAT,
+            "borderwidth": 0
+        }
+        if "menu_bg" in theme:
+            menu_config["background"] = theme["menu_bg"]
+        if "menu_fg" in theme:
+            menu_config["foreground"] = theme["menu_fg"]
+        if "active_menu_bg" in theme:
+            menu_config["activebackground"] = theme["active_menu_bg"]
+        if "active_menu_fg" in theme:
+            menu_config["activeforeground"] = theme["active_menu_fg"]
+
         try:
-            menu.config(  # type: ignore
-                background=theme.get("menu_bg"),
-                foreground=theme.get("menu_fg"),
-                activebackground=theme.get("active_menu_bg"),
-                activeforeground=theme.get("active_menu_fg"),
-                relief=tk.FLAT,
-                borderwidth=0
-            )
+            menu.config(**menu_config)
         except tk.TclError:
             pass # May fail on some systems
 
@@ -111,7 +152,7 @@ class ThemeManager:
 
     def apply_theme_to_toplevel(self, toplevel_window: Toplevel) -> None:
         """Applies the current theme to a Toplevel window and its children."""
-        theme = THEMES[self.current_theme]
+        theme = self.themes[self.current_theme]
         self.apply_theme_to_widget_tree(toplevel_window, theme)
 
     def get_current_theme(self) -> str:
