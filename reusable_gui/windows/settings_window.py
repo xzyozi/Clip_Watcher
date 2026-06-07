@@ -3,25 +3,22 @@ from __future__ import annotations
 import copy
 import tkinter as tk
 from tkinter import filedialog, font, messagebox, simpledialog, ttk
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.core.config import defaults as config
 from reusable_gui.base.base_toplevel_gui import BaseToplevelGUI
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
-    from src.core.bootstrap.base_application import BaseApplication
-
-    from src.core.config.settings_manager import SettingsManager
-    from src.plugins.base_plugin import Plugin
+    from reusable_gui.interfaces import GUIContextProto, SettingsManagerProto
 
 
 class SettingsWindow(BaseToplevelGUI):
     def __init__(
         self,
         master: tk.Misc,
-        app_instance: BaseApplication,
-        settings_manager: SettingsManager,
+        app_instance: GUIContextProto,
+        settings_manager: SettingsManagerProto,
     ) -> None:
         super().__init__(master, app_instance)
         self.title("Settings")
@@ -73,7 +70,7 @@ class SettingsWindow(BaseToplevelGUI):
         )
 
         self.tool_tab_vars: dict[str, tk.BooleanVar] = {}
-        gui_plugins: list[Plugin] = self.app_instance.plugin_manager.get_gui_plugins() # type: ignore
+        gui_plugins: list[Any] = self.app_instance.plugin_manager.get_gui_plugins() # type: ignore
         for plugin in gui_plugins:
             tool_name = plugin.name
             setting_name = f"show_{tool_name.lower().replace(' ', '_')}_tab"

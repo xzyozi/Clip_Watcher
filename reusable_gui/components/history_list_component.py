@@ -1,24 +1,33 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Any
 
 if TYPE_CHECKING:
-    from src.core.bootstrap.base_application import BaseApplication
-
-    from reusable_gui.base.context_menu import HistoryContextMenu
+    from reusable_gui.interfaces import GUIContextProto
+    from reusable_gui.base.context_menu import HistoryContextMenu, MenuState
 
 
 class HistoryListComponent(tk.Frame):
-    def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
+    def __init__(self, master: tk.Misc, app_instance: GUIContextProto) -> None:
         super().__init__(master)
         self.app = app_instance
         self.displayed_history: list[tuple[str, bool, float]] = []  # Will store the full (content, is_pinned, timestamp) tuples
         self.current_theme: dict[str, str] = {}
         self._updating_history: bool = False
 
+        # Decoupled callbacks
+        from reusable_gui.base.context_menu import MenuState
+        self.get_menu_state_cb: Callable[[], MenuState] = lambda: MenuState(False, (), [], None, False, False)
+        self.menu_action_cb: Callable[[str, Any], None] = lambda cmd, val: None
+
         self._create_widgets()
         self._bind_events()
+
+    def set_callbacks(self, get_state: Callable[[], MenuState], action: Callable[[str, Any], None]) -> None:
+        """Sets callbacks for menu state retrieval and action execution."""
+        self.get_menu_state_cb = get_state
+        self.menu_action_cb = action
 
     def _create_widgets(self) -> None:
         self.listbox = tk.Listbox(self, height=10, selectmode=tk.EXTENDED, exportselection=False)
@@ -32,7 +41,13 @@ class HistoryListComponent(tk.Frame):
         self.listbox.bind("<<ListboxSelect>>", self._on_history_select)
         self.listbox.bind("<Double-Button-1>", self._on_double_click)
         from reusable_gui.base import context_menu
-        history_context_menu: HistoryContextMenu = context_menu.HistoryContextMenu(self.master, self.app) # type: ignore
+        history_context_menu: HistoryContextMenu = context_menu.HistoryContextMenu(
+            self.master,
+            self.app,
+            self.listbox,
+            get_state_cb=lambda: self.get_menu_state_cb(),
+            action_cb=lambda cmd, val: self.menu_action_cb(cmd, val)
+        )
         self.listbox.bind("<Button-3>", history_context_menu.show)
 
     def _on_double_click(self, event: tk.Event) -> None:
@@ -44,16 +59,13 @@ class HistoryListComponent(tk.Frame):
         # On double-click, we typically act on the first selected item.
         item_ids: list[float] = self.get_ids_for_indices(selected_indices[:1])
         if item_ids:
-            # The event now passes a list of IDs, even if it's just one.
-            self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", item_ids) # type: ignore
+            self.menu_action_cb("copy", item_ids)
 
     def _on_history_select(self, event: tk.Event) -> None:
         if self._updating_history:
             return
-        # This event is now handled by the parent (main_gui) to update the text widget
-        self.app.event_dispatcher.dispatch("HISTORY_SELECTION_CHANGED", { # type: ignore
-            "selected_indices": self.listbox.curselection()
-        })
+        # Generate virtual event for parent/controller to handle selection
+        self.event_generate("<<HistorySelectionChanged>>")
 
     def get_ids_for_indices(self, indices: tuple[int, ...]) -> list[float]:
         """Translates listbox indices to unique history item IDs."""

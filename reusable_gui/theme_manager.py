@@ -2,24 +2,56 @@ import tkinter as tk
 from tkinter import Tk, Toplevel, ttk
 from typing import Any
 
-from src.core.config.defaults import THEMES
+DEFAULT_THEMES = {
+    "light": {
+        "bg": "#f0f0f0",
+        "fg": "#000000",
+        "frame_bg": "#f0f0f0",
+        "label_fg": "#000000",
+        "button_bg": "#e1e1e1",
+        "button_fg": "#000000",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "listbox_bg": "#ffffff",
+        "listbox_fg": "#000000",
+        "select_bg": "#0078d7",
+        "select_fg": "#ffffff",
+        "pinned_bg": "#ffeb3b",
+    },
+    "dark": {
+        "bg": "#2d2d2d",
+        "fg": "#ffffff",
+        "frame_bg": "#2d2d2d",
+        "label_fg": "#ffffff",
+        "button_bg": "#3d3d3d",
+        "button_fg": "#ffffff",
+        "entry_bg": "#1e1e1e",
+        "entry_fg": "#ffffff",
+        "listbox_bg": "#1e1e1e",
+        "listbox_fg": "#ffffff",
+        "select_bg": "#0f5b9e",
+        "select_fg": "#ffffff",
+        "pinned_bg": "#5c5c00",
+    }
+}
 
 
 class ThemeManager:
-    def __init__(self, root: Tk) -> None:
+    def __init__(self, root: Tk, themes: dict[str, dict[str, str]] | None = None) -> None:
         self.root = root
         self.current_theme = "light"
         self.menubar: tk.Menu | None = None
+        self.themes = themes or DEFAULT_THEMES
 
     def set_menubar(self, menubar: tk.Menu) -> None:
         self.menubar = menubar
 
     def apply_theme(self, theme_name: str) -> None:
-        if theme_name not in THEMES:
+        if theme_name not in self.themes:
             print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
         self.current_theme = theme_name
-        theme = THEMES[theme_name]
+        theme = self.themes[theme_name]
 
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
@@ -111,7 +143,7 @@ class ThemeManager:
 
     def apply_theme_to_toplevel(self, toplevel_window: Toplevel) -> None:
         """Applies the current theme to a Toplevel window and its children."""
-        theme = THEMES[self.current_theme]
+        theme = self.themes[self.current_theme]
         self.apply_theme_to_widget_tree(toplevel_window, theme)
 
     def get_current_theme(self) -> str:
