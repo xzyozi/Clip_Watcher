@@ -97,15 +97,21 @@ class ThemeManager:
             self._apply_theme_to_menu(self.menubar, theme)
 
     def _apply_theme_to_menu(self, menu: tk.Menu, theme: dict[str, str]) -> None:
+        menu_config: dict[str, Any] = {
+            "relief": tk.FLAT,
+            "borderwidth": 0
+        }
+        if "menu_bg" in theme:
+            menu_config["background"] = theme["menu_bg"]
+        if "menu_fg" in theme:
+            menu_config["foreground"] = theme["menu_fg"]
+        if "active_menu_bg" in theme:
+            menu_config["activebackground"] = theme["active_menu_bg"]
+        if "active_menu_fg" in theme:
+            menu_config["activeforeground"] = theme["active_menu_fg"]
+
         try:
-            menu.config(  # type: ignore
-                background=theme.get("menu_bg"),
-                foreground=theme.get("menu_fg"),
-                activebackground=theme.get("active_menu_bg"),
-                activeforeground=theme.get("active_menu_fg"),
-                relief=tk.FLAT,
-                borderwidth=0
-            )
+            menu.config(**menu_config)
         except tk.TclError:
             pass # May fail on some systems
 
