@@ -44,6 +44,105 @@ def test_event_dispatcher_unsubscribe(event_dispatcher: EventDispatcher) -> None
     assert call_count == 1
 
 
+def test_event_dispatcher_variadic_listeners(event_dispatcher: EventDispatcher) -> None:
+    """引数なし、複数位置引数、キーワード引数を伴うリスナーの正常呼び出しを検証します。"""
+    no_arg_called = False
+    multi_arg_result: tuple[int, str] | None = None
+    kw_arg_result: str | None = None
+
+    def no_arg_listener() -> None:
+        nonlocal no_arg_called
+        no_arg_called = True
+
+    def multi_arg_listener(a: int, b: str) -> None:
+        nonlocal multi_arg_result
+        multi_arg_result = (a, b)
+
+    def kw_arg_listener(*, name: str) -> None:
+        nonlocal kw_arg_result
+        kw_arg_result = name
+
+    event_dispatcher.subscribe("NO_ARG_EVENT", no_arg_listener)
+    event_dispatcher.dispatch("NO_ARG_EVENT")
+    assert no_arg_called is True
+
+    event_dispatcher.subscribe("MULTI_ARG_EVENT", multi_arg_listener)
+    event_dispatcher.dispatch("MULTI_ARG_EVENT", 42, "hello")
+    assert multi_arg_result == (42, "hello")
+
+    event_dispatcher.subscribe("KW_ARG_EVENT", kw_arg_listener)
+    event_dispatcher.dispatch("KW_ARG_EVENT", name="clip_watcher")
+    assert kw_arg_result == "clip_watcher"
+
+
+def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object(
+    event_dispatcher: EventDispatcher, monkeypatch: Any
+) -> None:
+    """functools.partialやcallableオブジェクトの例外発生時も安全にエラーログ出力が行われることを検証します。"""
+    import functools
+
+    logged_errors: list[str] = []
+
+    def mock_log_and_show_error(title: str, message: str, exc_info: bool = False) -> None:
+        logged_errors.append(message)
+
+    monkeypatch.setattr("src.core.events.event_dispatcher.log_and_show_error", mock_log_and_show_error)
+
+    # 1. functools.partial の例
+    def failing_target(arg: str) -> None:
+        raise ValueError("Partial target failure")
+
+    partial_listener = functools.partial(failing_target, "test")
+    event_dispatcher.subscribe("PARTIAL_FAIL_EVENT", partial_listener)
+    event_dispatcher.dispatch("PARTIAL_FAIL_EVENT")
+
+    assert len(logged_errors) == 1
+    assert "ValueError: Partial target failure" in logged_errors[0]
+
+    # 2. __name__ を持たない Callable クラスインスタンスの例
+    class CustomCallableListener:
+        def __call__(self) -> None:
+            raise RuntimeError("Callable object failure")
+
+    callable_listener = CustomCallableListener()
+    event_dispatcher.subscribe("CALLABLE_FAIL_EVENT", callable_listener)
+    event_dispatcher.dispatch("CALLABLE_FAIL_EVENT")
+
+    assert len(logged_errors) == 2
+    assert "RuntimeError: Callable object failure" in logged_errors[1]
+
+
+def test_event_dispatcher_event_contracts(event_dispatcher: EventDispatcher) -> None:
+    """SETTINGS_CHANGED, HISTORY_UPDATED, LANGUAGE_CHANGED などの主要イベント契約を検証します。"""
+    settings_received: dict[str, Any] = {}
+    history_received: list[dict[str, Any]] = []
+    lang_received: str = ""
+
+    def on_settings(payload: dict[str, Any]) -> None:
+        nonlocal settings_received
+        settings_received = payload
+
+    def on_history(items: list[dict[str, Any]]) -> None:
+        nonlocal history_received
+        history_received = items
+
+    def on_lang(lang: str) -> None:
+        nonlocal lang_received
+        lang_received = lang
+
+    event_dispatcher.subscribe("SETTINGS_CHANGED", on_settings)
+    event_dispatcher.subscribe("HISTORY_UPDATED", on_history)
+    event_dispatcher.subscribe("LANGUAGE_CHANGED", on_lang)
+
+    event_dispatcher.dispatch("SETTINGS_CHANGED", {"theme": "dark"})
+    event_dispatcher.dispatch("HISTORY_UPDATED", [{"id": 1, "content": "text"}])
+    event_dispatcher.dispatch("LANGUAGE_CHANGED", "ja")
+
+    assert settings_received == {"theme": "dark"}
+    assert history_received == [{"id": 1, "content": "text"}]
+    assert lang_received == "ja"
+
+
 # ==========================================
 # UndoManager Tests (3 Items)
 # ==========================================
