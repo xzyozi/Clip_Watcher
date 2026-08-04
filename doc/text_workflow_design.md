@@ -109,7 +109,28 @@ class WorkflowResult:
 ### 4.2 Classifier (`src/core/text_workflow/classifier.py`)
 - JSON 定義された分類ルール (`rules.json`) を評価。
 - `priority` 昇順・`rule_id` 昇順でマッチングを行い、最初にマッチしたカテゴリを割り当てる。
-- 正規表現マッチング (`regex`)、部分一致 (`contains`)、文字長制限 (`maxLength`, `minLength`) をサポート。
+- 正規表現マッチング (`regex`)、部分一致 (`contains` / `containsAny`)、文字長制限 (`minLength`, `maxLength`) をサポート。
+- 詳細なルール記述方法や逆引きレシピについては [HOWTO_TEXT_WORKFLOW_RULES.md](file:///c:/Users/xzyoi/Desktop/python/tool/Clip_Watcher/doc/HOWTO_TEXT_WORKFLOW_RULES.md) を参照。
+
+```json
+/* rules.json の例 */
+{
+  "rules": [
+    {
+      "id": "meeting-rule",
+      "priority": 10,
+      "categoryId": "meeting",
+      "templateId": "meeting-summary",
+      "when": {
+        "all": [
+          { "kind": "containsAny", "values": ["議事録", "MTGノート"] },
+          { "kind": "containsAny", "values": ["日時", "参加者", "決定事項"] }
+        ]
+      }
+    }
+  ]
+}
+```
 
 ### 4.3 TemplateRenderer (`src/core/text_workflow/template_renderer.py`)
 - Python の標準文字列置換または軽量安全テンプレエンジンを利用。
