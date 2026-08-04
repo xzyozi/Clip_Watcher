@@ -3,6 +3,8 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import logging
+import threading
+import time
 import tkinter as tk
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, cast
@@ -32,8 +34,7 @@ class ClipboardMonitor:
         self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
-        self._clipboard_check_job: str | None = None
-        self._auto_save_check_job: str | None = None
+        self.monitor_thread: threading.Thread | None = None
         self.history_file_path: str = history_file_path
         self.db_manager: DatabaseManager = db_manager
         self.history_service = history_service
@@ -113,18 +114,18 @@ class ClipboardMonitor:
         # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.history_service.add_history_item(text)
 
-    def _schedule_clipboard_check(self, delay_ms: int) -> None:
-        if self._running:
-            self._clipboard_check_job = self.tk_root.after(delay_ms, self._monitor_clipboard)
-
     def _monitor_clipboard(self) -> None:
-        """Checks the clipboard on the Tkinter main thread and schedules the next check."""
-        self._clipboard_check_job = None
-        if not self._running:
-            return
-
-        self._check_clipboard()
-        self._schedule_clipboard_check(500)
+        logging.info("クリップボード監視を開始します")
+        while self._running:
+            try:
+                self.tk_root.after(0, self._check_clipboard)
+                time.sleep(0.5)
+            except RuntimeError as e:
+                logging.warning(f"Tkinterランタイムエラー: {e}")
+                time.sleep(1)
+            except Exception:
+                logging.error("クリップボード監視ループで予期せぬエラーが発生しました。", exc_info=True)
+                time.sleep(5)
 
     def _decode_clipboard_data(self, data: Any) -> str:
         if isinstance(data, bytes):
@@ -229,37 +230,24 @@ class ClipboardMonitor:
     def start(self) -> None:
         if not self._running:
             self._running = True
-            logging.info("クリップボード監視を開始します")
-            self._schedule_clipboard_check(0)
+            self.monitor_thread = threading.Thread(target=self._monitor_clipboard, daemon=True) # type: ignore
+            self.monitor_thread.start() # type: ignore
             self._schedule_auto_save_check()
 
     def _schedule_auto_save_check(self) -> None:
         if self._running:
-            self._auto_save_check_job = self.tk_root.after(
-                self._auto_save_interval_ms, self._auto_save_check
-            )
+            self.tk_root.after(self._auto_save_interval_ms, self._auto_save_check)
 
     def _auto_save_check(self) -> None:
-        self._auto_save_check_job = None
         if not self._running:
             return
         # DBに都度保存しているため、ここでは何もしません
         self._schedule_auto_save_check()
 
-    def _cancel_scheduled_job(self, job_id: str | None) -> None:
-        if job_id is None:
-            return
-        try:
-            self.tk_root.after_cancel(job_id)
-        except tk.TclError:
-            pass
-
     def stop(self) -> None:
         self._running = False
-        self._cancel_scheduled_job(self._clipboard_check_job)
-        self._cancel_scheduled_job(self._auto_save_check_job)
-        self._clipboard_check_job = None
-        self._auto_save_check_job = None
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            self.monitor_thread.join(timeout=2)
 
     def get_history(self) -> list[tuple[str, bool, float]]:
         return self.history_service.get_history()
