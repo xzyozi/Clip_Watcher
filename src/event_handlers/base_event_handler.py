@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 if TYPE_CHECKING:
     from src.core.events.event_dispatcher import EventDispatcher
+
 
 class BaseEventHandler(ABC):
     """A base class for event handlers to standardize subscription and cleanup."""
@@ -27,6 +28,36 @@ class BaseEventHandler(ABC):
         """
         pass
 
+    @overload
+    def subscribe(
+        self, event_name: Literal["SETTINGS_CHANGED"], handler: Callable[[dict[str, Any]], Any]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self, event_name: Literal["HISTORY_UPDATED"], handler: Callable[[list[dict[str, Any]]], Any]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self, event_name: Literal["LANGUAGE_CHANGED"], handler: Callable[[str], Any]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self, event_name: Literal["HISTORY_ITEM_EDITED"], handler: Callable[[dict[str, Any]], Any]
+    ) -> None: ...
+
+    @overload
+    def subscribe(
+        self,
+        event_name: Literal["REQUEST_UNDO_LAST_ACTION", "REQUEST_REDO_LAST_ACTION"],
+        handler: Callable[[], Any],
+    ) -> None: ...
+
+    @overload
+    def subscribe(self, event_name: str, handler: Callable[..., Any]) -> None: ...
+
     def subscribe(self, event_name: str, handler: Callable[..., Any]) -> None:
         """
         Subscribes a handler to an event and tracks the subscription.
@@ -48,3 +79,4 @@ class BaseEventHandler(ABC):
             if hasattr(self.dispatcher, 'unsubscribe'):
                 self.dispatcher.unsubscribe(event_name, handler)
         self._subscriptions = []
+

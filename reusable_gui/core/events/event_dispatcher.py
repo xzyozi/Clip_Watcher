@@ -7,6 +7,15 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _get_listener_name(listener: Callable[..., Any]) -> str:
+    """安全にリスナーの表示名を取得します（functools.partial や callable オブジェクト対応）。"""
+    if hasattr(listener, "__qualname__"):
+        return str(listener.__qualname__)
+    if hasattr(listener, "__name__"):
+        return str(listener.__name__)
+    return repr(listener)
+
+
 class EventDispatcher:
     """
     集中型イベントディスパッチャ。
@@ -49,6 +58,7 @@ class EventDispatcher:
             try:
                 listener(*args, **kwargs)
             except Exception:
+                listener_name = _get_listener_name(listener)
                 logger.error(
-                    f"Error dispatching event {event_type} to listener {getattr(listener, '__name__', str(listener))}: {traceback.format_exc()}"
+                    f"Error dispatching event {event_type} to listener {listener_name}: {traceback.format_exc()}"
                 )
