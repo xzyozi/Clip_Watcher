@@ -41,7 +41,7 @@ def test_settings_manager_load_and_save(event_dispatcher: EventDispatcher, temp_
 
     # 2. 値の書き換えとセーブ
     manager.set_setting("history_limit", 15)
-    manager.set_setting("theme", "DarkBlue")
+    manager.set_setting("theme", "dark")
     manager.save_settings()
 
     # ファイルが正しく生成されていること
@@ -51,7 +51,7 @@ def test_settings_manager_load_and_save(event_dispatcher: EventDispatcher, temp_
     new_manager = SettingsManager(event_dispatcher=event_dispatcher, file_path=temp_settings_file)
     new_manager.load_and_notify()
     assert new_manager.get_setting("history_limit") == 15
-    assert new_manager.get_setting("theme") == "DarkBlue"
+    assert new_manager.get_setting("theme") == "dark"
 
 
 def test_settings_manager_event_trigger(event_dispatcher: EventDispatcher, temp_settings_file: str) -> None:
