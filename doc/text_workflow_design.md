@@ -27,7 +27,7 @@ graph TD
     GUI[GUI / Clipboard Monitor] -->|WorkflowRequest| WS[TextWorkflowService]
     CLI[CLI Runner] -->|WorkflowRequest| WS
     
-    subgraph TextWorkflow Core (src/core/text_workflow/)
+    subgraph "TextWorkflow Core (src/core/text_workflow/)"
         WS --> TW[TextWorkflow Manager]
         CR[ConfigurationResolver] --> TW
         TW --> CF[Classifier]
