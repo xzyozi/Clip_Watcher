@@ -208,7 +208,7 @@ class HistoryEventHandlers(BaseEventHandler):
 
             selected_index: int = selected_indices[0]
 
-            history_data: list[tuple[str, bool, float]] = history_component.displayed_history
+            history_data: list[tuple[str, bool, float]] = history_component.history # type: ignore
             if 0 <= selected_index < len(history_data):
                 original_text: str = history_data[selected_index][0]
                 item_id: float = history_data[selected_index][2] # Get item_id
