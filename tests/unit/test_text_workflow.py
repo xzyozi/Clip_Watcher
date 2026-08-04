@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 import uuid
+
 from src.core.text_workflow.classifier import Classifier
 from src.core.text_workflow.config_resolver import ConfigurationResolver, deep_overlay
 from src.core.text_workflow.history import ExecutionHistory, HistoryEntry
@@ -11,13 +12,12 @@ from src.core.text_workflow.models import (
     WorkflowRequest,
 )
 from src.core.text_workflow.normalizer import Normalizer
-from src.core.text_workflow.template_renderer import TemplateError, TemplateRenderer
+from src.core.text_workflow.template_renderer import TemplateRenderer
 from src.core.text_workflow.workflow import TextWorkflow
 from src.services.text_workflow_service import TextWorkflowService
 
 
 class TestTextWorkflowUnit(unittest.TestCase):
-
     def test_deep_overlay(self) -> None:
         base = {"a": 1, "b": {"c": 2, "d": 3}, "list": [1, 2]}
         overlay = {"b": {"d": 4}, "list": [3]}
@@ -171,15 +171,19 @@ class TestTextWorkflowUnit(unittest.TestCase):
         self.assertEqual(result.status, ExecutionStatus.COMPLETED)
         self.assertEqual(result.classification.category_id, "meeting")
         self.assertEqual(result.output_text, "[要約]\n本日の議事録メモです\n")
-        
+
         # 履歴件数の確認
         history_records = history.get_recent(limit=5)
         self.assertEqual(len(history_records), 1)
-        self.assertEqual(history_records[0].output_text, "[要約]\n本日の議事録メモです\n")
+        self.assertEqual(
+            history_records[0].output_text, "[要約]\n本日の議事録メモです\n"
+        )
 
     def test_workflow_input_too_large(self) -> None:
         builtin_config = {"workflow": {"maxInputBytes": 10}}
-        workflow = TextWorkflow(config_resolver=ConfigurationResolver(builtin_config=builtin_config))
+        workflow = TextWorkflow(
+            config_resolver=ConfigurationResolver(builtin_config=builtin_config)
+        )
 
         request = WorkflowRequest(
             request_id="req-large",

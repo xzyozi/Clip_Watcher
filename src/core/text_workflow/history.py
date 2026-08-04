@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
-import sqlite3
-from typing import List, Optional
 
 
 @dataclass
@@ -11,8 +10,8 @@ class HistoryEntry:
     record_id: str
     request_id: str
     category_id: str
-    rule_id: Optional[str]
-    template_id: Optional[str]
+    rule_id: str | None
+    template_id: str | None
     input_text: str
     output_text: str
     created_at: str
@@ -81,7 +80,7 @@ class ExecutionHistory:
         except Exception:
             return False
 
-    def get_recent(self, limit: int = 50) -> List[HistoryEntry]:
+    def get_recent(self, limit: int = 50) -> list[HistoryEntry]:
         """最新の履歴を取得する"""
         cursor = self._conn.cursor()
         cursor.execute(

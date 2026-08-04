@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
 import uuid
-from typing import Any, Dict, Optional
+from datetime import datetime
 
 from src.core.text_workflow.classifier import Classifier
 from src.core.text_workflow.config_resolver import ConfigurationResolver
@@ -13,7 +12,7 @@ from src.core.text_workflow.models import (
     WorkflowResult,
 )
 from src.core.text_workflow.normalizer import Normalizer
-from src.core.text_workflow.template_renderer import TemplateRenderer, TemplateError
+from src.core.text_workflow.template_renderer import TemplateError, TemplateRenderer
 
 
 class TextWorkflow:
@@ -21,8 +20,8 @@ class TextWorkflow:
 
     def __init__(
         self,
-        config_resolver: Optional[ConfigurationResolver] = None,
-        history: Optional[ExecutionHistory] = None,
+        config_resolver: ConfigurationResolver | None = None,
+        history: ExecutionHistory | None = None,
     ) -> None:
         self._config_resolver = config_resolver or ConfigurationResolver()
         self._history = history or ExecutionHistory(":memory:")
@@ -48,15 +47,28 @@ class TextWorkflow:
         rules = config.get("rules", [])
         default_category = wf_config.get("defaultCategory", "general")
         classifier = Classifier(rules=rules, default_category=default_category)
-        classification = classifier.classify(request.input_text, category_hint=request.category_hint)
+        classification = classifier.classify(
+            request.input_text, category_hint=request.category_hint
+        )
 
         # 4. テンプレート展開 (TemplateRenderer)
         templates = config.get("templates", [])
         template_renderer = TemplateRenderer(templates=templates)
-        target_template_id = request.template_id or (
-            classification.matched_rule_id
-            and next((r.get("templateId") for r in rules if r.get("id") == classification.matched_rule_id), None)
-        ) or wf_config.get("defaultTemplateId")
+        target_template_id = (
+            request.template_id
+            or (
+                classification.matched_rule_id
+                and next(
+                    (
+                        r.get("templateId")
+                        for r in rules
+                        if r.get("id") == classification.matched_rule_id
+                    ),
+                    None,
+                )
+            )
+            or wf_config.get("defaultTemplateId")
+        )
 
         template_vars = {
             "input": request.input_text,
@@ -81,7 +93,9 @@ class TextWorkflow:
         profiles = wf_config.get("normalizationProfiles", {})
         normalizer = Normalizer(custom_profiles=profiles)
         profile_name = request.normalization_profile or "plain"
-        normalized_text, applied_normalizers = normalizer.normalize(rendered_text, profile_name=profile_name)
+        normalized_text, applied_normalizers = normalizer.normalize(
+            rendered_text, profile_name=profile_name
+        )
 
         status = ExecutionStatus.COMPLETED
 

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-
-DEFAULT_BUILTIN_CONFIG: Dict[str, Any] = {
+DEFAULT_BUILTIN_CONFIG: dict[str, Any] = {
     "schemaVersion": 1,
     "workflow": {
         "defaultCategory": "general",
@@ -12,7 +11,11 @@ DEFAULT_BUILTIN_CONFIG: Dict[str, Any] = {
         "defaultTemplateId": "plain",
         "normalizationProfiles": {
             "plain": ["normalize-newlines", "trim-trailing-space"],
-            "issue": ["normalize-newlines", "trim-trailing-space", "ensure-final-newline"],
+            "issue": [
+                "normalize-newlines",
+                "trim-trailing-space",
+                "ensure-final-newline",
+            ],
         },
     },
     "history": {
@@ -24,7 +27,7 @@ DEFAULT_BUILTIN_CONFIG: Dict[str, Any] = {
 }
 
 
-def deep_overlay(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
+def deep_overlay(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
     """
     2つの辞書を再帰的にマージする。
     辞書の値が辞書同士であれば深層マージする。
@@ -44,15 +47,17 @@ class ConfigurationResolver:
 
     def __init__(
         self,
-        builtin_config: Optional[Dict[str, Any]] = None,
-        personal_config: Optional[Dict[str, Any]] = None,
-        workspace_config: Optional[Dict[str, Any]] = None,
+        builtin_config: dict[str, Any] | None = None,
+        personal_config: dict[str, Any] | None = None,
+        workspace_config: dict[str, Any] | None = None,
     ) -> None:
         self._builtin = builtin_config or DEFAULT_BUILTIN_CONFIG
         self._personal = personal_config or {}
         self._workspace = workspace_config or {}
 
-    def resolve(self, runtime_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def resolve(
+        self, runtime_overrides: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """優先度に従って設定をディープマージして返す"""
         effective = copy.deepcopy(self._builtin)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unicodedata
 
+
 # 個別ノーマライザー関数
 def normalize_newlines(text: str) -> str:
     """CRLF や CR を LF に統一する"""
@@ -35,7 +36,12 @@ NORMALIZERS = {
 
 DEFAULT_PROFILES = {
     "plain": ["normalize-newlines", "trim-trailing-space"],
-    "strict": ["normalize-newlines", "trim-trailing-space", "ensure-final-newline", "unicode-nfc"],
+    "strict": [
+        "normalize-newlines",
+        "trim-trailing-space",
+        "ensure-final-newline",
+        "unicode-nfc",
+    ],
 }
 
 
@@ -45,13 +51,17 @@ class Normalizer:
     def __init__(self, custom_profiles: dict[str, list[str]] | None = None) -> None:
         self._profiles = {**DEFAULT_PROFILES, **(custom_profiles or {})}
 
-    def normalize(self, text: str, profile_name: str = "plain") -> tuple[str, list[str]]:
+    def normalize(
+        self, text: str, profile_name: str = "plain"
+    ) -> tuple[str, list[str]]:
         """
         指定プロファイルに従ってテキストを順次正規化し、(正規化後テキスト, 適用ノーマライザー名一覧) を返す。
         """
         applied: list[str] = []
         current = text
-        normalizer_keys = self._profiles.get(profile_name, self._profiles.get("plain", []))
+        normalizer_keys = self._profiles.get(
+            profile_name, self._profiles.get("plain", [])
+        )
 
         for key in normalizer_keys:
             if key in NORMALIZERS:

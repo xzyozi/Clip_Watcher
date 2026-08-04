@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
 import re
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 
 
 class TemplateError(Exception):
     """テンプレート処理のエラー"""
+
     pass
 
 
 class TemplateRenderer:
     """テンプレートに変数を展開するレンダラー"""
 
-    def __init__(self, templates: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(self, templates: list[dict[str, Any]] | None = None) -> None:
         self._templates_by_id = {t["id"]: t for t in (templates or []) if "id" in t}
 
     def render(
         self,
-        template_id: Optional[str],
-        variables: Dict[str, Any],
-        default_body: Optional[str] = None
+        template_id: str | None,
+        variables: dict[str, Any],
+        default_body: str | None = None,
     ) -> str:
         """
         指定された template_id のテンプレートに変数を埋め込んでテキストを返す。
@@ -33,7 +34,7 @@ class TemplateRenderer:
 
         template_def = self._templates_by_id[template_id]
         body: str = template_def.get("body", "")
-        template_vars: List[Dict[str, Any]] = template_def.get("variables", [])
+        template_vars: list[dict[str, Any]] = template_def.get("variables", [])
 
         # 標準環境変数の補填
         full_vars = {
@@ -51,7 +52,9 @@ class TemplateRenderer:
 
             if name not in full_vars or full_vars[name] is None:
                 if required:
-                    raise TemplateError(f"Required variable '{name}' is missing for template '{template_id}'")
+                    raise TemplateError(
+                        f"Required variable '{name}' is missing for template '{template_id}'"
+                    )
                 full_vars[name] = default_val
 
         # 置換処理 {{variable}}
