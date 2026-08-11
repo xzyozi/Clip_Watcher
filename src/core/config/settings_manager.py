@@ -2,8 +2,8 @@ import json
 import os
 from typing import Any, cast
 
-from src.core.events.event_dispatcher import EventDispatcher
 from reusable_gui.core.config.schema import SettingField, WidgetType
+from src.core.events.event_dispatcher import EventDispatcher
 
 from . import defaults
 

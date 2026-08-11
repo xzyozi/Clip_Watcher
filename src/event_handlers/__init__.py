@@ -50,7 +50,6 @@ def start_app() -> None:
 
         history_file_path = os.path.join(app_data_dir, 'history.json')
         settings_file_path = os.path.join(app_data_dir, 'settings.json')
-        fixed_phrases_file_path = os.path.join(app_data_dir, 'fixed_phrases.json')
         db_path = os.path.join(app_data_dir, 'clip_watcher.db')
 
         # --- Logging ---
@@ -75,7 +74,6 @@ def start_app() -> None:
             .with_translator() \
             .with_theme_manager(root) \
             .with_history_service() \
-            .with_fixed_phrases_manager(fixed_phrases_file_path) \
             .with_plugin_manager() \
             .with_clipboard_monitor(root, history_file_path) \
             .build(root)

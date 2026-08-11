@@ -11,7 +11,6 @@ from src.gui.components import HistoryListComponent
 
 # from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomEntry, CustomText
-from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
 from src.gui.windows.meta_management_window import MetaManagementFrame
 
 if TYPE_CHECKING:
@@ -90,11 +89,6 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.quit_button = ttk.Button(self.control_frame, text="", command=self.app.file_handlers.handle_quit) # type: ignore
         self.quit_button.pack(side=tk.RIGHT, padx=config.BUTTON_PADDING_X)
-
-        self.fixed_phrases_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-        self.notebook.add(self.fixed_phrases_tab_frame, text="") # Text set in _update_widget_text
-        self.fixed_phrases_frame = FixedPhrasesFrame(self.fixed_phrases_tab_frame, self.app)
-        self.fixed_phrases_frame.pack(fill=tk.BOTH, expand=True)
 
         self.meta_management_tab_frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
         self.notebook.add(self.meta_management_tab_frame, text="") # Text set in _update_widget_text
@@ -184,7 +178,6 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.format_button.config(text=translator("format_button"))
         self.quit_button.config(text=translator("quit_button"))
-        self.notebook.tab(self.fixed_phrases_tab_frame, text=translator("fixed_phrases_tab"))
         self.notebook.tab(self.meta_management_tab_frame, text=translator("meta_management_tab"))
 
     def _destroy_plugin_tabs(self) -> None:

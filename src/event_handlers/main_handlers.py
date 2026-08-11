@@ -6,8 +6,6 @@ from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
 from src.core.config import defaults
-from src.gui.windows.fixed_phrases_window import FixedPhrasesFrame
-from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
@@ -44,11 +42,6 @@ def handle_copy_fixed_phrase(gui_instance: Any, phrase: str) -> None:
         logger.info(f"Copied fixed phrase: {phrase[:50]}...")
     except Exception as e:
         log_and_show_error("エラー",f"Error copying fixed phrase: {e}")
-
-def handle_manage_fixed_phrases(master: tk.Tk, fixed_phrases_manager: FixedPhrasesManager) -> None:
-    fixed_phrases_window = FixedPhrasesFrame(master, fixed_phrases_manager) # type: ignore
-    fixed_phrases_window.grab_set() # type: ignore
-    master.wait_window(fixed_phrases_window) # type: ignore
 
 
 def handle_show_schedule_helper_tool(app_instance: BaseApplication) -> None:

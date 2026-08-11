@@ -1,14 +1,14 @@
 """Application interface for type hints (generalized version)"""
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-import logging
 from enum import Enum, auto
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from reusable_gui.core.events.event_dispatcher import EventDispatcher
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
+from reusable_gui.core.events.event_dispatcher import EventDispatcher
 
 
 class ApplicationState(Enum):

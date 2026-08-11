@@ -12,13 +12,11 @@ from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
 from src.gui.theme_manager import ThemeManager
 from src.plugins.manager import PluginManager
-from src.services.fixed_phrases_manager import FixedPhrasesManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
-    from src.core.history_service import HistoryService
     from src.db.database_manager import DatabaseManager
     from src.services.history_service import HistoryService
 
@@ -32,7 +30,6 @@ class ApplicationBuilder:
         self.db_manager: DatabaseManager | None = None
         self.history_service: HistoryService | None = None
         self.monitor: ClipboardMonitor | None = None
-        self.fixed_phrases_manager: FixedPhrasesManager | None = None
         self.plugin_manager: PluginManager | None = None
         self.event_dispatcher: EventDispatcher | None = None
         self.theme_manager: ThemeManager | None = None
@@ -137,16 +134,6 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"クリップボードモニターの初期化に失敗: {str(e)}")
             raise ConfigError(f"クリップボードモニターの初期化に失敗しました: {str(e)}") from e
 
-    def with_fixed_phrases_manager(self, file_path: str = "fixed_phrases.json") -> ApplicationBuilder:
-        """定型文マネージャーの初期化"""
-        try:
-            self.fixed_phrases_manager = FixedPhrasesManager(file_path)
-            logger.info("定型文マネージャーを初期化しました")
-            return self
-        except Exception as e:
-            log_and_show_error(title="エラー", message=f"定型文マネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"定型文マネージャーの初期化に失敗しました: {str(e)}") from e
-
     def with_plugin_manager(self) -> ApplicationBuilder:
         """プラグインマネージャーの初期化"""
         try:
@@ -157,11 +144,9 @@ class ApplicationBuilder:
             log_and_show_error(title="エラー", message=f"プラグインマネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}") from e
 
-
-
     def build(self, master: tk.Tk) -> MainApplication:
         """アプリケーションのビルド"""
-        if not all([self.settings_manager, self.db_manager, self.history_service, self.monitor, self.fixed_phrases_manager, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
+        if not all([self.settings_manager, self.db_manager, self.history_service, self.monitor, self.plugin_manager, self.event_dispatcher, self.theme_manager, self.translator, self.app_status]):
             raise ConfigError("必要なコンポーネントが初期化されていません")
 
         try:
@@ -172,7 +157,6 @@ class ApplicationBuilder:
                 db_manager=self.db_manager, # type: ignore
                 history_service=self.history_service, # type: ignore
                 monitor=self.monitor, # type: ignore
-                fixed_phrases_manager=self.fixed_phrases_manager, # type: ignore
                 plugin_manager=self.plugin_manager, # type: ignore
                 event_dispatcher=self.event_dispatcher, # type: ignore
                 theme_manager=self.theme_manager, # type: ignore
