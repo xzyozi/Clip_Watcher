@@ -86,6 +86,40 @@ def test_main_application_hotkey_and_window_integration() -> None:
         mock_hrm.stop.assert_called_once()
 
 
+def test_global_hotkey_triggered_event_dispatch_zero_args() -> None:
+    from src.core.app_main import MainApplication
+    from src.core.events.event_dispatcher import EventDispatcher
+
+    dispatcher = EventDispatcher()
+    mock_master = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.get_setting.side_effect = lambda k, default=None: default
+    mock_wsm = MagicMock()
+
+    with patch("src.core.app_main.ClipWatcherGUI"), \
+         patch("src.core.app_main.menu_bar"), \
+         patch("src.event_handlers.register_class_based_handlers"):
+
+        app = MainApplication(
+            master=mock_master,
+            settings_manager=mock_settings,
+            db_manager=MagicMock(),
+            history_service=MagicMock(),
+            monitor=MagicMock(),
+            plugin_manager=MagicMock(),
+            event_dispatcher=dispatcher,
+            theme_manager=MagicMock(),
+            translator=MagicMock(),
+            app_status=MagicMock(),
+            window_state_manager=mock_wsm,
+            hotkey_registration_manager=MagicMock(),
+        )
+
+        # 引数なしで dispatch された場合に TypeError が発生せず toggle が実行されること
+        dispatcher.dispatch("GLOBAL_HOTKEY_TRIGGERED")
+        mock_wsm.toggle.assert_called_once()
+
+
 def test_start_app_builder_chain_includes_hotkey_components() -> None:
     from src.event_handlers import start_app
 

@@ -76,7 +76,7 @@ class MainApplication(BaseApplication):
 
         if self.window_state_manager:
             self.event_dispatcher.subscribe(
-                "GLOBAL_HOTKEY_TRIGGERED", lambda _: self.window_state_manager.toggle()
+                "GLOBAL_HOTKEY_TRIGGERED", lambda *_: self.window_state_manager.toggle()
             )
 
         self.master.bind("<FocusIn>", self.on_focus_in)
