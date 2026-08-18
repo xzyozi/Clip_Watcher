@@ -153,7 +153,13 @@ class SettingsWindow(tk.Toplevel):
     def _tr(self, text: str) -> str:
         """翻訳サービスが存在する場合はテキストを翻訳し、なければそのまま返す。"""
         if hasattr(self.app, "translator") and self.app.translator:
-            return self.app.translator.get(text, text)
+            tr = self.app.translator
+            if hasattr(tr, "get") and callable(tr.get):
+                return tr.get(text, text)
+            if hasattr(tr, "translate") and callable(tr.translate):
+                return tr.translate(text)
+            if callable(tr):
+                return tr(text)
         return text
 
     def _render_tab(

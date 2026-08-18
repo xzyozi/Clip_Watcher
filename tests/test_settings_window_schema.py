@@ -40,3 +40,24 @@ def test_settings_window_schema_composition() -> None:
         window.destroy()
     finally:
         root.destroy()
+
+
+def test_settings_window_with_translator_instance() -> None:
+    from src.utils.i18n import Translator
+
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        dispatcher = EventDispatcher()
+        settings_manager = SettingsManager(dispatcher)
+        translator = Translator(settings_manager)
+
+        app_mock = MagicMock()
+        app_mock.translator = translator
+        app_mock.plugin_manager.get_gui_plugins.return_value = []
+
+        window = SettingsWindow(root, app_mock, settings_manager)
+        assert window.winfo_exists()
+        window.destroy()
+    finally:
+        root.destroy()
