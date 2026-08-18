@@ -17,6 +17,9 @@ from src.utils.i18n import Translator
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
+    from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
+    from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
+    from src.core.window.window_state_manager import WindowStateManager
     from src.db.database_manager import DatabaseManager
     from src.services.history_service import HistoryService
 
@@ -37,9 +40,9 @@ class ApplicationBuilder:
         self.translator: Translator | None = None
         self.app_status: AppStatus | None = None
 
-        self.window_state_manager: Any | None = None
-        self.hotkey_listener: Any | None = None
-        self.hotkey_registration_manager: Any | None = None
+        self.window_state_manager: WindowStateManager | None = None
+        self.hotkey_listener: GlobalHotkeyListener | None = None
+        self.hotkey_registration_manager: HotkeyRegistrationManager | None = None
 
     def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
