@@ -56,10 +56,7 @@ class HotkeyRegistrationManager:
         old_enabled = self._current_enabled
         old_combo = self._current_combo
 
-        # 一旦現在のリスナーを停止
-        self._listener.stop()
-
-        # 新キーで登録試行
+        # 新キーで登録試行 (GlobalHotkeyListener.start が既存登録を自動停止します)
         success = self._listener.start(modifiers, vk_code)
         if success:
             self._current_enabled = True

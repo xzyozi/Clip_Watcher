@@ -150,6 +150,12 @@ class SettingsWindow(tk.Toplevel):
             self._tab_frames[tab_name] = frame
             self._render_tab(frame, tab_groups[tab_name])
 
+    def _tr(self, text: str) -> str:
+        """翻訳サービスが存在する場合はテキストを翻訳し、なければそのまま返す。"""
+        if hasattr(self.app, "translator") and self.app.translator:
+            return self.app.translator.get(text, text)
+        return text
+
     def _render_tab(
         self, parent: ttk.Frame, groups: dict[str, list[SettingField]]
     ) -> None:
@@ -157,7 +163,7 @@ class SettingsWindow(tk.Toplevel):
         for group_name, fields in groups.items():
             if group_name:
                 container: tk.Widget = ttk.LabelFrame(
-                    parent, text=group_name, padding=config.FRAME_PADDING
+                    parent, text=self._tr(group_name), padding=config.FRAME_PADDING
                 )
                 container.pack(
                     fill=tk.X,
@@ -174,8 +180,9 @@ class SettingsWindow(tk.Toplevel):
 
     def _render_field(self, parent: tk.Widget, f: SettingField, row: int) -> int:
         """WidgetType に応じてウィジェットを生成し、grid で配置する。row の次の値を返す。"""
+        label_text = self._tr(f.label)
         if f.widget_type == WidgetType.CHECKBUTTON:
-            cb = ttk.Checkbutton(parent, text=f.label, variable=self._vars[f.key])
+            cb = ttk.Checkbutton(parent, text=label_text, variable=self._vars[f.key])
             cb.grid(
                 row=row, column=0, columnspan=2, sticky=tk.W,
                 padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y,
@@ -183,7 +190,7 @@ class SettingsWindow(tk.Toplevel):
             return row + 1
 
         elif f.widget_type == WidgetType.SPINBOX:
-            lbl = ttk.Label(parent, text=f"{f.label}:")
+            lbl = ttk.Label(parent, text=f"{label_text}:")
             lbl.grid(row=row, column=0, sticky=tk.W,
                      padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
             sp = ttk.Spinbox(
@@ -199,7 +206,7 @@ class SettingsWindow(tk.Toplevel):
             return row + 1
 
         elif f.widget_type == WidgetType.OPTION_MENU:
-            lbl = ttk.Label(parent, text=f"{f.label}:")
+            lbl = ttk.Label(parent, text=f"{label_text}:")
             lbl.grid(row=row, column=0, sticky=tk.W,
                      padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
             var = self._vars[f.key]
@@ -209,7 +216,7 @@ class SettingsWindow(tk.Toplevel):
             return row + 1
 
         elif f.widget_type == WidgetType.FONT_PICKER:
-            lbl = ttk.Label(parent, text=f"{f.label}:")
+            lbl = ttk.Label(parent, text=f"{label_text}:")
             lbl.grid(row=row, column=0, sticky=tk.W,
                      padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
             font_families = sorted(font.families())
@@ -220,7 +227,7 @@ class SettingsWindow(tk.Toplevel):
             return row + 1
 
         elif f.widget_type == WidgetType.ENTRY:
-            lbl = ttk.Label(parent, text=f"{f.label}:")
+            lbl = ttk.Label(parent, text=f"{label_text}:")
             lbl.grid(row=row, column=0, sticky=tk.W,
                      padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y)
             entry = ttk.Entry(parent, textvariable=self._vars[f.key], width=f.width)
@@ -240,7 +247,8 @@ class SettingsWindow(tk.Toplevel):
 
     def _render_hotkey_capture(self, parent: tk.Widget, f: SettingField, row: int) -> int:
         """HOTKEY_CAPTURE 型: キー入力をキャプチャしてホットキー文字列化する Entry ウィジェット。"""
-        lbl = ttk.Label(parent, text=f"{f.label}:")
+        label_text = self._tr(f.label)
+        lbl = ttk.Label(parent, text=f"{label_text}:")
         lbl.grid(
             row=row, column=0, sticky=tk.W,
             padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y

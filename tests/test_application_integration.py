@@ -5,7 +5,7 @@ ApplicationBuilder と MainApplication へのホットキー・ウィンドウ�
 from unittest.mock import MagicMock, patch
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
-from src.core.window.window_state_manager import WindowState, WindowStateManager
+from src.core.window.window_state_manager import WindowState
 
 
 def test_application_builder_component_injection() -> None:
@@ -75,13 +75,51 @@ def test_main_application_hotkey_and_window_integration() -> None:
         assert app.window_state_manager is mock_wsm
         assert app.hotkey_registration_manager is mock_hrm
 
-        # GLOBAL_HOTKEY_TRIGGERED サブスクライブの確認
-        mock_dispatcher.subscribe.assert_any_call("GLOBAL_HOTKEY_TRIGGERED", app.event_dispatcher.subscribe.call_args[0][1] if app.event_dispatcher.subscribe.call_args else MagicMock())
+        mock_dispatcher.subscribe.assert_any_call(
+            "GLOBAL_HOTKEY_TRIGGERED", app.event_dispatcher.subscribe.call_args[0][1] if app.event_dispatcher.subscribe.call_args else MagicMock()
+        )
 
-        # on_ready 呼び出し時の reconfigure
         app.on_ready()
         mock_hrm.reconfigure.assert_called_once_with(True, "Ctrl+Shift+F")
 
-        # shutdown 呼び出し時の stop
         app.shutdown()
         mock_hrm.stop.assert_called_once()
+
+
+def test_start_app_builder_chain_includes_hotkey_components() -> None:
+    from src.event_handlers import start_app
+
+    with patch("socket.socket"), \
+         patch("src.event_handlers.setup_logging"), \
+         patch("scripts.migrate_json_to_sqlite.main"), \
+         patch("src.event_handlers.tk.Tk") as mock_tk_cls, \
+         patch("src.event_handlers.ApplicationBuilder") as mock_builder_cls:
+
+        mock_root = MagicMock()
+        mock_tk_cls.return_value = mock_root
+
+        mock_builder = MagicMock()
+        mock_builder_cls.return_value = mock_builder
+        mock_builder.with_event_dispatcher.return_value = mock_builder
+        mock_builder.with_dependency_check.return_value = mock_builder
+        mock_builder.with_settings.return_value = mock_builder
+        mock_builder.with_database.return_value = mock_builder
+        mock_builder.with_translator.return_value = mock_builder
+        mock_builder.with_theme_manager.return_value = mock_builder
+        mock_builder.with_history_service.return_value = mock_builder
+        mock_builder.with_plugin_manager.return_value = mock_builder
+        mock_builder.with_window_state_manager.return_value = mock_builder
+        mock_builder.with_global_hotkey_listener.return_value = mock_builder
+        mock_builder.with_hotkey_registration_manager.return_value = mock_builder
+        mock_builder.with_clipboard_monitor.return_value = mock_builder
+
+        mock_root.mainloop.side_effect = KeyboardInterrupt
+
+        try:
+            start_app()
+        except KeyboardInterrupt:
+            pass
+
+        mock_builder.with_window_state_manager.assert_called_once_with(mock_root)
+        mock_builder.with_global_hotkey_listener.assert_called_once_with(mock_root)
+        mock_builder.with_hotkey_registration_manager.assert_called_once()
