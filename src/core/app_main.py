@@ -25,7 +25,21 @@ if TYPE_CHECKING:
 
 
 class MainApplication(BaseApplication):
-    def __init__(self, master: tk.Tk, settings_manager: SettingsManager, db_manager: DatabaseManager, history_service: HistoryService, monitor: ClipboardMonitor, plugin_manager: PluginManager, event_dispatcher: EventDispatcher, theme_manager: ThemeManager, translator: Translator, app_status: Any) -> None:
+    def __init__(
+        self,
+        master: tk.Tk,
+        settings_manager: SettingsManager,
+        db_manager: DatabaseManager,
+        history_service: HistoryService,
+        monitor: ClipboardMonitor,
+        plugin_manager: PluginManager,
+        event_dispatcher: EventDispatcher,
+        theme_manager: ThemeManager,
+        translator: Translator,
+        app_status: Any,
+        window_state_manager: Any | None = None,
+        hotkey_registration_manager: Any | None = None,
+    ) -> None:
         super().__init__()
         self.master = master
         self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -39,11 +53,14 @@ class MainApplication(BaseApplication):
         self.theme_manager = theme_manager
         self.translator = translator
         self.app_status = app_status
+        self.window_state_manager = window_state_manager
+        self.hotkey_registration_manager = hotkey_registration_manager
+
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending: bool = False
         self.menubar: tk.Menu | None = None
 
-        event_handlers.register_class_based_handlers(self) # type: ignore
+        event_handlers.register_class_based_handlers(self)  # type: ignore
 
         self.gui = ClipWatcherGUI(master, self)
 
@@ -51,11 +68,16 @@ class MainApplication(BaseApplication):
         self.event_dispatcher.subscribe("HISTORY_UPDATED", self._on_history_updated_event)
         self.monitor.set_error_callback(self.show_error_message)
 
-        self._rebuild_menu(event=None) # Call with dummy event
+        self._rebuild_menu(event=None)  # Call with dummy event
 
-        self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort) # type: ignore
+        self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
-        self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu) # type: ignore
+        self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)  # type: ignore
+
+        if self.window_state_manager:
+            self.event_dispatcher.subscribe(
+                "GLOBAL_HOTKEY_TRIGGERED", lambda _: self.window_state_manager.toggle()
+            )
 
         self.master.bind("<FocusIn>", self.on_focus_in)
 
@@ -66,11 +88,25 @@ class MainApplication(BaseApplication):
         # Populate GUI with initial history loaded from file
         self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
 
+        if self.hotkey_registration_manager:
+            enabled = self.settings_manager.get_setting("global_hotkey_enabled", True)
+            combo = self.settings_manager.get_setting("global_hotkey_combo", "Ctrl+Shift+F")
+            success = self.hotkey_registration_manager.reconfigure(enabled, combo)
+            if not success:
+                import logging
+                logging.getLogger(__name__).warning("起動時のホットキー登録に失敗しました: %s", combo)
+                self.show_error_message(
+                    "Hotkey Registration Warning",
+                    f"Could not register global hotkey: {combo!r}. The key combination may be in use by another application.",
+                )
+
         self.monitor.start()
         self._set_state(ApplicationState.RUNNING)
 
     def shutdown(self) -> None:
         """Performs a clean shutdown of the application."""
+        if self.hotkey_registration_manager:
+            self.hotkey_registration_manager.stop()
         self.stop_monitor()
         self.monitor.save_history_to_file()
 
