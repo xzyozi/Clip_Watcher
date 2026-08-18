@@ -72,5 +72,8 @@
     "all_categories": "[All]",
     "confirm_category_delete_title": "Confirm Category Deletion",
     "confirm_category_delete_msg": "This category contains {count} phrases. Deleting the category will also delete all of these phrases. Are you sure you want to proceed?",
-    "no_title": "(No Title)"
+    "no_title": "(No Title)",
+    "enable_global_hotkey": "Enable Global Hotkey",
+    "show_hide_hotkey": "Show/Hide Hotkey",
+    "global_hotkey_group": "Global Hotkey"
 }

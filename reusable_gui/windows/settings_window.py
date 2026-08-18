@@ -59,7 +59,7 @@ class SettingsWindow(tk.Toplevel):
         self.settings_saved = False
 
         # スキーマ取得
-        self._schema: list[SettingField] = self.settings_manager.get_settings_schema()
+        self._schema: list[SettingField] = self._get_schema()
 
         # key -> tk.Variable のマップ（WidgetType に応じた型で生成）
         self._vars: dict[str, tk.Variable] = {}
@@ -70,6 +70,18 @@ class SettingsWindow(tk.Toplevel):
 
         self._init_variables()
         self._build_ui()
+
+    def _get_schema(self) -> list[SettingField]:
+        """設定ウィンドウが使用するスキーマを返す。
+        サブクラスでオーバーライドしてスキーマの合成や変更を行う。
+        """
+        return self.settings_manager.get_settings_schema()
+
+    def _validate_pending_values(self) -> bool:
+        """保存/適用前に未確定の設定値を検証するフック。
+        サブクラスでオーバーライドして特定の入力検証や登録処理を行う。
+        """
+        return True
 
     # ------------------------------------------------------------------
     # 変数の初期化
@@ -89,7 +101,12 @@ class SettingsWindow(tk.Toplevel):
                 else:
                     self._vars[f.key] = tk.IntVar(value=int(value) if value is not None else 0)
 
-            elif f.widget_type in (WidgetType.OPTION_MENU, WidgetType.FONT_PICKER, WidgetType.ENTRY):
+            elif f.widget_type in (
+                WidgetType.OPTION_MENU,
+                WidgetType.FONT_PICKER,
+                WidgetType.ENTRY,
+                WidgetType.HOTKEY_CAPTURE,
+            ):
                 self._vars[f.key] = tk.StringVar(value=str(value) if value is not None else "")
 
             elif f.widget_type == WidgetType.LISTBOX_EDIT:
@@ -215,8 +232,68 @@ class SettingsWindow(tk.Toplevel):
             self._render_listbox_edit(parent, f)
             return row + 1  # LISTBOX_EDIT はグリッドではなく pack を使うため行は +1 のみ
 
+        elif f.widget_type == WidgetType.HOTKEY_CAPTURE:
+            return self._render_hotkey_capture(parent, f, row)
+
         logger.warning("Unknown WidgetType %s for key '%s'. Skipped.", f.widget_type, f.key)
         return row
+
+    def _render_hotkey_capture(self, parent: tk.Widget, f: SettingField, row: int) -> int:
+        """HOTKEY_CAPTURE 型: キー入力をキャプチャしてホットキー文字列化する Entry ウィジェット。"""
+        lbl = ttk.Label(parent, text=f"{f.label}:")
+        lbl.grid(
+            row=row, column=0, sticky=tk.W,
+            padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y
+        )
+
+        var = self._vars[f.key]
+        entry = ttk.Entry(parent, textvariable=var, width=f.width, state="readonly")
+        entry.grid(
+            row=row, column=1, sticky=tk.W,
+            padx=config.BUTTON_PADDING_X, pady=config.BUTTON_PADDING_Y
+        )
+
+        def _on_key_press(event: tk.Event) -> str | None:
+            keysym = event.keysym.lower()
+            if keysym in (
+                "control_l", "control_r", "shift_l", "shift_r",
+                "alt_l", "alt_r", "super_l", "super_r", "win_l", "win_r"
+            ):
+                return None
+
+            if keysym in ("backspace", "delete"):
+                var.set("")
+                return "break"
+
+            parts = []
+            state = event.state
+            if (state & 0x0004) or "control" in keysym:
+                parts.append("Ctrl")
+            if (state & 0x0001) or "shift" in keysym:
+                parts.append("Shift")
+            if (state & 0x0020) or (state & 0x0008) or "alt" in keysym:
+                parts.append("Alt")
+
+            char = event.char
+            if keysym.isalnum() and len(keysym) == 1:
+                main_key = keysym.upper()
+            elif char and char.isalnum() and len(char) == 1:
+                main_key = char.upper()
+            elif len(keysym) == 1 and keysym.isprintable():
+                main_key = keysym.upper()
+            else:
+                return "break"
+
+            if not parts:
+                return "break"
+
+            parts.append(main_key)
+            combo_str = "+".join(parts)
+            var.set(combo_str)
+            return "break"
+
+        entry.bind("<KeyPress>", _on_key_press)
+        return row + 1
 
     def _render_listbox_edit(self, parent: tk.Widget, f: SettingField) -> None:
         """LISTBOX_EDIT 型: Listbox + Add/Remove ボタンを描画する。"""
@@ -322,10 +399,14 @@ class SettingsWindow(tk.Toplevel):
     # ------------------------------------------------------------------
 
     def _apply_only(self) -> None:
+        if not self._validate_pending_values():
+            return
         self._collect_values()
         self.settings_manager.notify_listeners()
 
     def _save_and_close(self) -> None:
+        if not self._validate_pending_values():
+            return
         self._collect_values()
         self.settings_manager.save_settings()
         self.settings_saved = True
