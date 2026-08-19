@@ -66,6 +66,13 @@ class Translator:
         return self.translations.get(self.current_lang, {}).get(key,
                self.translations.get(self.default_lang, {}).get(key, key))
 
+    def get(self, key: str, default: str | None = None) -> str:
+        """Translates a key with an optional default fallback, similar to dict.get."""
+        translated = self.translate(key)
+        if translated == key and default is not None:
+            return default
+        return translated
+
     # Alias for translate for shorter calls
     def __call__(self, key: str) -> str:
         return self.translate(key)

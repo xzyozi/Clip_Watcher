@@ -75,6 +75,9 @@ def start_app() -> None:
             .with_theme_manager(root) \
             .with_history_service() \
             .with_plugin_manager() \
+            .with_window_state_manager(root) \
+            .with_global_hotkey_listener(root) \
+            .with_hotkey_registration_manager() \
             .with_clipboard_monitor(root, history_file_path) \
             .build(root)
 
