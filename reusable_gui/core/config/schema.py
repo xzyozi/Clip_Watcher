@@ -35,6 +35,10 @@ class WidgetType(Enum):
     ENTRY = auto()
     """str 値: ttk.Entry (自由入力)"""
 
+    HOTKEY_CAPTURE = auto()
+    """str値（例: "Ctrl+Shift+F"）。フォーカス中のキー入力を取得して
+    正規化したホットキー文字列を保持する専用ウィジェット。"""
+
 
 @dataclass
 class SettingField:

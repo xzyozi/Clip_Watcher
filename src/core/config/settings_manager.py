@@ -2,17 +2,26 @@ import json
 import os
 from typing import Any, cast
 
-from src.core.events.event_dispatcher import EventDispatcher
 from reusable_gui.core.config.schema import SettingField, WidgetType
+from reusable_gui.core.config.settings_manager import BaseSettingsManager
+from src.core.events.event_dispatcher import EventDispatcher
 
 from . import defaults
 
 
-class SettingsManager:
+class SettingsManager(BaseSettingsManager):
     def __init__(self, event_dispatcher: EventDispatcher, file_path: str = "settings.json") -> None:
         self.event_dispatcher = event_dispatcher
         self.file_path = file_path
-        self.settings: dict[str, Any] = self._get_default_settings()
+        self._settings: dict[str, Any] = self._get_default_settings()
+
+    @property
+    def settings(self) -> dict[str, Any]:
+        return self._settings
+
+    @settings.setter
+    def settings(self, val: dict[str, Any]) -> None:
+        self._settings = val
 
     def load_and_notify(self) -> None:
         """Loads settings from the file and notifies listeners."""
@@ -102,6 +111,20 @@ class SettingsManager:
                 widget_type=WidgetType.CHECKBUTTON,
                 tab="General", group="Startup",
                 default=False,
+            ),
+
+            # ── General / Global Hotkey ────────────────────────────────
+            SettingField(
+                key="global_hotkey_enabled", label="Enable Global Hotkey",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="General", group="Global Hotkey",
+                default=True,
+            ),
+            SettingField(
+                key="global_hotkey_combo", label="Show/Hide Hotkey",
+                widget_type=WidgetType.HOTKEY_CAPTURE,
+                tab="General", group="Global Hotkey",
+                default="Ctrl+Shift+F",
             ),
 
             # ── History ───────────────────────────────────────────────

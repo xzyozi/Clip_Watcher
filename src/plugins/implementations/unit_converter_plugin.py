@@ -92,8 +92,22 @@ class UnitConverterComponent(BaseFrameGUI):
         self.to_unit_combo.pack(fill=tk.X, padx=5, pady=5)
         self.to_unit_combo.bind("<<ComboboxSelected>>", self._convert)
 
-        output_label = ttk.Label(to_frame, textvariable=self.output_var, anchor="w")
-        output_label.pack(fill=tk.X, padx=5, pady=5)
+        result_frame = ttk.Frame(to_frame)
+        result_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        output_label = ttk.Label(result_frame, textvariable=self.output_var, anchor="w")
+        output_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        copy_button = ttk.Button(result_frame, text="Copy", command=self._copy_result)
+        copy_button.pack(side=tk.RIGHT, padx=(5, 0))
+
+    def _copy_result(self) -> None:
+        result_text = self.output_var.get()
+        if result_text.startswith("Result: "):
+            val = result_text[8:].strip()
+            if val and val not in ("Error", "Invalid number"):
+                self.app.monitor.update_clipboard(val) # type: ignore
+                self.logger.info(f"Copied to clipboard: {val}")
 
     def _on_category_change(self, event: tk.Event | None = None) -> None:
         category = self.category_var.get()
