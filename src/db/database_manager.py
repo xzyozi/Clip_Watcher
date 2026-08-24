@@ -42,51 +42,53 @@ class DatabaseManager:
     def _initialize_tables(self) -> None:
         """テーブルとインデックスを作成します。"""
         with self._lock:
+            conn = self._get_connection()
             try:
-                with self._get_connection() as conn:
-                    # 1. クリップボード履歴テーブル
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS t_clipboard_history (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            content TEXT NOT NULL,
-                            content_hash TEXT NOT NULL,
-                            is_pinned INTEGER NOT NULL DEFAULT 0,
-                            created_at REAL NOT NULL
-                        )
-                    """)
+                # 1. クリップボード履歴テーブル
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS t_clipboard_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        content TEXT NOT NULL,
+                        content_hash TEXT NOT NULL,
+                        is_pinned INTEGER NOT NULL DEFAULT 0,
+                        created_at REAL NOT NULL
+                    )
+                """)
 
-                    # 2. カテゴリテーブル
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS t_category (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            name TEXT NOT NULL UNIQUE,
-                            sort_order INTEGER NOT NULL DEFAULT 0
-                        )
-                    """)
+                # 2. カテゴリテーブル
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS t_category (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL UNIQUE,
+                        sort_order INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
 
-                    # 3. カテゴリ別定型文（メタ管理）テーブル
-                    conn.execute("""
-                        CREATE TABLE IF NOT EXISTS t_meta_phrase (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            title TEXT NOT NULL,
-                            content TEXT NOT NULL,
-                            category_id INTEGER NOT NULL,
-                            sort_order INTEGER NOT NULL DEFAULT 0,
-                            created_at REAL NOT NULL,
-                            FOREIGN KEY(category_id) REFERENCES t_category(id) ON DELETE CASCADE
-                        )
-                    """)
+                # 3. カテゴリ別定型文（メタ管理）テーブル
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS t_meta_phrase (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        category_id INTEGER NOT NULL,
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        created_at REAL NOT NULL,
+                        FOREIGN KEY(category_id) REFERENCES t_category(id) ON DELETE CASCADE
+                    )
+                """)
 
-                    # インデックス作成
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_history_hash ON t_clipboard_history(content_hash)")
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON t_clipboard_history(created_at DESC)")
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_phrase_category ON t_meta_phrase(category_id, sort_order)")
+                # インデックス作成
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_history_hash ON t_clipboard_history(content_hash)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON t_clipboard_history(created_at DESC)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_phrase_category ON t_meta_phrase(category_id, sort_order)")
 
-                    conn.commit()
+                conn.commit()
                 logger.info("データベーステーブルおよびインデックスの初期化が完了しました。")
             except sqlite3.Error as e:
                 logger.error("データベース初期化中にエラーが発生しました: %s", str(e), exc_info=True)
                 raise
+            finally:
+                conn.close()
 
     def check_and_migrate_json(self, history_file_path: str) -> None:
         """

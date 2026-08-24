@@ -26,39 +26,41 @@ class ClipboardHistoryDAO(BaseDAO):
         """
         pinned_val = 1 if dto.is_pinned else 0
         with self._lock:
+            conn = self._get_connection()
             try:
-                with self._get_connection() as conn:
-                    cursor = conn.cursor()
-                    # 重複チェック
-                    cursor.execute(
-                        "SELECT id, is_pinned FROM t_clipboard_history WHERE content_hash = ?",
-                        (dto.content_hash,)
-                    )
-                    row = cursor.fetchone()
+                cursor = conn.cursor()
+                # 重複チェック
+                cursor.execute(
+                    "SELECT id, is_pinned FROM t_clipboard_history WHERE content_hash = ?",
+                    (dto.content_hash,)
+                )
+                row = cursor.fetchone()
 
-                    if row:
-                        existing_id = int(row[0])
-                        existing_pinned = int(row[1])
-                        merged_pinned = 1 if (existing_pinned or pinned_val) else 0
-                        cursor.execute(
-                            "UPDATE t_clipboard_history SET is_pinned = ?, created_at = ? WHERE id = ?",
-                            (merged_pinned, dto.created_at, existing_id)
-                        )
-                        conn.commit()
-                        logger.info("重複履歴を検出しました。最上部に移動します (ID: %d)", existing_id)
-                        return existing_id
-                    else:
-                        cursor.execute(
-                            "INSERT INTO t_clipboard_history (content, content_hash, is_pinned, created_at) VALUES (?, ?, ?, ?)",
-                            (dto.content, dto.content_hash, pinned_val, dto.created_at)
-                        )
-                        new_id = cursor.lastrowid or -1
-                        conn.commit()
-                        logger.info("新規履歴を登録しました (ID: %d)", new_id)
-                        return new_id
+                if row:
+                    existing_id = int(row[0])
+                    existing_pinned = int(row[1])
+                    merged_pinned = 1 if (existing_pinned or pinned_val) else 0
+                    cursor.execute(
+                        "UPDATE t_clipboard_history SET is_pinned = ?, created_at = ? WHERE id = ?",
+                        (merged_pinned, dto.created_at, existing_id)
+                    )
+                    conn.commit()
+                    logger.info("重複履歴を検出しました。最上部に移動します (ID: %d)", existing_id)
+                    return existing_id
+                else:
+                    cursor.execute(
+                        "INSERT INTO t_clipboard_history (content, content_hash, is_pinned, created_at) VALUES (?, ?, ?, ?)",
+                        (dto.content, dto.content_hash, pinned_val, dto.created_at)
+                    )
+                    new_id = cursor.lastrowid or -1
+                    conn.commit()
+                    logger.info("新規履歴を登録しました (ID: %d)", new_id)
+                    return new_id
             except sqlite3.Error as e:
                 logger.error("履歴項目の追加中にエラーが発生しました: %s", str(e), exc_info=True)
                 return -1
+            finally:
+                conn.close()
 
     def get_items(self, limit: int | None = None, query: str | None = None) -> list[ClipboardHistoryDTO]:
         """履歴項目を取得します。ピン留めされている項目を優先し、次に created_at DESC でソートします。"""
@@ -162,33 +164,35 @@ class ClipboardHistoryDAO(BaseDAO):
     def cleanup_old(self, limit: int) -> None:
         """上限値を超えている場合、ピン留めされていない最も古い履歴からクリーンアップします。"""
         with self._lock:
+            conn = self._get_connection()
             try:
-                with self._get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT COUNT(*) FROM t_clipboard_history")
-                    count = cursor.fetchone()[0]
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM t_clipboard_history")
+                count = cursor.fetchone()[0]
 
-                    if count <= limit:
-                        return
+                if count <= limit:
+                    return
 
-                    excess = count - limit
+                excess = count - limit
+                cursor.execute(
+                    "SELECT id FROM t_clipboard_history WHERE is_pinned = 0 ORDER BY created_at ASC LIMIT ?",
+                    (excess,)
+                )
+                rows = cursor.fetchall()
+
+                if rows:
+                    ids_to_delete = [row[0] for row in rows]
+                    placeholders = ",".join("?" for _ in ids_to_delete)
                     cursor.execute(
-                        "SELECT id FROM t_clipboard_history WHERE is_pinned = 0 ORDER BY created_at ASC LIMIT ?",
-                        (excess,)
+                        f"DELETE FROM t_clipboard_history WHERE id IN ({placeholders})",
+                        tuple(ids_to_delete)
                     )
-                    rows = cursor.fetchall()
-
-                    if rows:
-                        ids_to_delete = [row[0] for row in rows]
-                        placeholders = ",".join("?" for _ in ids_to_delete)
-                        cursor.execute(
-                            f"DELETE FROM t_clipboard_history WHERE id IN ({placeholders})",
-                            tuple(ids_to_delete)
-                        )
-                        conn.commit()
-                        logger.info(
-                            "履歴件数上限（%d件）を超過したため、ピン留めされていない古い項目を %d 件クリーンアップしました。",
-                            limit, len(ids_to_delete)
-                        )
+                    conn.commit()
+                    logger.info(
+                        "履歴件数上限（%d件）を超過したため、ピン留めされていない古い項目を %d 件クリーンアップしました。",
+                        limit, len(ids_to_delete)
+                    )
             except sqlite3.Error as e:
                 logger.error("履歴の自動自動クリーンアップ中にエラーが発生しました: %s", str(e), exc_info=True)
+            finally:
+                conn.close()

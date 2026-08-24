@@ -18,26 +18,28 @@ class CategoryDAO(BaseDAO):
     def add(self, dto: CategoryDTO) -> int:
         """カテゴリを追加します。"""
         with self._lock:
+            conn = self._get_connection()
             try:
-                with self._get_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT COALESCE(MAX(sort_order), 0) FROM t_category")
-                    max_order = cursor.fetchone()[0]
+                cursor = conn.cursor()
+                cursor.execute("SELECT COALESCE(MAX(sort_order), 0) FROM t_category")
+                max_order = cursor.fetchone()[0]
 
-                    cursor.execute(
-                        "INSERT INTO t_category (name, sort_order) VALUES (?, ?)",
-                        (dto.name, max_order + 1)
-                    )
-                    new_id = cursor.lastrowid or -1
-                    conn.commit()
-                    logger.info("カテゴリを追加しました: %s (ID: %d)", dto.name, new_id)
-                    return new_id
+                cursor.execute(
+                    "INSERT INTO t_category (name, sort_order) VALUES (?, ?)",
+                    (dto.name, max_order + 1)
+                )
+                new_id = cursor.lastrowid or -1
+                conn.commit()
+                logger.info("カテゴリを追加しました: %s (ID: %d)", dto.name, new_id)
+                return new_id
             except sqlite3.IntegrityError:
                 logger.warning("カテゴリ名 '%s' は既に存在します。", dto.name)
                 return -1
             except sqlite3.Error as e:
                 logger.error("カテゴリの追加中にエラーが発生しました: %s", str(e), exc_info=True)
                 return -1
+            finally:
+                conn.close()
 
     def get_all(self) -> list[CategoryDTO]:
         """すべてのカテゴリを表示順（sort_order）で取得します。"""
