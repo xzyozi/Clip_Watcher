@@ -98,8 +98,10 @@ class ClipboardMonitor:
         if not text:
             return
 
-        # テキストが最新の履歴アイテムと同一である場合、重複したエントリの追加を避けます。
-        if self.history and text == self.history[0][0]:
+        # テキストが直近のクリップボード内容と同一である場合、重複したエントリの
+        # 追加を避けます（ピン留め項目による表示順序に影響されないよう
+        # last_clipboard_data で比較する）。
+        if text == self.last_clipboard_data:
             return
 
         try:

@@ -91,6 +91,21 @@ class ClipboardHistoryDAO(BaseDAO):
             logger.error("履歴項目の取得中にエラーが発生しました: %s", str(e), exc_info=True)
             return []
 
+    def get_last_added_content(self) -> str | None:
+        """ピン留め状態に関わらず、created_at が最も新しい項目のcontentを取得します。
+
+        表示順序（ピン留め優先）とは無関係に「直近で実際にクリップボードにコピーされた
+        内容」を判定するために使用します。
+        """
+        try:
+            rows = self.execute_read(
+                "SELECT content FROM t_clipboard_history ORDER BY created_at DESC LIMIT 1"
+            )
+            return str(rows[0][0]) if rows else None
+        except Exception as e:
+            logger.error("直近の履歴項目の取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            return None
+
     def update_content(self, item_id: int, new_content: str, new_hash: str) -> bool:
         """履歴テキストの内容とハッシュを更新します。"""
         try:
