@@ -42,7 +42,12 @@ class HistoryService:
             dtos = self.db_manager.history_dao.get_items(limit=self.history_limit)
             self.history = [(dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos]
             if self.history:
-                self.last_clipboard_data = self.history[0][0]
+                # 表示順序（ピン留め優先）ではなく、実際に最後にクリップボードへ
+                # コピーされた内容（created_at が最新の項目）を last_clipboard_data
+                # に設定する。これを誤ると、ピン留め項目がある状態でクリップボード
+                # の変化判定が常に真になり、重複挿入ログが無限に出続けるバグになる。
+                last_added = self.db_manager.history_dao.get_last_added_content()
+                self.last_clipboard_data = last_added if last_added is not None else self.history[0][0]
             else:
                 self.last_clipboard_data = ""
             return self.history
@@ -61,9 +66,16 @@ class HistoryService:
         if not text:
             return
 
-        # 重複チェック
-        if self.history and text == self.history[0][0]:
-            return
+        # 重複チェック。
+        # last_clipboard_data は呼び出し元（ClipboardMonitor._update_history_with_new_entry）
+        # がこのメソッド呼び出し前に先行更新する場合があるため、判定には使用しない。
+        # 代わりに self.history 内で id（挿入順）が最大の項目を「実際に最後に
+        # 追加/更新された項目」とみなして比較する。これはピン留めによる表示順序
+        # （is_pinned優先ソート）の影響を受けない。
+        if self.history:
+            last_touched = max(self.history, key=lambda item: item[2])
+            if text == last_touched[0]:
+                return
 
         try:
             dto = ClipboardHistoryDTO(content=text, is_pinned=False)
