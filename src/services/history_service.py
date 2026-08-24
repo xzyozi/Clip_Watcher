@@ -66,10 +66,16 @@ class HistoryService:
         if not text:
             return
 
-        # 重複チェック（ピン留めによる表示順序に影響されないよう、実際に最後に
-        # 追加された内容である last_clipboard_data と比較する）
-        if text == self.last_clipboard_data:
-            return
+        # 重複チェック。
+        # last_clipboard_data は呼び出し元（ClipboardMonitor._update_history_with_new_entry）
+        # がこのメソッド呼び出し前に先行更新する場合があるため、判定には使用しない。
+        # 代わりに self.history 内で id（挿入順）が最大の項目を「実際に最後に
+        # 追加/更新された項目」とみなして比較する。これはピン留めによる表示順序
+        # （is_pinned優先ソート）の影響を受けない。
+        if self.history:
+            last_touched = max(self.history, key=lambda item: item[2])
+            if text == last_touched[0]:
+                return
 
         try:
             dto = ClipboardHistoryDTO(content=text, is_pinned=False)

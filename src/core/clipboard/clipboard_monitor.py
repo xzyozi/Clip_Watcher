@@ -99,10 +99,12 @@ class ClipboardMonitor:
             return
 
         # テキストが直近のクリップボード内容と同一である場合、重複したエントリの
-        # 追加を避けます（ピン留め項目による表示順序に影響されないよう
-        # last_clipboard_data で比較する）。
-        if text == self.last_clipboard_data:
-            return
+        # 追加を避けます。ピン留め項目による表示順序（is_pinned優先ソート）に
+        # 影響されないよう、id（挿入順）が最大の項目と比較する。
+        if self.history:
+            last_touched = max(self.history, key=lambda item: item[2])
+            if text == last_touched[0]:
+                return
 
         try:
             # 最初にシステムクリップボードを更新します
