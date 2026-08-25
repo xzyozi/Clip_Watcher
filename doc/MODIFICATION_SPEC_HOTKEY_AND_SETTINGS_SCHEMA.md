@@ -757,6 +757,9 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
   対象とし、`HOTKEY_ID=1` 固定でよい。第2のホットキー要件が確定した時点で、
   `HotkeyRegistrationManager` にID採番・登録一覧・一括解放を持たせる設計を
   検討する。現時点での先行実装は不要。
+  詳細な設計検討結果（ID範囲・競合検知単位・データ構造変更案・ハンドラ
+  振り分け方式の選択肢）は `.kiro/specs/pin-treeview-hotkey-investigation/
+  investigation_report.md` の Multi_Hotkey_Section を参照。
 - **トレイ格納状態**: スコープ外であり、トレイアイコンやWndProcを含む実装は
   行わない。将来 `HIDDEN_TO_TRAY` と `TrayHiddenStrategy` を追加できるよう、
   `WindowState` / `WindowStateStrategy` の拡張点だけを維持する。
