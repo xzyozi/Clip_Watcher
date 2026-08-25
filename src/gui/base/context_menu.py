@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from abc import ABC, abstractmethod
+from tkinter import ttk
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
@@ -32,10 +33,10 @@ class HistoryMenuStateProvider:
     def __init__(self, app: BaseApplication) -> None:
         self.app = app
 
-    def get_menu_state(self, listbox: tk.Listbox) -> MenuState:
+    def get_menu_state(self, tree: ttk.Treeview) -> MenuState:
         """Calculates and returns the current state of the menu."""
         history_component: HistoryListComponent = self.app.gui.history_component # type: ignore
-        selected_indices: tuple[int, ...] = listbox.curselection()
+        selected_indices: tuple[int, ...] = tuple(sorted(tree.index(iid) for iid in tree.selection()))
         has_selection: bool = bool(selected_indices)
 
         selected_ids: list[float] = history_component.get_ids_for_indices(list(selected_indices)) # type: ignore
@@ -98,7 +99,7 @@ class HistoryContextMenu(BaseContextMenu):
     """Context menu for the history listbox, with state management separated."""
     def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         self.app = app_instance
-        self.listbox: tk.Listbox | None = None
+        self.tree: ttk.Treeview | None = None
         self.state_provider = HistoryMenuStateProvider(app_instance)
         super().__init__(master, app_instance.translator, app_instance.event_dispatcher) # type: ignore
 
@@ -110,16 +111,16 @@ class HistoryContextMenu(BaseContextMenu):
         # Dynamic menu, no action needed here.
         pass
 
-    def _get_listbox(self) -> tk.Listbox:
-        if not self.listbox:
-            self.listbox = self.app.gui.history_component.listbox # type: ignore
-        return self.listbox
+    def _get_tree(self) -> ttk.Treeview:
+        if not self.tree:
+            self.tree = self.app.gui.history_component.tree # type: ignore
+        return self.tree
 
     def _build_dynamic_menu(self) -> None:
         """Builds the menu based on the current application state."""
         self.menu.delete(0, tk.END)
-        listbox = self._get_listbox()
-        state = self.state_provider.get_menu_state(listbox)
+        tree = self._get_tree()
+        state = self.state_provider.get_menu_state(tree)
         self._add_menu_items(state)
 
     def _add_menu_items(self, state: MenuState) -> None:
@@ -160,15 +161,25 @@ class HistoryContextMenu(BaseContextMenu):
         )
 
     def show(self, event: tk.Event) -> None:
-        listbox = self._get_listbox()
-        try:
-            item_index = listbox.nearest(event.y)
-            if not listbox.selection_includes(item_index):
-                listbox.selection_clear(0, tk.END)
-                listbox.selection_set(item_index)
-                listbox.activate(item_index)
-        except tk.TclError:
-            pass  # Listbox is empty
+        """Show the context menu, syncing selection to the right-clicked row.
+
+        Preconditions:
+            - `event` is a right-click event on `self._get_tree()`.
+        Postconditions:
+            - Requirement 6.2: `identify_row(event.y)` が空文字列（対象行なし）
+              の場合、既存の選択状態を変更しない。
+            - Requirement 6.1/6.4: `identify_row(event.y)` が有効な行iidを返した
+              場合、その行が未選択であれば `selection_set()` でその行のみを選択
+              状態にし、`focus()` でフォーカス行として設定する。
+        """
+        tree = self._get_tree()
+        row_iid: str = tree.identify_row(event.y)
+
+        if row_iid:
+            if row_iid not in tree.selection():
+                tree.selection_set(row_iid)
+            tree.focus(row_iid)
+        # else: row_iid == "" (空行クリック)。既存の選択状態を変更しない。
 
         self._build_dynamic_menu()
         super().show(event)
