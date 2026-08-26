@@ -101,12 +101,26 @@ class HistoryListComponent(tk.Frame):
         display_text = content.replace('\n', ' ').replace('\r', '')
         return f"{index + 1}. {display_text[:100]}..."
 
+    def _theme_name(self, theme: dict[str, str]) -> str:
+        """テーマ辞書に対応するTHEMES上のテーマ名を返す。
+
+        update_history() は呼出元からテーマ辞書を受け取るため、ThemeManagerの
+        現在値ではなく、その辞書自身をTHEMESから逆引きしてアイコンのテーマ名を
+        決定する。該当しない辞書はテーマ名を一意に導出できないため拒否する。
+        """
+        from src.core.config.defaults import THEMES
+
+        for theme_name, theme_values in THEMES.items():
+            if theme == theme_values:
+                return theme_name
+        raise ValueError("theme must match a configured THEMES entry")
+
     def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
         """履歴データとテーマの内容に基づき、表示ウィジェットの内容を差分更新する。
 
         Preconditions:
             - history はタプル (content, is_pinned, item_id) のリストであり、item_id は履歴全体で一意
-            - theme は 'pinned_bg' キーを持つ dict[str, str]
+            - theme は THEMES に定義されたテーマ辞書と値が一致する dict[str, str]
 
         Postconditions:
             - history と theme が直前の表示内容（displayed_history, current_theme）と完全に一致する場合、
@@ -140,6 +154,7 @@ class HistoryListComponent(tk.Frame):
             self.displayed_history = history
             self.current_theme = theme
             pinned_bg_color = theme["pinned_bg"]
+            theme_name = self._theme_name(theme)
 
             new_iids: list[str] = [self._iid_for_item_id(item[2]) for item in history]
             new_iid_set: set[str] = set(new_iids)
@@ -159,12 +174,22 @@ class HistoryListComponent(tk.Frame):
                 # Requirements 7.2: is_pinned が False の行には空タプル（タグなし）とし、
                 #   "pinned" タグを付与しない。
                 tags: tuple[str, ...] = ("pinned",) if is_pinned else ()
+                icon_image = (
+                    self.app.icon_manager.get_icon("pin", theme_name)
+                    if is_pinned
+                    else ""
+                )
 
                 if iid in existing_iid_set:
-                    self.tree.item(iid, text=display_text, tags=tags)
+                    self.tree.item(
+                        iid, text=display_text, tags=tags, image=icon_image
+                    )
                     self.tree.move(iid, "", index)
                 else:
-                    self.tree.insert("", index, iid=iid, text=display_text, tags=tags)
+                    self.tree.insert(
+                        "", index, iid=iid, text=display_text, tags=tags,
+                        image=icon_image
+                    )
 
             # Requirements 7.3: "pinned" タグの背景色は theme["pinned_bg"]（pinned_bg_color）から
             # 取得する。tag_configure は既存・新規行を問わず全ての "pinned" タグ付き行に一括適用される。

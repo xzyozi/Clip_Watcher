@@ -11,6 +11,7 @@ from src.core.config.app_status import AppStatus
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
 from src.plugins.manager import PluginManager
 from src.utils.error_handler import log_and_show_error
@@ -37,6 +38,7 @@ class ApplicationBuilder:
         self.plugin_manager: PluginManager | None = None
         self.event_dispatcher: EventDispatcher | None = None
         self.theme_manager: ThemeManager | None = None
+        self.icon_manager: IconManager | None = None
 
         self.translator: Translator | None = None
         self.app_status: AppStatus | None = None
@@ -110,6 +112,28 @@ class ApplicationBuilder:
         except Exception as e:
             log_and_show_error(title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}")
             raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}") from e
+
+    def with_icon_manager(self, icons_dir: str = "assets/icons") -> ApplicationBuilder:
+        """IconManagerを初期化し、ThemeManagerへ登録する。
+
+        このメソッドは必ず ``with_theme_manager()`` の後に呼び出すこと。
+
+        Args:
+            icons_dir: アイコンPNGファイルを格納するディレクトリ。
+
+        Raises:
+            ConfigError: ThemeManagerが初期化されていない場合。
+        """
+        if self.theme_manager is None:
+            raise ConfigError(
+                "テーママネージャーが初期化されていません。"
+                "with_icon_manager()の前にwith_theme_manager()を呼び出してください"
+            )
+
+        self.icon_manager = IconManager(icons_dir)
+        self.theme_manager.set_icon_manager(self.icon_manager)
+        logger.info("アイコンマネージャーを初期化し、テーママネージャーへ登録しました")
+        return self
 
     def with_history_service(self) -> ApplicationBuilder:
         """履歴サービスの初期化"""
@@ -187,8 +211,9 @@ class ApplicationBuilder:
         if not self.hotkey_listener:
             raise ConfigError("グローバルホットキーリスナーが初期化されていません")
         try:
-            from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
-
+            from src.core.hotkey.hotkey_registration_manager import (
+                HotkeyRegistrationManager,
+            )
             self.hotkey_registration_manager = HotkeyRegistrationManager(self.hotkey_listener)
             logger.info("ホットキー登録マネージャーを初期化しました")
             return self
@@ -223,6 +248,7 @@ class ApplicationBuilder:
                 plugin_manager=self.plugin_manager,  # type: ignore
                 event_dispatcher=self.event_dispatcher,  # type: ignore
                 theme_manager=self.theme_manager,  # type: ignore
+                icon_manager=self.icon_manager,
                 translator=self.translator,  # type: ignore
                 app_status=self.app_status,  # type: ignore
                 window_state_manager=self.window_state_manager,

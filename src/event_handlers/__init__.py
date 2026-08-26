@@ -73,6 +73,7 @@ def start_app() -> None:
             .with_database(db_path) \
             .with_translator() \
             .with_theme_manager(root) \
+            .with_icon_manager() \
             .with_history_service() \
             .with_plugin_manager() \
             .with_window_state_manager(root) \

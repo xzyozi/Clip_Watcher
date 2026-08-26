@@ -3,6 +3,7 @@ from tkinter import Tk, Toplevel, ttk
 from typing import Any
 
 from src.core.config.defaults import THEMES
+from src.gui.icon_manager import IconManager
 
 
 class ThemeManager:
@@ -10,9 +11,14 @@ class ThemeManager:
         self.root = root
         self.current_theme = "light"
         self.menubar: tk.Menu | None = None
+        self.icon_manager: IconManager | None = None
 
     def set_menubar(self, menubar: tk.Menu) -> None:
         self.menubar = menubar
+
+    def set_icon_manager(self, icon_manager: IconManager) -> None:
+        """テーマ切替時に通知するIconManagerを登録する。"""
+        self.icon_manager = icon_manager
 
     def apply_theme(self, theme_name: str) -> None:
         # Requirements 8.3: このメソッドは途中で例外が発生した場合に、それまでに適用済みの
@@ -27,6 +33,9 @@ class ThemeManager:
             theme_name = "light"
         self.current_theme = theme_name
         theme = THEMES[theme_name]
+
+        if self.icon_manager is not None:
+            self.icon_manager.invalidate_theme(theme_name)
 
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
