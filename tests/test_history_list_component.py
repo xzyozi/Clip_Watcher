@@ -144,4 +144,3 @@ def test_apply_theme_reapplies_pinned_icon_using_new_theme_name() -> None:
         ("item-1.0", "pin-dark-icon"),
         ("item-2.0", ""),
     ]
-

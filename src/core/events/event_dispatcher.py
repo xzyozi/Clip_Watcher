@@ -30,12 +30,16 @@ class EventDispatcher:
     # ── Overloads for subscribe ─────────────────────────────────────────────
     @overload
     def subscribe(
-        self, event_type: Literal["SETTINGS_CHANGED"], listener: Callable[[dict[str, Any]], Any]
+        self,
+        event_type: Literal["SETTINGS_CHANGED"],
+        listener: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
     def subscribe(
-        self, event_type: Literal["HISTORY_UPDATED"], listener: Callable[[list[dict[str, Any]]], Any]
+        self,
+        event_type: Literal["HISTORY_UPDATED"],
+        listener: Callable[[list[dict[str, Any]]], Any],
     ) -> None: ...
 
     @overload
@@ -45,7 +49,9 @@ class EventDispatcher:
 
     @overload
     def subscribe(
-        self, event_type: Literal["HISTORY_ITEM_EDITED"], listener: Callable[[dict[str, Any]], Any]
+        self,
+        event_type: Literal["HISTORY_ITEM_EDITED"],
+        listener: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
@@ -71,12 +77,16 @@ class EventDispatcher:
     # ── Overloads for unsubscribe ───────────────────────────────────────────
     @overload
     def unsubscribe(
-        self, event_type: Literal["SETTINGS_CHANGED"], listener: Callable[[dict[str, Any]], Any]
+        self,
+        event_type: Literal["SETTINGS_CHANGED"],
+        listener: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
     def unsubscribe(
-        self, event_type: Literal["HISTORY_UPDATED"], listener: Callable[[list[dict[str, Any]]], Any]
+        self,
+        event_type: Literal["HISTORY_UPDATED"],
+        listener: Callable[[list[dict[str, Any]]], Any],
     ) -> None: ...
 
     @overload
@@ -86,7 +96,9 @@ class EventDispatcher:
 
     @overload
     def unsubscribe(
-        self, event_type: Literal["HISTORY_ITEM_EDITED"], listener: Callable[[dict[str, Any]], Any]
+        self,
+        event_type: Literal["HISTORY_ITEM_EDITED"],
+        listener: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
@@ -112,22 +124,29 @@ class EventDispatcher:
 
     # ── Overloads for dispatch ──────────────────────────────────────────────
     @overload
-    def dispatch(self, event_type: Literal["SETTINGS_CHANGED"], payload: dict[str, Any]) -> None: ...
+    def dispatch(
+        self, event_type: Literal["SETTINGS_CHANGED"], payload: dict[str, Any]
+    ) -> None: ...
 
     @overload
     def dispatch(
-        self, event_type: Literal["HISTORY_UPDATED"], history_items: list[dict[str, Any]]
+        self,
+        event_type: Literal["HISTORY_UPDATED"],
+        history_items: list[dict[str, Any]],
     ) -> None: ...
 
     @overload
     def dispatch(self, event_type: Literal["LANGUAGE_CHANGED"], lang: str) -> None: ...
 
     @overload
-    def dispatch(self, event_type: Literal["HISTORY_ITEM_EDITED"], item: dict[str, Any]) -> None: ...
+    def dispatch(
+        self, event_type: Literal["HISTORY_ITEM_EDITED"], item: dict[str, Any]
+    ) -> None: ...
 
     @overload
     def dispatch(
-        self, event_type: Literal["REQUEST_UNDO_LAST_ACTION", "REQUEST_REDO_LAST_ACTION"]
+        self,
+        event_type: Literal["REQUEST_UNDO_LAST_ACTION", "REQUEST_REDO_LAST_ACTION"],
     ) -> None: ...
 
     @overload

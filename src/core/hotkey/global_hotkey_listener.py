@@ -88,7 +88,9 @@ class GlobalHotkeyListener:
             self.stop()
 
         if sys.platform != "win32":
-            logger.warning("Windows 以外の環境のため、グローバルホットキー登録をスキップします。")
+            logger.warning(
+                "Windows 以外の環境のため、グローバルホットキー登録をスキップします。"
+            )
             return False
 
         import ctypes.wintypes
@@ -100,12 +102,16 @@ class GlobalHotkeyListener:
             user32 = ctypes.windll.user32
             self._thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
 
-            ok = user32.RegisterHotKey(None, HOTKEY_ID, modifiers | MOD_NOREPEAT, vk_code)
+            ok = user32.RegisterHotKey(
+                None, HOTKEY_ID, modifiers | MOD_NOREPEAT, vk_code
+            )
             result_holder["ok"] = bool(ok)
             ready_event.set()
 
             if not ok:
-                logger.warning("グローバルホットキーの登録に失敗しました（キー競合の可能性）。")
+                logger.warning(
+                    "グローバルホットキーの登録に失敗しました（キー競合の可能性）。"
+                )
                 return
 
             msg = ctypes.wintypes.MSG()

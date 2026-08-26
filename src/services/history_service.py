@@ -20,7 +20,12 @@ _DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
 class HistoryService:
     """履歴データおよびその永続化・状態操作を管理するサービス（単一責任原則に基づく）"""
 
-    def __init__(self, db_manager: DatabaseManager, event_dispatcher: EventDispatcher, history_limit: int = _DEFAULT_HISTORY_LIMIT) -> None:
+    def __init__(
+        self,
+        db_manager: DatabaseManager,
+        event_dispatcher: EventDispatcher,
+        history_limit: int = _DEFAULT_HISTORY_LIMIT,
+    ) -> None:
         self.db_manager = db_manager
         self.event_dispatcher = event_dispatcher
         self.history_limit = history_limit
@@ -54,26 +59,32 @@ class HistoryService:
             self.load_history()
             self._notify_updated()
         elif len(self.history) > self.history_limit:
-            self.history = self.history[:self.history_limit]
+            self.history = self.history[: self.history_limit]
             self._notify_updated()
 
     def load_history(self) -> list[tuple[str, bool, float]]:
         """データベースから最新の履歴データを取得し、内部状態を更新します。"""
         try:
             dtos = self.db_manager.history_dao.get_items(limit=self.history_limit)
-            self.history = [(dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos]
+            self.history = [
+                (dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos
+            ]
             if self.history:
                 # 表示順序（ピン留め優先）ではなく、実際に最後にクリップボードへ
                 # コピーされた内容（created_at が最新の項目）を last_clipboard_data
                 # に設定する。これを誤ると、ピン留め項目がある状態でクリップボード
                 # の変化判定が常に真になり、重複挿入ログが無限に出続けるバグになる。
                 last_added = self.db_manager.history_dao.get_last_added_content()
-                self.last_clipboard_data = last_added if last_added is not None else self.history[0][0]
+                self.last_clipboard_data = (
+                    last_added if last_added is not None else self.history[0][0]
+                )
             else:
                 self.last_clipboard_data = ""
             return self.history
         except Exception as e:
-            logger.error(f"データベースからの履歴読み込みに失敗しました: {e}", exc_info=True)
+            logger.error(
+                f"データベースからの履歴読み込みに失敗しました: {e}", exc_info=True
+            )
             return []
 
     def get_history(self) -> list[tuple[str, bool, float]]:
@@ -112,17 +123,21 @@ class HistoryService:
     def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
         """指定されたIDの履歴項目のコンテンツを更新します。"""
         db_id = int(item_id)
-        new_hash = hashlib.sha256(new_text.encode('utf-8')).hexdigest()
+        new_hash = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
 
         try:
-            success = self.db_manager.history_dao.update_content(db_id, new_text, new_hash)
+            success = self.db_manager.history_dao.update_content(
+                db_id, new_text, new_hash
+            )
             if success:
                 if self.history and self.history[0][2] == item_id:
                     self.last_clipboard_data = new_text
                 self.load_history()
                 self._notify_updated()
         except Exception as e:
-            logger.error(f"履歴項目の更新に失敗しました (ID: {item_id}): {e}", exc_info=True)
+            logger.error(
+                f"履歴項目の更新に失敗しました (ID: {item_id}): {e}", exc_info=True
+            )
 
     def delete_history_item_by_id(self, item_id: float) -> None:
         """指定されたIDの履歴項目を削除します。"""
@@ -138,7 +153,9 @@ class HistoryService:
             else:
                 logger.warning(f"ID {item_id} の履歴項目が見つかりませんでした。")
         except Exception as e:
-            logger.error(f"履歴項目の削除に失敗しました (ID: {item_id}): {e}", exc_info=True)
+            logger.error(
+                f"履歴項目の削除に失敗しました (ID: {item_id}): {e}", exc_info=True
+            )
 
     def pin_item_by_id(self, item_id: float) -> None:
         """指定されたIDの履歴項目をピン留めします。"""
@@ -149,7 +166,9 @@ class HistoryService:
                 self.load_history()
                 self._notify_updated()
         except Exception as e:
-            logger.error(f"履歴項目のピン留めに失敗しました (ID: {item_id}): {e}", exc_info=True)
+            logger.error(
+                f"履歴項目のピン留めに失敗しました (ID: {item_id}): {e}", exc_info=True
+            )
 
     def unpin_item_by_id(self, item_id: float) -> None:
         """指定されたIDの履歴項目のピン留めを解除します。"""
@@ -160,7 +179,10 @@ class HistoryService:
                 self.load_history()
                 self._notify_updated()
         except Exception as e:
-            logger.error(f"履歴項目のピン留め解除に失敗しました (ID: {item_id}): {e}", exc_info=True)
+            logger.error(
+                f"履歴項目のピン留め解除に失敗しました (ID: {item_id}): {e}",
+                exc_info=True,
+            )
 
     def clear_history(self) -> None:
         """すべての履歴データを削除します。"""
@@ -181,16 +203,23 @@ class HistoryService:
             self._notify_updated()
             logger.info("ピン留めされていないすべての履歴を削除しました。")
         except Exception as e:
-            logger.error(f"ピン留めされていない履歴の削除に失敗しました: {e}", exc_info=True)
+            logger.error(
+                f"ピン留めされていない履歴の削除に失敗しました: {e}", exc_info=True
+            )
 
     def import_history(self, new_history_items: list[str]) -> None:
         """外部からテキスト配列を履歴項目として一括インポートします。"""
         import time
+
         try:
             base_time = time.time()
             for i, item_content in enumerate(reversed(new_history_items)):
                 # 基準時間を固定し、そこからデクリメントすることで、DBの書き込み遅延に影響されず正しい順序を保ちます
-                dto = ClipboardHistoryDTO(content=item_content, is_pinned=False, created_at=base_time - i * 0.01)
+                dto = ClipboardHistoryDTO(
+                    content=item_content,
+                    is_pinned=False,
+                    created_at=base_time - i * 0.01,
+                )
                 self.db_manager.history_dao.add_item(dto)
             self.db_manager.history_dao.cleanup_old(self.history_limit)
             self.load_history()
@@ -201,15 +230,19 @@ class HistoryService:
     def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:
         """検索クエリに合致する履歴項目を取得します。"""
         try:
-            dtos = self.db_manager.history_dao.get_items(limit=self.history_limit, query=query)
+            dtos = self.db_manager.history_dao.get_items(
+                limit=self.history_limit, query=query
+            )
             return [(dto.content, dto.is_pinned, float(dto.id or 0)) for dto in dtos]
         except Exception as e:
-            logger.error(f"履歴のフィルタリング取得中にエラーが発生しました: {e}", exc_info=True)
+            logger.error(
+                f"履歴のフィルタリング取得中にエラーが発生しました: {e}", exc_info=True
+            )
             return []
 
     def _notify_updated(self) -> None:
         """履歴の状態が更新されたことをイベント経由で通知します。"""
-        self.event_dispatcher.dispatch("HISTORY_UPDATED", {
-            "last_content": self.last_clipboard_data,
-            "history": self.get_history()
-        })
+        self.event_dispatcher.dispatch(
+            "HISTORY_UPDATED",
+            {"last_content": self.last_clipboard_data, "history": self.get_history()},
+        )

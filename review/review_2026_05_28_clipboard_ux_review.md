@@ -20,7 +20,9 @@
 `HistoryListComponent`（履歴リストを表示する部品）が更新される際、毎回無条件に全要素を削除して再インサートする設計になっています。
 ```python
 # src/gui/components/history_list_component.py
-def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
+def update_history(
+    self, history: list[tuple[str, bool, float]], theme: dict[str, str]
+) -> None:
     ...
     self.listbox.delete(0, tk.END)  # 毎回すべての項目を削除
     ...
@@ -89,12 +91,17 @@ sequenceDiagram
 
 ```python
 # 改善後のイメージ
-def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
+def update_history(
+    self, history: list[tuple[str, bool, float]], theme: dict[str, str]
+) -> None:
     # 履歴データと現在のテーマ（色設定）が両方完全に同じなら何もしない
     # ※テーマ変更時（ダーク/ライト切り替え時）は再描画してピン留め背景色などを適用する必要があるため、テーマの比較も必須です。
-    if getattr(self, "displayed_history", None) == history and getattr(self, "current_theme", None) == theme:
+    if (
+        getattr(self, "displayed_history", None) == history
+        and getattr(self, "current_theme", None) == theme
+    ):
         return
-    
+
     self.current_theme = theme
     ...
 ```

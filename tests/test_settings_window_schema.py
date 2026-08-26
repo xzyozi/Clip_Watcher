@@ -2,6 +2,7 @@
 
 reusable_gui 継承版の SettingsWindow スキーマ駆動テスト。
 """
+
 import tkinter as tk
 from unittest.mock import MagicMock
 

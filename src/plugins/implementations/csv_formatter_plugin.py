@@ -18,15 +18,15 @@ class CSVFormatterPlugin(Plugin):
             return text
 
         # Try to detect delimiter (comma or tab)
-        delimiter = ','
-        if '\t' in text and ',' not in text:
-            delimiter = '\t'
-        elif '\t' in text and ',' in text:
+        delimiter = ","
+        if "\t" in text and "," not in text:
+            delimiter = "\t"
+        elif "\t" in text and "," in text:
             # If both are present, count occurrences to guess
-            if text.count('\t') > text.count(','):
-                delimiter = '\t'
+            if text.count("\t") > text.count(","):
+                delimiter = "\t"
             else:
-                delimiter = ','
+                delimiter = ","
 
         # Use StringIO to treat string as a file
         f = io.StringIO(text)
@@ -59,4 +59,4 @@ class CSVFormatterPlugin(Plugin):
                     formatted_row_parts.append(cell.ljust(column_widths[i]))
             formatted_lines.append(delimiter.join(formatted_row_parts))
 
-        return '\n'.join(formatted_lines)
+        return "\n".join(formatted_lines)

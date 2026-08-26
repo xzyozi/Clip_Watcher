@@ -10,13 +10,17 @@ if TYPE_CHECKING:
 
 
 class SettingsEventHandlers(BaseEventHandler):
-    def __init__(self, event_dispatcher: EventDispatcher, settings_manager: SettingsManager) -> None:
+    def __init__(
+        self, event_dispatcher: EventDispatcher, settings_manager: SettingsManager
+    ) -> None:
         self.settings_manager = settings_manager
         super().__init__(event_dispatcher)
 
     def _register_handlers(self) -> None:
         self.subscribe("SETTINGS_ALWAYS_ON_TOP", self.handle_set_always_on_top)
-        self.subscribe("SETTINGS_SET_THEME", self.handle_set_theme) # Added this missing subscription
+        self.subscribe(
+            "SETTINGS_SET_THEME", self.handle_set_theme
+        )  # Added this missing subscription
 
     def handle_set_always_on_top(self, value: bool) -> None:
         self.settings_manager.set_setting("always_on_top", value)

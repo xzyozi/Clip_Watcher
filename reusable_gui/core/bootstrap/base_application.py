@@ -1,4 +1,5 @@
 """Application interface for type hints (generalized version)"""
+
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ApplicationState(Enum):
     """Defines the possible states of the application's lifecycle."""
+
     INITIALIZING = auto()
     READY = auto()
     RUNNING = auto()
@@ -55,7 +57,10 @@ class BaseApplication(ABC):
                 try:
                     listener(new_state)
                 except Exception as e:
-                    logger.error(f"Error in state listener for state {new_state}: {e}", exc_info=True)
+                    logger.error(
+                        f"Error in state listener for state {new_state}: {e}",
+                        exc_info=True,
+                    )
 
     @property
     @abstractmethod

@@ -1,4 +1,5 @@
 """Application interface for type hints"""
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum, auto
@@ -6,11 +7,13 @@ from enum import Enum, auto
 
 class ApplicationState(Enum):
     """Defines the possible states of the application's lifecycle."""
+
     INITIALIZING = auto()
     READY = auto()
     RUNNING = auto()
     SHUTTING_DOWN = auto()
     CLOSED = auto()
+
 
 class BaseApplication(ABC):
     """Interface definition for the main application."""

@@ -64,7 +64,10 @@ class HotkeyRegistrationManager:
             logger.info("グローバルホットキーを登録しました: %s", combo)
             return True
 
-        logger.warning("ホットキー %r の登録に失敗しました（キー競合等）。旧設定へ復元を試みます。", combo)
+        logger.warning(
+            "ホットキー %r の登録に失敗しました（キー競合等）。旧設定へ復元を試みます。",
+            combo,
+        )
         # 復元試行
         if old_enabled and old_combo:
             try:

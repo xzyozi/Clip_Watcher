@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class ClipboardHistoryDAO(BaseDAO):
     """クリップボード履歴（t_clipboard_history）テーブルへのデータアクセスを行うDAO"""
 
@@ -32,7 +33,7 @@ class ClipboardHistoryDAO(BaseDAO):
                 # 重複チェック
                 cursor.execute(
                     "SELECT id, is_pinned FROM t_clipboard_history WHERE content_hash = ?",
-                    (dto.content_hash,)
+                    (dto.content_hash,),
                 )
                 row = cursor.fetchone()
 
@@ -42,30 +43,38 @@ class ClipboardHistoryDAO(BaseDAO):
                     merged_pinned = 1 if (existing_pinned or pinned_val) else 0
                     cursor.execute(
                         "UPDATE t_clipboard_history SET is_pinned = ?, created_at = ? WHERE id = ?",
-                        (merged_pinned, dto.created_at, existing_id)
+                        (merged_pinned, dto.created_at, existing_id),
                     )
                     conn.commit()
-                    logger.info("重複履歴を検出しました。最上部に移動します (ID: %d)", existing_id)
+                    logger.info(
+                        "重複履歴を検出しました。最上部に移動します (ID: %d)",
+                        existing_id,
+                    )
                     return existing_id
                 else:
                     cursor.execute(
                         "INSERT INTO t_clipboard_history (content, content_hash, is_pinned, created_at) VALUES (?, ?, ?, ?)",
-                        (dto.content, dto.content_hash, pinned_val, dto.created_at)
+                        (dto.content, dto.content_hash, pinned_val, dto.created_at),
                     )
                     new_id = cursor.lastrowid or -1
                     conn.commit()
                     logger.info("新規履歴を登録しました (ID: %d)", new_id)
                     return new_id
             except sqlite3.Error as e:
-                logger.error("履歴項目の追加中にエラーが発生しました: %s", str(e), exc_info=True)
+                logger.error(
+                    "履歴項目の追加中にエラーが発生しました: %s", str(e), exc_info=True
+                )
                 return -1
             finally:
                 conn.close()
 
-    def get_items(self, limit: int | None = None, query: str | None = None) -> list[ClipboardHistoryDTO]:
+    def get_items(
+        self, limit: int | None = None, query: str | None = None
+    ) -> list[ClipboardHistoryDTO]:
         """履歴項目を取得します。ピン留めを優先し、作成日時・IDの降順でソートします。"""
         sql = "SELECT id, content, content_hash, is_pinned, created_at FROM t_clipboard_history"
         from typing import Any
+
         params: list[Any] = []
 
         if query:
@@ -86,11 +95,14 @@ class ClipboardHistoryDAO(BaseDAO):
                     content=row[1],
                     content_hash=row[2],
                     is_pinned=bool(row[3]),
-                    created_at=float(row[4])
-                ) for row in rows
+                    created_at=float(row[4]),
+                )
+                for row in rows
             ]
         except Exception as e:
-            logger.error("履歴項目の取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "履歴項目の取得中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return []
 
     def get_last_added_content(self) -> str | None:
@@ -105,7 +117,11 @@ class ClipboardHistoryDAO(BaseDAO):
             )
             return str(rows[0][0]) if rows else None
         except Exception as e:
-            logger.error("直近の履歴項目の取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "直近の履歴項目の取得中にエラーが発生しました: %s",
+                str(e),
+                exc_info=True,
+            )
             return None
 
     def update_content(self, item_id: int, new_content: str, new_hash: str) -> bool:
@@ -113,11 +129,13 @@ class ClipboardHistoryDAO(BaseDAO):
         try:
             affected_rows = self.execute_write(
                 "UPDATE t_clipboard_history SET content = ?, content_hash = ? WHERE id = ?",
-                (new_content, new_hash, item_id)
+                (new_content, new_hash, item_id),
             )
             return affected_rows > 0
         except Exception as e:
-            logger.error("履歴テキストの更新中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "履歴テキストの更新中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return False
 
     def pin_item(self, item_id: int, pin: bool) -> bool:
@@ -126,23 +144,26 @@ class ClipboardHistoryDAO(BaseDAO):
         try:
             affected_rows = self.execute_write(
                 "UPDATE t_clipboard_history SET is_pinned = ? WHERE id = ?",
-                (pinned_val, item_id)
+                (pinned_val, item_id),
             )
             return affected_rows > 0
         except Exception as e:
-            logger.error("ピン留め状態の更新中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "ピン留め状態の更新中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return False
 
     def delete_item(self, item_id: int) -> bool:
         """履歴項目を削除します。"""
         try:
             affected_rows = self.execute_write(
-                "DELETE FROM t_clipboard_history WHERE id = ?",
-                (item_id,)
+                "DELETE FROM t_clipboard_history WHERE id = ?", (item_id,)
             )
             return affected_rows > 0
         except Exception as e:
-            logger.error("履歴項目の削除中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "履歴項目の削除中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return False
 
     def clear_all(self) -> None:
@@ -151,7 +172,9 @@ class ClipboardHistoryDAO(BaseDAO):
             self.execute_write("DELETE FROM t_clipboard_history")
             logger.info("すべての履歴をクリアしました。")
         except Exception as e:
-            logger.error("履歴クリア中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "履歴クリア中にエラーが発生しました: %s", str(e), exc_info=True
+            )
 
     def delete_unpinned(self) -> None:
         """ピン留めされていない履歴をすべて削除します。"""
@@ -159,7 +182,11 @@ class ClipboardHistoryDAO(BaseDAO):
             self.execute_write("DELETE FROM t_clipboard_history WHERE is_pinned = 0")
             logger.info("ピン留めされていない履歴を削除しました。")
         except Exception as e:
-            logger.error("未ピン留め履歴の削除中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "未ピン留め履歴の削除中にエラーが発生しました: %s",
+                str(e),
+                exc_info=True,
+            )
 
     def cleanup_old(self, limit: int) -> None:
         """上限値を超えている場合、ピン留めされていない最も古い履歴からクリーンアップします。"""
@@ -176,7 +203,7 @@ class ClipboardHistoryDAO(BaseDAO):
                 excess = count - limit
                 cursor.execute(
                     "SELECT id FROM t_clipboard_history WHERE is_pinned = 0 ORDER BY created_at ASC, id ASC LIMIT ?",
-                    (excess,)
+                    (excess,),
                 )
                 rows = cursor.fetchall()
 
@@ -185,14 +212,19 @@ class ClipboardHistoryDAO(BaseDAO):
                     placeholders = ",".join("?" for _ in ids_to_delete)
                     cursor.execute(
                         f"DELETE FROM t_clipboard_history WHERE id IN ({placeholders})",
-                        tuple(ids_to_delete)
+                        tuple(ids_to_delete),
                     )
                     conn.commit()
                     logger.info(
                         "履歴件数上限（%d件）を超過したため、ピン留めされていない古い項目を %d 件クリーンアップしました。",
-                        limit, len(ids_to_delete)
+                        limit,
+                        len(ids_to_delete),
                     )
             except sqlite3.Error as e:
-                logger.error("履歴の自動自動クリーンアップ中にエラーが発生しました: %s", str(e), exc_info=True)
+                logger.error(
+                    "履歴の自動自動クリーンアップ中にエラーが発生しました: %s",
+                    str(e),
+                    exc_info=True,
+                )
             finally:
                 conn.close()

@@ -38,7 +38,10 @@ class SettingsWindow(ReusableSettingsWindow):
     def _get_schema(self) -> list[SettingField]:
         core_schema = self.settings_manager.get_settings_schema()
         plugin_schema: list[SettingField] = []
-        if hasattr(self.app_instance, "plugin_manager") and self.app_instance.plugin_manager:
+        if (
+            hasattr(self.app_instance, "plugin_manager")
+            and self.app_instance.plugin_manager
+        ):
             provider = PluginSettingsSchemaProvider(self.app_instance.plugin_manager)
             plugin_schema = provider.get_fields()
         return [*core_schema, *plugin_schema]

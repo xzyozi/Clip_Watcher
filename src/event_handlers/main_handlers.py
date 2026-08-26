@@ -14,11 +14,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 def handle_about() -> None:
     messagebox.showinfo(
         "バージョン情報 (About)",
-        f"ClipWatcher\nバージョン: {defaults.APP_VERSION}\n開発者: xx\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。"
+        f"ClipWatcher\nバージョン: {defaults.APP_VERSION}\n開発者: xx\n\nこのアプリケーションは、クリップボードの履歴を管理し、再利用を容易にするために開発されました。",
     )
+
 
 def handle_how_to_use() -> None:
     messagebox.showinfo(
@@ -32,8 +34,9 @@ def handle_how_to_use() -> None:
         "   - 「編集」メニュー: 履歴の削除など。\n"
         "   - 「表示」メニュー: ウィンドウの表示設定など。\n"
         "   - 「ヘルプ」メニュー: バージョン情報など。\n"
-        "\nご不明な点があれば、[SPECIFICATION.md](SPECIFICATION.md) を参照してください。"
+        "\nご不明な点があれば、[SPECIFICATION.md](SPECIFICATION.md) を参照してください。",
     )
+
 
 def handle_copy_fixed_phrase(gui_instance: Any, phrase: str) -> None:
     try:
@@ -41,16 +44,20 @@ def handle_copy_fixed_phrase(gui_instance: Any, phrase: str) -> None:
         gui_instance.master.clipboard_append(phrase)
         logger.info(f"Copied fixed phrase: {phrase[:50]}...")
     except Exception as e:
-        log_and_show_error("エラー",f"Error copying fixed phrase: {e}")
+        log_and_show_error("エラー", f"Error copying fixed phrase: {e}")
 
 
 def handle_show_schedule_helper_tool(app_instance: BaseApplication) -> None:
-    """ Switch to the Schedule Helper Tool tab in the main notebook """
+    """Switch to the Schedule Helper Tool tab in the main notebook"""
     try:
         # The tab index should be 2 (0: Clipboard, 1: Fixed Phrases, 2: Schedule Helper)
-        app_instance.gui.notebook.select(2) # type: ignore
+        app_instance.gui.notebook.select(2)  # type: ignore
         logger.info("Switched to Schedule Helper Tool tab.")
     except tk.TclError as e:
-        logger.error(f"Failed to switch to Schedule Helper Tool tab. It might not exist. {e}")
+        logger.error(
+            f"Failed to switch to Schedule Helper Tool tab. It might not exist. {e}"
+        )
     except Exception as e:
-        log_and_show_error("エラー", f"An unexpected error occurred while switching tabs: {e}")
+        log_and_show_error(
+            "エラー", f"An unexpected error occurred while switching tabs: {e}"
+        )

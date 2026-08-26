@@ -9,21 +9,53 @@ def categorize_phrase(text: str) -> str:
     text_lower = text.lower()
 
     # 1. Business / Mail
-    business_keywords = ["お世話になっております", "お疲れ様です", "株式会社", "よろしくお願いいたします", "ご担当者様", "拝啓", "敬具"]
+    business_keywords = [
+        "お世話になっております",
+        "お疲れ様です",
+        "株式会社",
+        "よろしくお願いいたします",
+        "ご担当者様",
+        "拝啓",
+        "敬具",
+    ]
     if any(k in text_lower for k in business_keywords):
         return "Business / Mail"
 
     # 2. Prompts (Image Gen)
-    prompt_tags = ["1girl", "2girls", "boy", "hair", "eyes", "face", "nsfw", "masterpiece", "best quality", "docking", "breast"]
+    prompt_tags = [
+        "1girl",
+        "2girls",
+        "boy",
+        "hair",
+        "eyes",
+        "face",
+        "nsfw",
+        "masterpiece",
+        "best quality",
+        "docking",
+        "breast",
+    ]
     # カンマが3つ以上あり改行がない、またはカンマが5つ以上ある、または特定のプロンプトタグが含まれる
-    has_many_commas = (text_lower.count(',') >= 3 and '\n' not in text_lower) or (text_lower.count(',') >= 5)
+    has_many_commas = (text_lower.count(",") >= 3 and "\n" not in text_lower) or (
+        text_lower.count(",") >= 5
+    )
     has_prompt_tags = any(tag in text_lower for tag in prompt_tags)
 
     if has_many_commas or has_prompt_tags:
         return "Prompts"
 
     # 3. Development / IT
-    dev_keywords = ["python", "bug", "実装", "エラー", "スクリプト", "def ", "class ", "git ", "http"]
+    dev_keywords = [
+        "python",
+        "bug",
+        "実装",
+        "エラー",
+        "スクリプト",
+        "def ",
+        "class ",
+        "git ",
+        "http",
+    ]
     if any(k in text_lower for k in dev_keywords):
         return "Development / IT"
 
@@ -34,9 +66,13 @@ def categorize_phrase(text: str) -> str:
 
     return "General / Memo"
 
+
 def get_db_path():
-    app_data_dir = os.path.join(os.environ.get('USERPROFILE', os.path.expanduser('~')), '.clipWatcher')
-    return os.path.join(app_data_dir, 'clip_watcher.db')
+    app_data_dir = os.path.join(
+        os.environ.get("USERPROFILE", os.path.expanduser("~")), ".clipWatcher"
+    )
+    return os.path.join(app_data_dir, "clip_watcher.db")
+
 
 def main():
     json_path = "fixed_phrases.json"
@@ -50,7 +86,7 @@ def main():
         sys.exit(1)
 
     print(f"Loading data from {json_path}...")
-    with open(json_path, encoding='utf-8') as f:
+    with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
     if not isinstance(data, list):
@@ -77,7 +113,10 @@ def main():
         # カテゴリごとの次の sort_order (フレーズ用)
         phrase_sort_orders = {}
         for cat_id in category_cache.values():
-            cursor.execute("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM t_meta_phrase WHERE category_id = ?", (cat_id,))
+            cursor.execute(
+                "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM t_meta_phrase WHERE category_id = ?",
+                (cat_id,),
+            )
             phrase_sort_orders[cat_id] = cursor.fetchone()[0]
 
         migrated_count = 0
@@ -90,7 +129,10 @@ def main():
 
             # カテゴリが存在しなければ作成
             if category_name not in category_cache:
-                cursor.execute("INSERT INTO t_category (name, sort_order) VALUES (?, ?)", (category_name, next_cat_sort_order))
+                cursor.execute(
+                    "INSERT INTO t_category (name, sort_order) VALUES (?, ?)",
+                    (category_name, next_cat_sort_order),
+                )
                 new_cat_id = cursor.lastrowid
                 category_cache[category_name] = new_cat_id
                 phrase_sort_orders[new_cat_id] = 0
@@ -99,7 +141,7 @@ def main():
             cat_id = category_cache[category_name]
 
             # titleの生成
-            first_line = content.split('\n')[0]
+            first_line = content.split("\n")[0]
             title = first_line[:25] + ("..." if len(first_line) > 25 else "")
             if not title:
                 title = "Untitled"
@@ -109,7 +151,7 @@ def main():
 
             cursor.execute(
                 "INSERT INTO t_meta_phrase (title, content, category_id, sort_order, created_at) VALUES (?, ?, ?, ?, ?)",
-                (title, content, cat_id, sort_order, created_at)
+                (title, content, cat_id, sort_order, created_at),
             )
             phrase_sort_orders[cat_id] += 1
             migrated_count += 1
@@ -129,6 +171,7 @@ def main():
         print(f"Migration failed and rolled back: {e}")
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@
 
 PluginSettingsSchemaProvider の動作検証テスト。
 """
+
 from reusable_gui.core.config.schema import WidgetType
 from src.plugins.base_plugin import Plugin
 from src.plugins.manager import PluginManager

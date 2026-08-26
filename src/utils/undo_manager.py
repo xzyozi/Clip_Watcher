@@ -5,6 +5,7 @@ from src.core.events.event_dispatcher import EventDispatcher
 
 class UndoableCommand(ABC):
     """An interface for a command that can be undone."""
+
     @abstractmethod
     def execute(self) -> None:
         """Executes the command."""
@@ -15,8 +16,10 @@ class UndoableCommand(ABC):
         """Undoes the command."""
         pass
 
+
 class UndoManager:
     """Manages undo and redo operations using command objects."""
+
     def __init__(self, event_dispatcher: EventDispatcher):
         self.undo_stack: list[UndoableCommand] = []
         self.redo_stack: list[UndoableCommand] = []
@@ -59,5 +62,5 @@ class UndoManager:
         """Dispatches an event to notify UI about stack changes."""
         self.event_dispatcher.dispatch(
             "UNDO_REDO_STACK_CHANGED",
-            {"can_undo": self.can_undo(), "can_redo": self.can_redo()}
+            {"can_undo": self.can_undo(), "can_redo": self.can_redo()},
         )

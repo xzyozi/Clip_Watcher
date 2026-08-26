@@ -69,12 +69,16 @@ class MainApplication(BaseApplication):
         self.gui = ClipWatcherGUI(master, self)
 
         # コールバックではなく、EventDispatcherによるイベント駆動（Pub/Sub）でGUIの更新を受け取ります
-        self.event_dispatcher.subscribe("HISTORY_UPDATED", self._on_history_updated_event)
+        self.event_dispatcher.subscribe(
+            "HISTORY_UPDATED", self._on_history_updated_event
+        )
         self.monitor.set_error_callback(self.show_error_message)
 
         self._rebuild_menu(event=None)  # Call with dummy event
 
-        self.event_dispatcher.subscribe("HISTORY_TOGGLE_SORT", self.on_toggle_history_sort)  # type: ignore
+        self.event_dispatcher.subscribe(
+            "HISTORY_TOGGLE_SORT", self.on_toggle_history_sort
+        )  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)  # type: ignore
 
@@ -94,11 +98,16 @@ class MainApplication(BaseApplication):
 
         if self.hotkey_registration_manager:
             enabled = self.settings_manager.get_setting("global_hotkey_enabled", True)
-            combo = self.settings_manager.get_setting("global_hotkey_combo", "Ctrl+Shift+F")
+            combo = self.settings_manager.get_setting(
+                "global_hotkey_combo", "Ctrl+Shift+F"
+            )
             success = self.hotkey_registration_manager.reconfigure(enabled, combo)
             if not success:
                 import logging
-                logging.getLogger(__name__).warning("起動時のホットキー登録に失敗しました: %s", combo)
+
+                logging.getLogger(__name__).warning(
+                    "起動時のホットキー登録に失敗しました: %s", combo
+                )
                 self.show_error_message(
                     "Hotkey Registration Warning",
                     f"Could not register global hotkey: {combo!r}. The key combination may be in use by another application.",
@@ -123,15 +132,19 @@ class MainApplication(BaseApplication):
 
     def _rebuild_menu(self, event: Any = None) -> None:
         """Destroys and recreates the main menu bar, usually for language changes."""
-        if hasattr(self, 'menubar') and self.menubar: # type: ignore
-            self.menubar.destroy() # type: ignore
-        self.menubar = menu_bar.create_menu_bar(self.master, self) # type: ignore
+        if hasattr(self, "menubar") and self.menubar:  # type: ignore
+            self.menubar.destroy()  # type: ignore
+        self.menubar = menu_bar.create_menu_bar(self.master, self)  # type: ignore
         self.master.config(menu=self.menubar)
-        self.theme_manager.set_menubar(self.menubar) # type: ignore
+        self.theme_manager.set_menubar(self.menubar)  # type: ignore
 
-    def update_gui(self, current_content: str, history: list[tuple[str, bool, float]]) -> None:
+    def update_gui(
+        self, current_content: str, history: list[tuple[str, bool, float]]
+    ) -> None:
         """Wrapper to pass sort order to the GUI."""
-        self.gui.update_clipboard_display(current_content, history, self.history_sort_ascending)
+        self.gui.update_clipboard_display(
+            current_content, history, self.history_sort_ascending
+        )
 
     def _on_history_updated_event(self, data: dict[str, Any]) -> None:
         """履歴更新イベント（HISTORY_UPDATED）受信時のハンドラー。"""
@@ -153,13 +166,13 @@ class MainApplication(BaseApplication):
             theme = "light"
         self.theme_manager.apply_theme(theme)
         self.gui.history_component.apply_theme(THEMES[theme])
-        if hasattr(self, 'theme_var'): # type: ignore
-            self.theme_var.set(theme) # type: ignore
+        if hasattr(self, "theme_var"):  # type: ignore
+            self.theme_var.set(theme)  # type: ignore
 
         always_on_top: bool = settings.get("always_on_top", False)
         self.master.attributes("-topmost", always_on_top)
-        if hasattr(self, 'always_on_top_var'): # type: ignore
-            self.always_on_top_var.set(always_on_top) # type: ignore
+        if hasattr(self, "always_on_top_var"):  # type: ignore
+            self.always_on_top_var.set(always_on_top)  # type: ignore
 
         startup_enabled: bool = settings.get("startup_on_boot", False)
         self._manage_startup(startup_enabled)
@@ -171,7 +184,14 @@ class MainApplication(BaseApplication):
         or standard venv folders to ensure successful activation.
         """
         if sys.platform == "win32":
-            startup_folder: str = os.path.join(os.environ['APPDATA'], 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+            startup_folder: str = os.path.join(
+                os.environ["APPDATA"],
+                "Microsoft",
+                "Windows",
+                "Start Menu",
+                "Programs",
+                "Startup",
+            )
             startup_script_path: str = os.path.join(startup_folder, "ClipWatcher.bat")
 
             try:
@@ -179,19 +199,33 @@ class MainApplication(BaseApplication):
                     # 1. プロジェクトルート(main.pyがある場所)を算出
                     current_dir: str = os.path.dirname(os.path.abspath(__file__))
                     # src/core -> src -> root
-                    project_root: str = os.path.abspath(os.path.join(current_dir, '..', '..'))
-                    main_script_path: str = os.path.join(project_root, "clip_watcher.py")
+                    project_root: str = os.path.abspath(
+                        os.path.join(current_dir, "..", "..")
+                    )
+                    main_script_path: str = os.path.join(
+                        project_root, "clip_watcher.py"
+                    )
 
                     # 2. activate.bat の場所を探索する
                     # 優先度1: 現在実行中のPython (sys.executable) と同じ階層にある Scripts/activate.bat
                     # (venv環境で実行していればこれが最も確実)
                     current_python_dir: str = os.path.dirname(sys.executable)
                     activate_candidates: list[str] = [
-                        os.path.join(current_python_dir, "activate.bat"), # Scriptsフォルダの中にいる場合
-                        os.path.join(current_python_dir, "Scripts", "activate.bat"), # python.exeの親がルートの場合
-                        os.path.join(project_root, "venv", "Scripts", "activate.bat"), # 一般的な名前 venv
-                        os.path.join(project_root, ".venv", "Scripts", "activate.bat"), # 一般的な名前 .venv
-                        os.path.join(project_root, "env", "Scripts", "activate.bat") # 一般的な名前 env
+                        os.path.join(
+                            current_python_dir, "activate.bat"
+                        ),  # Scriptsフォルダの中にいる場合
+                        os.path.join(
+                            current_python_dir, "Scripts", "activate.bat"
+                        ),  # python.exeの親がルートの場合
+                        os.path.join(
+                            project_root, "venv", "Scripts", "activate.bat"
+                        ),  # 一般的な名前 venv
+                        os.path.join(
+                            project_root, ".venv", "Scripts", "activate.bat"
+                        ),  # 一般的な名前 .venv
+                        os.path.join(
+                            project_root, "env", "Scripts", "activate.bat"
+                        ),  # 一般的な名前 env
                     ]
 
                     final_activate_path: str | None = None
@@ -201,7 +235,7 @@ class MainApplication(BaseApplication):
                             break
 
                     # 3. バッチファイルの内容を作成
-                    script_content: str = '@echo off\n'
+                    script_content: str = "@echo off\n"
                     script_content += f'cd "{project_root}"\n'
 
                     if final_activate_path:
@@ -221,32 +255,40 @@ class MainApplication(BaseApplication):
                     if os.path.exists(startup_script_path):
                         os.remove(startup_script_path)
             except Exception as e:
-                self.show_error_message("Startup Error", f"Failed to manage startup script: {e}")
+                self.show_error_message(
+                    "Startup Error", f"Failed to manage startup script: {e}"
+                )
 
     def on_toggle_history_sort(self, event: Any = None) -> None:
         """Toggles the history sort order and refreshes the GUI."""
         self.history_sort_ascending = not self.history_sort_ascending
 
         if self.history_sort_ascending:
-            self.gui.sort_button.config(text=self.translator("sort_asc_button")) # type: ignore
+            self.gui.sort_button.config(text=self.translator("sort_asc_button"))  # type: ignore
         else:
-            self.gui.sort_button.config(text=self.translator("sort_desc_button")) # type: ignore
+            self.gui.sort_button.config(text=self.translator("sort_desc_button"))  # type: ignore
 
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history()) # type: ignore
-        print(f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}")
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())  # type: ignore
+        print(
+            f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}"
+        )
 
     def open_settings_window(self) -> None:
         self.create_toplevel(SettingsWindow, self.settings_manager)
 
-    def create_toplevel(self, toplevel_class: type[tk.Toplevel], *args: Any, **kwargs: Any) -> tk.Toplevel:
-        toplevel_window: tk.Toplevel = toplevel_class(self.master, self, *args, **kwargs) # type: ignore
+    def create_toplevel(
+        self, toplevel_class: type[tk.Toplevel], *args: Any, **kwargs: Any
+    ) -> tk.Toplevel:
+        toplevel_window: tk.Toplevel = toplevel_class(
+            self.master, self, *args, **kwargs
+        )  # type: ignore
 
         # ToplevelClass might have a wait_window(), so the window could be destroyed
         # by the time we get here. Check if it still exists.
         if toplevel_window.winfo_exists():
             if self.settings_manager.get_setting("always_on_top", False):
                 toplevel_window.attributes("-topmost", True)
-            toplevel_window.transient(self.master) # type: ignore
+            toplevel_window.transient(self.master)  # type: ignore
 
         return toplevel_window
 
@@ -254,4 +296,4 @@ class MainApplication(BaseApplication):
         messagebox.showerror(title, message)
 
     def stop_monitor(self) -> None:
-        self.monitor.stop() # type: ignore
+        self.monitor.stop()  # type: ignore

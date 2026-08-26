@@ -62,13 +62,17 @@ class WindowStateManager:
         else:
             self.show()
 
-    def register_strategy(self, state: WindowState, strategy: WindowStateStrategy) -> None:
+    def register_strategy(
+        self, state: WindowState, strategy: WindowStateStrategy
+    ) -> None:
         self._strategies[state] = strategy
 
     def _transition_to(self, new_state: WindowState) -> None:
         strategy = self._strategies.get(new_state)
         if strategy is None:
-            logger.warning("未知のウィンドウ状態への遷移が要求されました: %s", new_state)
+            logger.warning(
+                "未知のウィンドウ状態への遷移が要求されました: %s", new_state
+            )
             return
         strategy.enter(self._root)
         self._state = new_state

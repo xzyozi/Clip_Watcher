@@ -12,7 +12,9 @@ def test_with_icon_manager_creates_and_registers_icon_manager() -> None:
     """要件5.4: IconManagerを生成し、ThemeManagerへ登録する。"""
     root = MagicMock()
 
-    with patch("src.core.bootstrap.application_builder.ThemeManager") as theme_manager_class:
+    with patch(
+        "src.core.bootstrap.application_builder.ThemeManager"
+    ) as theme_manager_class:
         theme_manager = theme_manager_class.return_value
         builder = ApplicationBuilder().with_theme_manager(root)
 
@@ -53,5 +55,7 @@ def test_build_passes_icon_manager_to_main_application() -> None:
         result = builder.build(MagicMock())
 
     assert result is built_app
-    assert main_application_class.call_args.kwargs["icon_manager"] is builder.icon_manager
+    assert (
+        main_application_class.call_args.kwargs["icon_manager"] is builder.icon_manager
+    )
     built_app.on_ready.assert_called_once_with()
