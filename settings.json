@@ -1,7 +1,7 @@
 {
     "theme": "dark",
     "language": "ja",
-    "history_limit": 110,
+    "history_limit": 300,
     "always_on_top": false,
     "excluded_apps": [
         "keepass.exe",
