@@ -78,7 +78,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.control_frame = ttk.Frame(history_area_frame)
         self.control_frame.pack(pady=config.FRAME_PADDING)
 
-        self.copy_history_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.listbox.curselection())) # type: ignore
+        self.copy_history_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", self.history_component.get_ids_for_indices(self.history_component.get_selected_indices()))) # type: ignore
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
 
         self.sort_button = ttk.Button(self.control_frame, text="", command=lambda: self.app.event_dispatcher.dispatch("HISTORY_TOGGLE_SORT")) # type: ignore
@@ -139,7 +139,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         if not edited_text:
             return
 
-        selected_indices: tuple[int, ...] = self.history_component.listbox.curselection()
+        selected_indices: tuple[int, ...] = self.history_component.get_selected_indices()
 
         if selected_indices:
             index: int = selected_indices[0]
@@ -262,7 +262,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.history_component.update_history(history, theme)
 
         # テキストエリアの上書き防止（差分チェックおよび選択操作状態の保護）
-        selected_indices: tuple[int, ...] = self.history_component.listbox.curselection()
+        selected_indices: tuple[int, ...] = self.history_component.get_selected_indices()
 
         # 挿入すべき新しい文字列を決定
         new_insert_content = ""

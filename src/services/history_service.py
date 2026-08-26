@@ -4,6 +4,7 @@ import hashlib
 import logging
 from typing import TYPE_CHECKING, Any
 
+from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
@@ -12,11 +13,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
+_DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
+
 
 class HistoryService:
     """履歴データおよびその永続化・状態操作を管理するサービス（単一責任原則に基づく）"""
 
-    def __init__(self, db_manager: DatabaseManager, event_dispatcher: EventDispatcher, history_limit: int = 50) -> None:
+    def __init__(self, db_manager: DatabaseManager, event_dispatcher: EventDispatcher, history_limit: int = _DEFAULT_HISTORY_LIMIT) -> None:
         self.db_manager = db_manager
         self.event_dispatcher = event_dispatcher
         self.history_limit = history_limit
@@ -30,9 +34,26 @@ class HistoryService:
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
 
     def on_settings_changed(self, settings: dict[str, Any]) -> None:
-        """設定変更イベント時のハンドラー。履歴表示制限件数を更新します。"""
-        self.history_limit = settings.get("history_limit", 50)
-        if len(self.history) > self.history_limit:
+        """設定変更イベント時のハンドラー。履歴表示制限件数を更新します。
+
+        起動シーケンス上、HistoryService はデフォルト値（history_limit=50）で
+        初期化され、その後に settings.json が読み込まれて SETTINGS_CHANGED が
+        発火する（ApplicationBuilder.build() 末尾の load_and_notify() 呼び出し）。
+        そのため、設定ファイルの history_limit がデフォルトより大きい場合、
+        メモリ上の self.history は既に古い（小さい）上限で読み込まれた件数しか
+        保持していない。上限が増えた場合は DB から再読み込みし、上限が減った
+        場合は既存のトリム処理で対応する。
+        """
+        new_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
+        limit_increased = new_limit > self.history_limit
+        self.history_limit = new_limit
+
+        if limit_increased:
+            # 上限が増えた場合、現在メモリ上の件数が新しい上限に達しているかに
+            # 関わらず、DBには上限を超えて残っている可能性があるため再読込する。
+            self.load_history()
+            self._notify_updated()
+        elif len(self.history) > self.history_limit:
             self.history = self.history[:self.history_limit]
             self._notify_updated()
 

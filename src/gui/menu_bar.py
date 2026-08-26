@@ -30,7 +30,7 @@ def create_menu_bar(master: tk.Tk, app_instance: BaseApplication) -> tk.Menu:
     # Edit Menu
     edit_menu = tk.Menu(menubar, tearoff=0, postcommand=app_instance.reassert_topmost) # type: ignore
     edit_menu.add_command(label=translator("find_menu_item"), command=lambda: logger.info("Find clicked"))
-    edit_menu.add_command(label=translator("copy_merged_menu_item"), command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_component.listbox.curselection())) # type: ignore
+    edit_menu.add_command(label=translator("copy_merged_menu_item"), command=lambda: app_instance.event_dispatcher.dispatch("HISTORY_COPY_MERGED", app_instance.gui.history_component.get_ids_for_indices(app_instance.gui.history_component.get_selected_indices()))) # type: ignore
     edit_menu.add_separator()
     edit_menu.add_command(label=translator("delete_selected_menu_item"), command=app_instance.history_handlers.handle_delete_selected_history) # type: ignore
     edit_menu.add_command(label=translator("delete_all_unpinned_menu_item"), command=app_instance.history_handlers.handle_delete_all_unpinned_history) # type: ignore

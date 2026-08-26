@@ -15,6 +15,13 @@ class ThemeManager:
         self.menubar = menubar
 
     def apply_theme(self, theme_name: str) -> None:
+        # Requirements 8.3: このメソッドは途中で例外が発生した場合に、それまでに適用済みの
+        # スタイル変更や self.current_theme を切替前の状態へ巻き戻す処理を持たない。
+        # 下記の try/except tk.TclError（'clam'テーマ選択・選択スタイルマッピング）は、
+        # 個々のワークアラウンド適用が失敗した場合の代替手段（フォールバック）であり、
+        # apply_theme() 全体の適用を取り消す「ロールバック」ではない。ここで捕捉されない
+        # 例外が発生した場合は、既存の例外伝播に委ね、ピン留め表示行を含む状態は
+        # 失敗時点のままとする。
         if theme_name not in THEMES:
             print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"
@@ -24,7 +31,14 @@ class ThemeManager:
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
         if theme_name == 'dark':
-            style.theme_use('clam')
+            try:
+                style.theme_use('clam')
+            except tk.TclError:
+                # Requirements 7.5: 'clam' テーマが利用できない環境では、
+                # 選択スタイルのワークアラウンド（'clam'前提）を適用できないため、
+                # 対応可能な 'default' テーマへ自動的にフォールバックする。
+                style.theme_use('default')
+                theme_name = 'default'
         else:
             style.theme_use('default')
 
@@ -54,7 +68,21 @@ class ThemeManager:
 
         # Treeview specific styling
         style.configure('Treeview', background=theme["listbox_bg"], foreground=theme["listbox_fg"], fieldbackground=theme["listbox_bg"])
-        style.map('Treeview', background=[('selected', theme["select_bg"])], foreground=[('selected', theme["select_fg"])])
+        if theme_name == 'dark':
+            # 既知の不具合ワークアラウンド（Requirements 7.4）:
+            # 'clam' テーマでは、Treeviewの選択状態スタイルマップ（'selected'）が
+            # tag_configure() で設定した行の背景色（例: ピン留め行の pinned タグ）を
+            # 無条件に上書きしてしまう。選択状態の背景/前景マッピングを空にすることで、
+            # 選択されていてもタグ側の背景色が視認可能な状態を維持する。
+            try:
+                style.map('Treeview', background=[], foreground=[])
+            except tk.TclError:
+                # Requirements 7.5: ワークアラウンドの適用自体が失敗した場合、
+                # 選択マッピングを完全に諦めるのではなく、通常の選択色マッピング
+                # にフォールバックし、視認性が完全に失われる事態を避ける。
+                style.map('Treeview', background=[('selected', theme["select_bg"])], foreground=[('selected', theme["select_fg"])])
+        else:
+            style.map('Treeview', background=[('selected', theme["select_bg"])], foreground=[('selected', theme["select_fg"])])
         style.configure('Treeview.Heading', background=theme["button_bg"], foreground=theme["button_fg"])
 
         # 2. Recursively apply theme to non-ttk widgets

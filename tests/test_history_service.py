@@ -192,3 +192,103 @@ def test_settings_changed(history_service: HistoryService, event_dispatcher: Eve
     # 最新の3件が保持される
     assert history_service.history[0][0] == "Item 4"
     assert history_service.history[2][0] == "Item 2"
+
+
+def test_settings_changed_limit_increase_reloads_from_db(
+    history_service: HistoryService, event_dispatcher: EventDispatcher, mocker: Any
+) -> None:
+    """history_limit が増加した際に、メモリ上の件数を単純比較するだけでなく
+    DB から再読み込みされ、増加後の上限までの件数が反映されることを検証します。
+
+    再現シナリオ:
+    起動時に SettingsManager がまだファイルを読み込んでいないデフォルト値
+    （小さい history_limit）で HistoryService が初期化され、その後
+    settings.json 由来の大きい history_limit が SETTINGS_CHANGED で通知される
+    ケース（ApplicationBuilder の初期化順序に起因する既知の不具合）。
+    """
+    # add_history_item()/ClipboardHistoryDTO は created_at に time.time() を
+    # 使うため、高速に連続実行すると同一タイムスタンプになり
+    # `ORDER BY created_at DESC` の順序が不定になる（既存の技術的負債）。
+    # このテストでは順序を安定させるため time.time を単調増加するダミー値に
+    # モックする。
+    fake_time = iter(float(i) for i in range(1, 1000))
+    mocker.patch("src.db.dto.time.time", side_effect=lambda: next(fake_time))
+
+    # フィクスチャの history_limit=5 の状態で7件追加すると、
+    # DB側の cleanup_old(5) により DB には最新5件のみ残る。
+    for i in range(7):
+        history_service.add_history_item(f"Item {i}")
+    assert len(history_service.history) == 5
+    assert history_service.history_limit == 5
+
+    # DB の cleanup_old が history_limit=5 で動作しているため、
+    # 上限拡大後にDB内の全件（5件）が再読込されることを確認する前提として、
+    # 事前に DB 側の実件数を確認する。
+    db_items_before = history_service.db_manager.history_dao.get_items(limit=None)
+    assert len(db_items_before) == 5
+
+    event_data: dict[str, Any] = {}
+
+    def on_updated(data: dict[str, Any]) -> None:
+        nonlocal event_data
+        event_data = data
+
+    event_dispatcher.subscribe("HISTORY_UPDATED", on_updated)
+
+    # 上限を10に拡大する設定変更イベントを発火する。
+    # cleanup_old が limit=5 で既に実行済みのため、DBには5件しか無いが、
+    # 上限拡大時に load_history() が呼ばれ、メモリ上の履歴が
+    # DBの実件数（5件）と一致した状態で再構築されることを確認する
+    # （拡大前の実装では load_history() が呼ばれず、拡大前のメモリ内容の
+    # ままになっていた）。
+    event_dispatcher.dispatch("SETTINGS_CHANGED", {"history_limit": 10})
+
+    assert history_service.history_limit == 10
+    assert len(history_service.history) == 5
+    assert history_service.history[0][0] == "Item 6"
+    assert history_service.history[4][0] == "Item 2"
+
+    # 上限拡大による再読込でも HISTORY_UPDATED イベントが通知されること
+    assert event_data != {}
+    assert len(event_data["history"]) == 5
+
+
+def test_settings_changed_limit_increase_recovers_items_beyond_previous_limit(
+    db_manager: Any, event_dispatcher: EventDispatcher
+) -> None:
+    """小さい history_limit で初期化された直後にDBへ多くの件数が存在する状態から、
+    history_limit を増加させた際、DB上の全件が上限拡大後の件数まで復元されることを
+    検証します（起動直後にデフォルト値で初期ロードされ、後から設定ファイルの
+    大きい history_limit が通知される実際の不具合シナリオを再現する）。
+    """
+    # HistoryService を経由せず、DAO を直接使って7件のダミー履歴をDBへ投入する
+    # （HistoryService.add_history_item は追加ごとに cleanup_old を実行してしまうため、
+    #  「DBには小さいlimitを超える件数が既に存在する」状況を作れない）。
+    from src.db.dto import ClipboardHistoryDTO
+
+    # created_at=0.0 は ClipboardHistoryDTO.__post_init__ の
+    # `if not self.created_at:` 判定で falsy とみなされ time.time() に
+    # 上書きされてしまうため、i=0 のケースを避けて 1 始まりの値を使う。
+    for i in range(7):
+        db_manager.history_dao.add_item(
+            ClipboardHistoryDTO(content=f"Preloaded {i}", is_pinned=False, created_at=float(i + 1))
+        )
+
+    db_items = db_manager.history_dao.get_items(limit=None)
+    assert len(db_items) == 7
+
+    # 起動シーケンスを再現: デフォルト値（小さい上限）で HistoryService を初期化する。
+    # コンストラクタ内の load_history() が limit=3 で読み込むため、
+    # この時点のメモリ内履歴は3件のみになる。
+    service = HistoryService(db_manager=db_manager, event_dispatcher=event_dispatcher, history_limit=3)
+    assert len(service.history) == 3
+
+    # settings.json 読み込み完了後に発火する SETTINGS_CHANGED を再現する
+    # （history_limit を7以上に拡大）。
+    event_dispatcher.dispatch("SETTINGS_CHANGED", {"history_limit": 7})
+
+    assert service.history_limit == 7
+    # 拡大前の実装では再読込されず3件のままだったが、修正後はDB上の7件全てが復元される
+    assert len(service.history) == 7
+    assert service.history[0][0] == "Preloaded 6"
+    assert service.history[6][0] == "Preloaded 0"

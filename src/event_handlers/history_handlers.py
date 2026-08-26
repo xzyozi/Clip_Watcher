@@ -43,7 +43,7 @@ class HistoryEventHandlers(BaseEventHandler):
     def handle_history_item_edited(self, data: dict[str, Any]) -> None:
         try:
             history_component: HistoryListComponent = self.app.gui.history_component # type: ignore
-            selected_indices: tuple[int, ...] = history_component.listbox.curselection() # type: ignore
+            selected_indices: tuple[int, ...] = history_component.get_selected_indices()
             if not selected_indices:
                 return
 
@@ -182,7 +182,7 @@ class HistoryEventHandlers(BaseEventHandler):
 
     def format_selected_item(self) -> None:
         try:
-            selected_indices: tuple[int, ...] = self.app.gui.history_component.listbox.curselection() # type: ignore
+            selected_indices: tuple[int, ...] = self.app.gui.history_component.get_selected_indices() # type: ignore
             if not selected_indices:
                 return
 
@@ -202,13 +202,13 @@ class HistoryEventHandlers(BaseEventHandler):
     def apply_plugin_to_selected_item(self, plugin_instance: Plugin) -> None:
         try:
             history_component: HistoryListComponent = self.app.gui.history_component # type: ignore
-            selected_indices: tuple[int, ...] = history_component.listbox.curselection() # type: ignore
+            selected_indices: tuple[int, ...] = history_component.get_selected_indices()
             if not selected_indices:
                 return
 
             selected_index: int = selected_indices[0]
 
-            history_data: list[tuple[str, bool, float]] = history_component.history # type: ignore
+            history_data: list[tuple[str, bool, float]] = history_component.displayed_history
             if 0 <= selected_index < len(history_data):
                 original_text: str = history_data[selected_index][0]
                 item_id: float = history_data[selected_index][2] # Get item_id
