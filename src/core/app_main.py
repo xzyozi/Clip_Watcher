@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from src import event_handlers
 from src.core.bootstrap.base_application import ApplicationState, BaseApplication
+from src.core.config.defaults import THEMES
 from src.gui import menu_bar
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui.windows.settings_window import SettingsWindow
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from src.core.config.settings_manager import SettingsManager
     from src.core.events.event_dispatcher import EventDispatcher
     from src.db.database_manager import DatabaseManager
+    from src.gui.icon_manager import IconManager
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager
     from src.services.history_service import HistoryService
@@ -37,6 +39,7 @@ class MainApplication(BaseApplication):
         theme_manager: ThemeManager,
         translator: Translator,
         app_status: Any,
+        icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
         hotkey_registration_manager: Any | None = None,
     ) -> None:
@@ -51,6 +54,7 @@ class MainApplication(BaseApplication):
         self.plugin_manager = plugin_manager
         self.event_dispatcher = event_dispatcher
         self.theme_manager = theme_manager
+        self.icon_manager = icon_manager
         self.translator = translator
         self.app_status = app_status
         self.window_state_manager = window_state_manager
@@ -145,7 +149,10 @@ class MainApplication(BaseApplication):
 
     def on_settings_changed(self, settings: dict[str, Any]) -> None:
         theme: str = settings.get("theme", "light")
+        if theme not in THEMES:
+            theme = "light"
         self.theme_manager.apply_theme(theme)
+        self.gui.history_component.apply_theme(THEMES[theme])
         if hasattr(self, 'theme_var'): # type: ignore
             self.theme_var.set(theme) # type: ignore
 

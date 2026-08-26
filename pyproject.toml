@@ -20,6 +20,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-mock",
+    "hypothesis==6.151.5",
 ]
 
 # --- Pytest ---
