@@ -132,7 +132,7 @@ class SettingsManager(BaseSettingsManager):
                 key="history_limit", label="History Limit",
                 widget_type=WidgetType.SPINBOX,
                 tab="History", group="History Options",
-                default=50,
+                default=d.DEFAULT_USER_SETTINGS["history_limit"],
                 min_value=d.HISTORY_LIMIT_MIN,
                 max_value=d.HISTORY_LIMIT_MAX,
                 increment=d.HISTORY_LIMIT_INCREMENT,
