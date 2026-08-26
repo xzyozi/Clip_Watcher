@@ -8,6 +8,7 @@ from src.core.bootstrap.dependency_checker import DependencyChecker
 from src.core.bootstrap.exceptions import ConfigError
 from src.core.clipboard.clipboard_monitor import ClipboardMonitor
 from src.core.config.app_status import AppStatus
+from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
 from src.gui.theme_manager import ThemeManager
@@ -117,9 +118,10 @@ class ApplicationBuilder:
         try:
             from src.services.history_service import HistoryService
             # デフォルト設定から履歴数上限を取得（後でSETTINGS_CHANGEDでも同期されます）
-            limit = 50
+            # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
+            limit = DEFAULT_USER_SETTINGS["history_limit"]
             if self.settings_manager:
-                limit = self.settings_manager.get_setting("history_limit", 50)
+                limit = self.settings_manager.get_setting("history_limit", limit)
             self.history_service = HistoryService(self.db_manager, self.event_dispatcher, history_limit=limit)
             logger.info("履歴サービスを初期化しました")
             return self

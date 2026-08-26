@@ -16,9 +16,13 @@ except ImportError:
     # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
     pass
 
+from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
+
+# history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
+_DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
 
 if TYPE_CHECKING:
     from src.services.history_service import HistoryService
@@ -27,7 +31,7 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ClipboardMonitor:
-    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, db_manager: DatabaseManager, history_service: HistoryService, history_limit: int = 50, excluded_apps: list[str] | None = None) -> None:
+    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, db_manager: DatabaseManager, history_service: HistoryService, history_limit: int = _DEFAULT_HISTORY_LIMIT, excluded_apps: list[str] | None = None) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
@@ -64,7 +68,7 @@ class ClipboardMonitor:
         self.history_service.last_clipboard_data = value
 
     def on_settings_changed(self, settings: dict[str, Any]) -> None:
-        self.history_limit = settings.get("history_limit", 50)
+        self.history_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
         self.excluded_apps = settings.get("excluded_apps", [])
         self.notification_manager.update_settings(settings)
 

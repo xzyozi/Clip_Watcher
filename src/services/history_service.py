@@ -4,6 +4,7 @@ import hashlib
 import logging
 from typing import TYPE_CHECKING, Any
 
+from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.db.dto import ClipboardHistoryDTO
 
 if TYPE_CHECKING:
@@ -12,11 +13,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
+_DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
+
 
 class HistoryService:
     """履歴データおよびその永続化・状態操作を管理するサービス（単一責任原則に基づく）"""
 
-    def __init__(self, db_manager: DatabaseManager, event_dispatcher: EventDispatcher, history_limit: int = 50) -> None:
+    def __init__(self, db_manager: DatabaseManager, event_dispatcher: EventDispatcher, history_limit: int = _DEFAULT_HISTORY_LIMIT) -> None:
         self.db_manager = db_manager
         self.event_dispatcher = event_dispatcher
         self.history_limit = history_limit
@@ -40,7 +44,7 @@ class HistoryService:
         保持していない。上限が増えた場合は DB から再読み込みし、上限が減った
         場合は既存のトリム処理で対応する。
         """
-        new_limit = settings.get("history_limit", 50)
+        new_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
         limit_increased = new_limit > self.history_limit
         self.history_limit = new_limit
 
