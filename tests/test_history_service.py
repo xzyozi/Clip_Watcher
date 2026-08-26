@@ -73,8 +73,10 @@ def test_update_history_item(history_service: HistoryService) -> None:
     assert history_service.last_clipboard_data == "Updated Text"
 
 
-def test_delete_history_item(history_service: HistoryService) -> None:
-    """履歴項目の削除が正しく機能することを検証します。"""
+def test_delete_history_item(history_service: HistoryService, mocker: Any) -> None:
+    """同一作成時刻でも最新IDの履歴を削除できることを検証します。"""
+    mocker.patch("src.db.dto.time.time", return_value=1.0)
+
     history_service.add_history_item("Item A")
     history_service.add_history_item("Item B")
     assert len(history_service.history) == 2
@@ -177,8 +179,12 @@ def test_get_filtered_history(history_service: HistoryService) -> None:
     assert "Banana" not in matched_contents
 
 
-def test_settings_changed(history_service: HistoryService, event_dispatcher: EventDispatcher) -> None:
-    """設定変更イベントによって制限件数が変更され、あふれた履歴がクリーンアップされることを検証します。"""
+def test_settings_changed(
+    history_service: HistoryService, event_dispatcher: EventDispatcher, mocker: Any
+) -> None:
+    """同一作成時刻でも設定縮小時に最新IDの履歴が保持されることを検証します。"""
+    mocker.patch("src.db.dto.time.time", return_value=1.0)
+
     for i in range(5):
         history_service.add_history_item(f"Item {i}")
     assert len(history_service.history) == 5

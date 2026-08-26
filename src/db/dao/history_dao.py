@@ -63,7 +63,7 @@ class ClipboardHistoryDAO(BaseDAO):
                 conn.close()
 
     def get_items(self, limit: int | None = None, query: str | None = None) -> list[ClipboardHistoryDTO]:
-        """履歴項目を取得します。ピン留めされている項目を優先し、次に created_at DESC でソートします。"""
+        """履歴項目を取得します。ピン留めを優先し、作成日時・IDの降順でソートします。"""
         sql = "SELECT id, content, content_hash, is_pinned, created_at FROM t_clipboard_history"
         from typing import Any
         params: list[Any] = []
@@ -72,7 +72,7 @@ class ClipboardHistoryDAO(BaseDAO):
             sql += " WHERE content LIKE ?"
             params.append(f"%{query}%")
 
-        sql += " ORDER BY is_pinned DESC, created_at DESC"
+        sql += " ORDER BY is_pinned DESC, created_at DESC, id DESC"
 
         if limit is not None:
             sql += " LIMIT ?"
@@ -101,7 +101,7 @@ class ClipboardHistoryDAO(BaseDAO):
         """
         try:
             rows = self.execute_read(
-                "SELECT content FROM t_clipboard_history ORDER BY created_at DESC LIMIT 1"
+                "SELECT content FROM t_clipboard_history ORDER BY created_at DESC, id DESC LIMIT 1"
             )
             return str(rows[0][0]) if rows else None
         except Exception as e:
@@ -175,7 +175,7 @@ class ClipboardHistoryDAO(BaseDAO):
 
                 excess = count - limit
                 cursor.execute(
-                    "SELECT id FROM t_clipboard_history WHERE is_pinned = 0 ORDER BY created_at ASC LIMIT ?",
+                    "SELECT id FROM t_clipboard_history WHERE is_pinned = 0 ORDER BY created_at ASC, id ASC LIMIT ?",
                     (excess,)
                 )
                 rows = cursor.fetchall()

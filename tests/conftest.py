@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tkinter as tk
 from collections.abc import Generator
 from typing import Any
 
@@ -62,3 +63,12 @@ def mock_monitor(mocker: Any) -> Any:
     """ClipboardMonitor のモックを提供し、OS依存の処理をスキップさせます。"""
     monitor = mocker.Mock()
     return monitor
+
+
+@pytest.fixture(scope="session")
+def tk_root() -> Generator[tk.Tk, None, None]:
+    """実GUIテスト用の非表示Tkルートをテストセッションで共有する。"""
+    root = tk.Tk()
+    root.withdraw()
+    yield root
+    root.destroy()
