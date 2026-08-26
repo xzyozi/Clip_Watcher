@@ -4,7 +4,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from reusable_gui.core.config.schema import SettingField
-from reusable_gui.windows.settings_window import SettingsWindow as ReusableSettingsWindow
+from reusable_gui.windows.settings_window import (
+    SettingsWindow as ReusableSettingsWindow,
+)
 from src.plugins.settings_schema_provider import PluginSettingsSchemaProvider
 
 if TYPE_CHECKING:

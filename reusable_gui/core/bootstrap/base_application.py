@@ -5,10 +5,10 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
 from reusable_gui.core.events.event_dispatcher import EventDispatcher
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationState(Enum):

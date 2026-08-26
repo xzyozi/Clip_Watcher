@@ -10,8 +10,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.db.database_manager import DatabaseManager
-from src.utils.logging_config import setup_logging
+from src.db.database_manager import DatabaseManager  # noqa: E402
+from src.utils.logging_config import setup_logging  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
