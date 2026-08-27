@@ -157,9 +157,7 @@ class HistoryContextMenu(BaseContextMenu):
         """Adds items to the menu based on the provided state."""
         self.menu.add_command(
             label=self._translate("copy_selected"),
-            command=lambda: self._dispatch(
-                "HISTORY_COPY_SELECTED", state.selected_ids
-            ),
+            command=lambda: self._dispatch("HISTORY_COPY_SELECTED", state.selected_ids),
             state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
