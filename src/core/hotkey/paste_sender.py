@@ -7,9 +7,14 @@ from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
+_VK_SHIFT = 0x10
 _VK_CONTROL = 0x11
+_VK_MENU = 0x12
+_VK_LWIN = 0x5B
+_VK_RWIN = 0x5C
 _VK_V = 0x56
 _KEYEVENTF_KEYUP = 0x0002
+_MODIFIER_KEYS = (_VK_SHIFT, _VK_CONTROL, _VK_MENU, _VK_LWIN, _VK_RWIN)
 
 
 class PasteSender(Protocol):
@@ -19,7 +24,21 @@ class PasteSender(Protocol):
 
 
 class WindowsPasteSender:
-    """Windows の入力ストリームへ Ctrl+V を送るアダプター。"""
+    """Windows の入力ストリームへCtrl+Vを送るアダプター。"""
+
+    def are_modifiers_released(self) -> bool:
+        """物理修飾キーがすべて解放済みならTrueを返す。"""
+        if sys.platform != "win32":
+            return False
+        try:
+            user32 = ctypes.windll.user32
+            return all(
+                not user32.GetAsyncKeyState(virtual_key) & 0x8000
+                for virtual_key in _MODIFIER_KEYS
+            )
+        except OSError:
+            logger.exception("修飾キー状態の取得に失敗しました。")
+            return False
 
     def paste_active_window(self) -> bool:
         if sys.platform != "win32":
