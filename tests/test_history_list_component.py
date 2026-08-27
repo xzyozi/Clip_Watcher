@@ -146,3 +146,37 @@ def test_apply_theme_reapplies_pinned_icon_using_new_theme_name() -> None:
         ("item-1.0", "pin-dark-icon"),
         ("item-2.0", ""),
     ]
+
+
+def test_update_history_displays_hotkeys_only_for_pinned_bound_items() -> None:
+    """設定済みのピン留め履歴だけにホットキー列の値を表示する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+
+    component.update_history(
+        [
+            ("assigned", True, 1.0),
+            ("unassigned", True, 2.0),
+            ("unpinned", False, 3.0),
+        ],
+        THEMES["light"],
+        {1: "Ctrl+Alt+1", 3: "Ctrl+Alt+3"},
+    )
+
+    assert tree.rows["item-1.0"]["values"] == ("Ctrl+Alt+1",)
+    assert tree.rows["item-2.0"]["values"] == ("",)
+    assert tree.rows["item-3.0"]["values"] == ("",)
+
+
+def test_update_history_refreshes_existing_row_when_only_hotkey_changes() -> None:
+    """履歴・テーマが不変でも、割当変更を既存行のホットキー列へ反映する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+    history = [("pinned", True, 1.0)]
+
+    component.update_history(history, THEMES["light"], {})
+    component.update_history(history, THEMES["light"], {1: "Ctrl+Alt+1"})
+
+    assert tree.rows["item-1.0"]["values"] == ("Ctrl+Alt+1",)
+    assert tree.item_calls[-1][0] == "item-1.0"
+    assert tree.item_calls[-1][1]["values"] == ("Ctrl+Alt+1",)

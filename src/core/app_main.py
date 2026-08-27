@@ -124,6 +124,10 @@ class MainApplication(BaseApplication):
             lambda combo: self.configure_pinned_hotkey(history_id, combo),
         )
 
+    def _refresh_history_display(self) -> None:
+        """現在の履歴を保持したまま一覧表示を更新する。"""
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+
     def configure_pinned_hotkey(self, history_id: int, combo: str) -> bool:
         if not self._is_history_item_pinned(history_id):
             self.show_error_message(
@@ -140,7 +144,7 @@ class MainApplication(BaseApplication):
             )
             return False
         self._save_pinned_hotkey_bindings(bindings)
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self._refresh_history_display()
         return True
 
     def remove_pinned_hotkey_binding(self, history_id: int) -> bool:
@@ -152,7 +156,7 @@ class MainApplication(BaseApplication):
             logger.error("履歴ID %s のホットキー解除に失敗しました。", history_id)
             return False
         self._save_pinned_hotkey_bindings(bindings)
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self._refresh_history_display()
         return True
 
     def clear_pinned_hotkey_bindings(self) -> bool:
@@ -160,7 +164,7 @@ class MainApplication(BaseApplication):
             logger.error("ピン留めホットキーの一括解除に失敗しました。")
             return False
         self._save_pinned_hotkey_bindings({})
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self._refresh_history_display()
         return True
 
     def _on_hotkey_triggered(self, hotkey_id: int = GLOBAL_HOTKEY_ID) -> None:
