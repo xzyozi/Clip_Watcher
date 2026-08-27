@@ -48,8 +48,7 @@ class HistoryListComponent(tk.Frame):
             show="tree headings",
             selectmode="extended",
         )
-        self.tree.heading("#0", text="履歴")
-        self.tree.heading("hotkey", text="ホットキー")
+        self._apply_translations()
         self.tree.column("hotkey", width=140, minwidth=100, stretch=False)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.config(yscrollcommand=self.scrollbar.set)
@@ -57,7 +56,15 @@ class HistoryListComponent(tk.Frame):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+    def _apply_translations(self) -> None:
+        """現在の言語に対応するTreeview列見出しを設定する。"""
+        self.tree.heading("#0", text=self.app.translator("history_column_label"))
+        self.tree.heading("hotkey", text=self.app.translator("hotkey_column_label"))
+
     def _bind_events(self) -> None:
+        self.app.event_dispatcher.subscribe(
+            "LANGUAGE_CHANGED", self._apply_translations
+        )  # type: ignore
         self.tree.bind("<<TreeviewSelect>>", self._on_history_select)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
         from src.gui.base import context_menu

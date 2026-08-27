@@ -23,6 +23,8 @@
     "waiting_for_clipboard_content": "Waiting for clipboard content...",
     "search_label": "Search:",
     "clipboard_history_label": "Clipboard History",
+    "history_column_label": "History",
+    "hotkey_column_label": "Hotkey",
     "copy_selected_button": "Copy Selected",
     "sort_desc_button": "Sort: Desc",
     "sort_asc_button": "Sort: Asc",
