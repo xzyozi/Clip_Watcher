@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import tkinter as tk
@@ -9,6 +10,8 @@ from typing import TYPE_CHECKING, Any, cast
 from src import event_handlers
 from src.core.bootstrap.base_application import ApplicationState, BaseApplication
 from src.core.config.defaults import THEMES
+from src.core.hotkey.global_hotkey_listener import GLOBAL_HOTKEY_ID
+from src.core.hotkey.hotkey_registration_manager import normalize_pinned_hotkey_bindings
 from src.gui import menu_bar
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui.windows.settings_window import SettingsWindow
@@ -18,12 +21,15 @@ if TYPE_CHECKING:
     from src.core.clipboard.clipboard_monitor import ClipboardMonitor
     from src.core.config.settings_manager import SettingsManager
     from src.core.events.event_dispatcher import EventDispatcher
+    from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
     from src.db.database_manager import DatabaseManager
     from src.gui.icon_manager import IconManager
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager
     from src.services.history_service import HistoryService
     from src.utils.i18n import Translator
+
+logger = logging.getLogger(__name__)
 
 
 class MainApplication(BaseApplication):
@@ -41,7 +47,7 @@ class MainApplication(BaseApplication):
         app_status: Any,
         icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
-        hotkey_registration_manager: Any | None = None,
+        hotkey_registration_manager: HotkeyRegistrationManager | None = None,
     ) -> None:
         super().__init__()
         self.master = master
@@ -65,57 +71,163 @@ class MainApplication(BaseApplication):
         self.menubar: tk.Menu | None = None
 
         event_handlers.register_class_based_handlers(self)  # type: ignore
-
         self.gui = ClipWatcherGUI(master, self)
 
-        # コールバックではなく、EventDispatcherによるイベント駆動（Pub/Sub）でGUIの更新を受け取ります
         self.event_dispatcher.subscribe(
             "HISTORY_UPDATED", self._on_history_updated_event
         )
         self.monitor.set_error_callback(self.show_error_message)
-
-        self._rebuild_menu(event=None)  # Call with dummy event
+        self._rebuild_menu(event=None)
 
         self.event_dispatcher.subscribe(
             "HISTORY_TOGGLE_SORT", self.on_toggle_history_sort
         )  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)  # type: ignore
-
-        if self.window_state_manager:
-            window_state_manager = self.window_state_manager
-            self.event_dispatcher.subscribe(
-                "GLOBAL_HOTKEY_TRIGGERED", lambda *_: window_state_manager.toggle()
-            )
-
+        self.event_dispatcher.subscribe(
+            "GLOBAL_HOTKEY_TRIGGERED", self._on_hotkey_triggered
+        )
         self.master.bind("<FocusIn>", self.on_focus_in)
 
     def on_ready(self) -> None:
         """Called when the application is fully initialized and ready to run."""
         self._set_state(ApplicationState.READY)
-
-        # Populate GUI with initial history loaded from file
         self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
 
-        if self.hotkey_registration_manager:
-            enabled = self.settings_manager.get_setting("global_hotkey_enabled", True)
+        if not self._reconfigure_hotkeys_from_settings():
             combo = self.settings_manager.get_setting(
                 "global_hotkey_combo", "Ctrl+Shift+F"
             )
-            success = self.hotkey_registration_manager.reconfigure(enabled, combo)
-            if not success:
-                import logging
-
-                logging.getLogger(__name__).warning(
-                    "起動時のホットキー登録に失敗しました: %s", combo
-                )
-                self.show_error_message(
-                    "Hotkey Registration Warning",
-                    f"Could not register global hotkey: {combo!r}. The key combination may be in use by another application.",
-                )
+            logger.warning("起動時のホットキー登録に失敗しました: %s", combo)
+            self.show_error_message(
+                "Hotkey Registration Warning",
+                f"Could not register global hotkey: {combo!r}. The key combination may be in use by another application.",
+            )
 
         self.monitor.start()
         self._set_state(ApplicationState.RUNNING)
+
+    def get_pinned_hotkey_combo(self, history_id: int) -> str | None:
+        bindings = self._pinned_hotkey_bindings_from_settings()
+        return bindings.get(history_id)
+
+    def open_pinned_hotkey_dialog(self, history_id: int) -> None:
+        from src.gui.dialogs.pinned_hotkey_dialog import PinnedHotkeyDialog
+
+        PinnedHotkeyDialog(
+            self.master,
+            self.get_pinned_hotkey_combo(history_id),
+            lambda combo: self.configure_pinned_hotkey(history_id, combo),
+        )
+
+    def configure_pinned_hotkey(self, history_id: int, combo: str) -> bool:
+        if not self._is_history_item_pinned(history_id):
+            self.show_error_message(
+                "Hotkey Assignment", "Only pinned history items can have a hotkey."
+            )
+            return False
+
+        bindings = self._pinned_hotkey_bindings_from_settings()
+        bindings[history_id] = combo
+        if not self._apply_pinned_hotkey_bindings(bindings):
+            self.show_error_message(
+                "Hotkey Assignment",
+                "Could not register the hotkey. It may be invalid or already in use.",
+            )
+            return False
+        self._save_pinned_hotkey_bindings(bindings)
+        return True
+
+    def remove_pinned_hotkey_binding(self, history_id: int) -> bool:
+        bindings = self._pinned_hotkey_bindings_from_settings()
+        if history_id not in bindings:
+            return True
+        del bindings[history_id]
+        if not self._apply_pinned_hotkey_bindings(bindings):
+            logger.error("履歴ID %s のホットキー解除に失敗しました。", history_id)
+            return False
+        self._save_pinned_hotkey_bindings(bindings)
+        return True
+
+    def clear_pinned_hotkey_bindings(self) -> bool:
+        if not self._apply_pinned_hotkey_bindings({}):
+            logger.error("ピン留めホットキーの一括解除に失敗しました。")
+            return False
+        self._save_pinned_hotkey_bindings({})
+        return True
+
+    def _on_hotkey_triggered(self, hotkey_id: int = GLOBAL_HOTKEY_ID) -> None:
+        if hotkey_id == GLOBAL_HOTKEY_ID:
+            if self.window_state_manager:
+                self.window_state_manager.toggle()
+            return
+        if not self.hotkey_registration_manager:
+            return
+
+        history_id = self.hotkey_registration_manager.history_id_for_hotkey(hotkey_id)
+        if history_id is None:
+            return
+        for content, is_pinned, item_id in self.monitor.get_history():
+            if int(item_id) == history_id and is_pinned:
+                self.master.clipboard_clear()
+                self.master.clipboard_append(content)
+                self.monitor.notification_manager.play_notification_sound()
+                self.master.after(75, self._paste_into_active_window)
+                logger.info(
+                    "ピン留め履歴をホットキーでクリップボードへ設定し、自動貼り付けを予約しました: ID=%s",
+                    history_id,
+                )
+                return
+
+        logger.warning(
+            "ホットキーに紐付くピン留め履歴が見つからないため、登録を解除します: ID=%s",
+            history_id,
+        )
+        self.remove_pinned_hotkey_binding(history_id)
+
+    def _paste_into_active_window(self) -> None:
+        from src.core.hotkey.paste_sender import WindowsPasteSender
+
+        if not WindowsPasteSender().paste_active_window():
+            logger.warning(
+                "自動貼り付けに失敗しました。クリップボードには内容が設定されています。"
+            )
+
+    def _pinned_hotkey_bindings_from_settings(self) -> dict[int, str]:
+        raw_bindings = self.settings_manager.get_setting("pinned_hotkey_bindings", {})
+        normalized = normalize_pinned_hotkey_bindings(raw_bindings)
+        return {
+            history_id: combo
+            for history_id, combo in normalized.items()
+            if self._is_history_item_pinned(history_id)
+        }
+
+    def _is_history_item_pinned(self, history_id: int) -> bool:
+        return any(
+            int(item_id) == history_id and is_pinned
+            for _, is_pinned, item_id in self.monitor.get_history()
+        )
+
+    def _apply_pinned_hotkey_bindings(self, bindings: dict[int, str]) -> bool:
+        if not self.hotkey_registration_manager:
+            return False
+        enabled = self.settings_manager.get_setting("global_hotkey_enabled", True)
+        combo = self.settings_manager.get_setting("global_hotkey_combo", "Ctrl+Shift+F")
+        if not bindings:
+            return self.hotkey_registration_manager.reconfigure(enabled, combo)
+        return self.hotkey_registration_manager.reconfigure_all(
+            enabled, combo, bindings
+        )
+
+    def _reconfigure_hotkeys_from_settings(self) -> bool:
+        return self._apply_pinned_hotkey_bindings(
+            self._pinned_hotkey_bindings_from_settings()
+        )
+
+    def _save_pinned_hotkey_bindings(self, bindings: dict[int, str]) -> None:
+        serialized = {str(history_id): combo for history_id, combo in bindings.items()}
+        self.settings_manager.set_setting("pinned_hotkey_bindings", serialized)
+        self.settings_manager.save_settings()
 
     def shutdown(self) -> None:
         """Performs a clean shutdown of the application."""

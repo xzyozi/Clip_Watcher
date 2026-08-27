@@ -120,6 +120,11 @@ class HistoryEventHandlers(BaseEventHandler):
             logger.error(f"Error copying selected history: {e}", exc_info=True)
 
     def handle_clear_all_history(self) -> None:
+        if not self.app.clear_pinned_hotkey_bindings():  # type: ignore
+            logger.error(
+                "ホットキー割当を解除できないため、履歴の全削除を中止しました。"
+            )
+            return
         self.app.monitor.clear_history()  # type: ignore
         self.app.gui.update_clipboard_display("", [])  # type: ignore
         logger.info("All history cleared.")
@@ -129,8 +134,13 @@ class HistoryEventHandlers(BaseEventHandler):
             logger.warning("No history item selected for deletion.")
             return
         try:
-            # No need to sort, just iterate and delete by ID
             for item_id in item_ids:
+                if not self.app.remove_pinned_hotkey_binding(int(item_id)):  # type: ignore
+                    logger.error(
+                        "ホットキー割当を解除できないため、履歴ID %s の削除を中止しました。",
+                        item_id,
+                    )
+                    continue
                 self.app.monitor.delete_history_item_by_id(item_id)  # type: ignore
             logger.info(f"Deleted {len(item_ids)} selected history item(s).")
         except Exception as e:
@@ -175,6 +185,11 @@ class HistoryEventHandlers(BaseEventHandler):
             content, is_pinned, _ = item_tuple
 
             if is_pinned:
+                if not self.app.remove_pinned_hotkey_binding(int(item_id)):  # type: ignore
+                    logger.error(
+                        "ホットキー割当を解除できないため、ピン解除を中止しました。"
+                    )
+                    return
                 self.app.monitor.unpin_item_by_id(item_id)  # type: ignore
                 logger.info(f"Unpinned: {content[:50]}...")
             else:
