@@ -78,6 +78,7 @@ def make_component(
     )
     component.tree = tree
     component.displayed_history = []
+    component.displayed_hotkey_bindings = {}
     component.current_theme = {}
     component._updating_history = False
     return component
@@ -100,6 +101,7 @@ def test_update_history_sets_images_for_new_pinned_and_unpinned_rows() -> None:
     component.update_history(
         [("pinned", True, 1.0), ("not pinned", False, 2.0)],
         THEMES["light"],
+        {},
     )
 
     assert icon_manager.calls == [("pin", "light")]
@@ -115,8 +117,8 @@ def test_update_history_replaces_images_when_existing_row_pin_state_changes() ->
     component = make_component(tree, icon_manager)
     theme = THEMES["dark"]
 
-    component.update_history([("first", True, 1.0), ("second", False, 2.0)], theme)
-    component.update_history([("first", False, 1.0), ("second", True, 2.0)], theme)
+    component.update_history([("first", True, 1.0), ("second", False, 2.0)], theme, {})
+    component.update_history([("first", False, 1.0), ("second", True, 2.0)], theme, {})
 
     assert tree.rows["item-1.0"]["image"] == ""
     assert tree.rows["item-2.0"]["image"] == "pin-dark-icon"
@@ -133,7 +135,7 @@ def test_apply_theme_reapplies_pinned_icon_using_new_theme_name() -> None:
     component = make_component(tree, icon_manager)
     history = [("pinned", True, 1.0), ("not pinned", False, 2.0)]
 
-    component.update_history(history, THEMES["light"])
+    component.update_history(history, THEMES["light"], {})
     component.apply_theme(THEMES["dark"])
 
     assert component.displayed_history == history

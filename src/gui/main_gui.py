@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Mapping
 from tkinter import font, ttk
 from typing import TYPE_CHECKING, Any
 
@@ -385,13 +386,16 @@ class ClipWatcherGUI(BaseFrameGUI):
         )
         theme_name: str = self.app.theme_manager.get_current_theme()  # type: ignore
         theme = THEMES.get(theme_name, THEMES["light"])
+        hotkey_bindings: Mapping[int, str] = self.app.get_pinned_hotkey_bindings()
         if search_query:
             filtered_history: list[tuple[str, bool, float]] = (
                 self.app.monitor.get_filtered_history(search_query)
             )  # type: ignore
-            self.history_component.update_history(filtered_history, theme)
+            self.history_component.update_history(
+                filtered_history, theme, hotkey_bindings
+            )
         else:
-            self.history_component.update_history(history, theme)
+            self.history_component.update_history(history, theme, hotkey_bindings)
 
         # テキストエリアの上書き防止（差分チェックおよび選択操作状態の保護）
         selected_indices: tuple[int, ...] = (
