@@ -196,29 +196,29 @@ class ScheduleHelperComponent(BaseFrameGUI):
         month_calendar = calendar.monthcalendar(self.current_year, self.current_month)
         for r, week in enumerate(month_calendar, 1):
             for c, day_value in enumerate(week):
-                day = int(day_value)
-                if day == 0:
+                day_number = int(day_value)
+                if day_number == 0:
                     continue
 
                 btn = ttk.Button(
                     self.calendar_frame,
-                    text=str(day),
+                    text=str(day_number),
                     width=4,
-                    command=partial(self._select_date, day),
+                    command=partial(self._select_date, day_number),
                 )  # type: ignore
                 btn.grid(row=r, column=c, padx=1, pady=1)
 
                 if (
                     self.current_year == self.today.year
                     and self.current_month == self.today.month
-                    and day == self.today.day
+                    and day_number == self.today.day
                 ):
                     btn.configure(style="Today.TButton")
 
                 is_selected = any(
                     d.year == self.current_year
                     and d.month == self.current_month
-                    and d.day == day
+                    and d.day == day_number
                     for d in self.selected_dates
                 )
                 if is_selected:
