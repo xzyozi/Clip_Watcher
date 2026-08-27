@@ -57,9 +57,11 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional, Dict, Any, List
 
+
 class SourceKind(Enum):
     EXPLICIT_TEXT = auto()
     CLIPBOARD = auto()
+
 
 class ExecutionStatus(Enum):
     COMPLETED = auto()
@@ -67,12 +69,14 @@ class ExecutionStatus(Enum):
     REJECTED = auto()
     FAILED = auto()
 
+
 @dataclass(frozen=True)
 class Classification:
     category_id: str
     matched_rule_id: Optional[str] = None
     confidence: float = 1.0
     tags: List[str] = field(default_factory=list)
+
 
 @dataclass(frozen=True)
 class WorkflowRequest:
@@ -85,6 +89,7 @@ class WorkflowRequest:
     normalization_profile: Optional[str] = None
     save_history: bool = True
     runtime_overrides: Dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass(frozen=True)
 class WorkflowResult:

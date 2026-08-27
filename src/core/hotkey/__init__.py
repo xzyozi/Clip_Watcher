@@ -2,6 +2,7 @@
 
 グローバルホットキーの検知・登録状態管理パッケージ。
 """
+
 from src.core.hotkey.global_hotkey_listener import (
     GlobalHotkeyListener,
     format_hotkey,

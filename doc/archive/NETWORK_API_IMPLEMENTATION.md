@@ -26,12 +26,7 @@
     # 既存のDEFAULT_SETTINGSに追加
     DEFAULT_SETTINGS = {
         # ... 既存の設定 ...
-        "network_api": {
-            "enabled": False,
-            "host": "127.0.0.1",
-            "port": 8181,
-            "api_key": ""
-        }
+        "network_api": {"enabled": False, "host": "127.0.0.1", "port": 8181, "api_key": ""}
     }
     ```
 
@@ -43,18 +38,19 @@
     ```python
     import secrets
 
+
     # SettingsManagerクラス内
     def load_settings(self):
         # ... 既存の読み込み処理 ...
-        
+
         # APIキーが未設定の場合、セキュアなキーを自動生成
         if not self.settings.get("network_api", {}).get("api_key"):
             if "network_api" not in self.settings:
-                self.settings["network_api"] = {} # セクションごとない場合
-            
+                self.settings["network_api"] = {}  # セクションごとない場合
+
             new_key = secrets.token_hex(16)
             self.settings["network_api"]["api_key"] = new_key
-            self.save_settings() # 生成したキーを保存
+            self.save_settings()  # 生成したキーを保存
     ```
 
 ---
@@ -75,6 +71,7 @@ HTTPリクエストを処理するサーバー本体を新しいファイルに�
     import threading
     import json
     from typing import Callable
+
 
     class ApiRequestHandler(http.server.BaseHTTPRequestHandler):
         # クラス変数として設定値やコールバックを保持
@@ -97,8 +94,10 @@ HTTPリクエストを処理するサーバー本体を新しいファイルに�
         def do_GET(self):
             """GET /clipboard: クリップボードの内容を取得"""
             if not self._authenticate():
-                return self._send_response(403, {"status": "error", "message": "Authentication failed."})
-            
+                return self._send_response(
+                    403, {"status": "error", "message": "Authentication failed."}
+                )
+
             if self.path == "/clipboard":
                 content = self.get_clipboard_content()
                 self._send_response(200, {"status": "success", "content": content})
@@ -108,7 +107,9 @@ HTTPリクエストを処理するサーバー本体を新しいファイルに�
         def do_POST(self):
             """POST /clipboard: クリップボードに内容を設定"""
             if not self._authenticate():
-                return self._send_response(403, {"status": "error", "message": "Authentication failed."})
+                return self._send_response(
+                    403, {"status": "error", "message": "Authentication failed."}
+                )
 
             if self.path == "/clipboard":
                 content_len = int(self.headers.get("Content-Length"))
@@ -118,23 +119,29 @@ HTTPリクエストを処理するサーバー本体を新しいファイルに�
                     new_content = data.get("content")
                     if new_content is None:
                         raise ValueError("Missing 'content' key")
-                    
+
                     self.set_clipboard_content(new_content)
-                    self._send_response(200, {"status": "success", "message": "Clipboard updated."})
+                    self._send_response(
+                        200, {"status": "success", "message": "Clipboard updated."}
+                    )
 
                 except (json.JSONDecodeError, ValueError) as e:
-                    self._send_response(400, {"status": "error", "message": f"Bad Request: {e}"})
+                    self._send_response(
+                        400, {"status": "error", "message": f"Bad Request: {e}"}
+                    )
             else:
                 self._send_response(404, {"status": "error", "message": "Not Found."})
 
 
     class NetworkApiServer(threading.Thread):
-        def __init__(self, host: str, port: int, api_key: str, get_cb: Callable, set_cb: Callable):
+        def __init__(
+            self, host: str, port: int, api_key: str, get_cb: Callable, set_cb: Callable
+        ):
             super().__init__(daemon=True)
             ApiRequestHandler.API_KEY = api_key
             ApiRequestHandler.get_clipboard_content = get_cb
             ApiRequestHandler.set_clipboard_content = set_cb
-            
+
             socketserver.TCPServer.allow_reuse_address = True
             self.httpd = socketserver.TCPServer((host, port), ApiRequestHandler)
 
@@ -161,7 +168,8 @@ APIサーバーをアプリケーションのライフサイクルに合わせ�
     ```python
     # app_main.py の Application クラスなど
     from .network_api_server import NetworkApiServer
-    
+
+
     class AppMain:
         def __init__(self, settings_manager):
             self.settings_manager = settings_manager
@@ -184,13 +192,13 @@ APIサーバーをアプリケーションのライフサイクルに合わせ�
         def update_network_server(self):
             """設定に基づいてAPIサーバーを起動・停止する"""
             config = self.settings_manager.get("network_api")
-            
+
             # サーバーが起動中なら一旦停止
             if self.network_server:
                 self.network_server.stop()
-                self.network_server.join() # 停止を待つ
+                self.network_server.join()  # 停止を待つ
                 self.network_server = None
-            
+
             # 設定が有効なら、新しい設定で再起動
             if config.get("enabled"):
                 self.network_server = NetworkApiServer(
@@ -198,7 +206,7 @@ APIサーバーをアプリケーションのライフサイクルに合わせ�
                     port=int(config.get("port")),
                     api_key=config.get("api_key"),
                     get_cb=self.get_clipboard_for_api,
-                    set_cb=self.set_clipboard_for_api
+                    set_cb=self.set_clipboard_for_api,
                 )
                 self.network_server.start()
 
@@ -228,24 +236,30 @@ APIサーバーをアプリケーションのライフサイクルに合わせ�
 
     ```python
     # SettingsWindowクラスのUI構築部分に追加
-    
+
     # --- Network API Frame ---
     api_frame = ttk.Labelframe(self, text="Network API")
     api_frame.pack(fill="x", padx=10, pady=5)
 
     # Enable/Disable Checkbox
     self.api_enabled_var = tk.BooleanVar()
-    api_check = ttk.Checkbutton(api_frame, text="Enable Network API", variable=self.api_enabled_var)
+    api_check = ttk.Checkbutton(
+        api_frame, text="Enable Network API", variable=self.api_enabled_var
+    )
     api_check.pack(anchor="w")
 
     # Host, Port
     # ... Combobox for host, Entry for port
-    
+
     # API Key
     # ... readonly Entry, Regenerate Button, Copy Button
 
     # Warning Label
-    self.api_warning_label = ttk.Label(api_frame, text="Warning: Allowing access from the network. Use only on trusted networks.", style="Warning.TLabel")
+    self.api_warning_label = ttk.Label(
+        api_frame,
+        text="Warning: Allowing access from the network. Use only on trusted networks.",
+        style="Warning.TLabel",
+    )
     # ... pack/grid and hide initially
 
     # UIの値をSettingsManagerにロード/セーブするロジックを実装

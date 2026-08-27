@@ -12,10 +12,11 @@
 *   **実装イメージ**:
     ```python
     import subprocess
+
+
     def run_script(script_path, input_text):
         result = subprocess.run(
-            ['python', script_path],
-            input=input_text, text=True, capture_output=True
+            ["python", script_path], input=input_text, text=True, capture_output=True
         )
         return result.stdout
     ```

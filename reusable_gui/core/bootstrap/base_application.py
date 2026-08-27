@@ -1,18 +1,19 @@
 """Application interface for type hints (generalized version)"""
+
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
-from reusable_gui.core.events.event_dispatcher import EventDispatcher
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationState(Enum):
     """Defines the possible states of the application's lifecycle."""
+
     INITIALIZING = auto()
     READY = auto()
     RUNNING = auto()
@@ -55,31 +56,17 @@ class BaseApplication(ABC):
                 try:
                     listener(new_state)
                 except Exception as e:
-                    logger.error(f"Error in state listener for state {new_state}: {e}", exc_info=True)
+                    logger.error(
+                        f"Error in state listener for state {new_state}: {e}",
+                        exc_info=True,
+                    )
 
-    @property
-    @abstractmethod
-    def translator(self) -> Any:
-        """Translates language keys."""
-        pass
-
-    @property
-    @abstractmethod
-    def event_dispatcher(self) -> EventDispatcher:
-        """Gets the application's event dispatcher."""
-        pass
-
-    @property
-    @abstractmethod
-    def settings_manager(self) -> BaseSettingsManager:
-        """Gets the application's settings manager."""
-        pass
-
-    @property
-    @abstractmethod
-    def theme_manager(self) -> Any:
-        """Gets the application's theme manager."""
-        pass
+    # 具体的なアプリケーションが初期化時に設定する共通サービス。
+    # 再利用GUIは特定アプリのサービス実装に依存しないため、ここでは汎用型を保つ。
+    translator: Any
+    event_dispatcher: Any
+    settings_manager: BaseSettingsManager
+    theme_manager: Any
 
     @abstractmethod
     def open_settings_window(self) -> None:

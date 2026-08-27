@@ -10,11 +10,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class Translator:
     """
     Handles translation of UI strings.
     """
-    def __init__(self, settings_manager: SettingsManager, locales_dir: str = "locales", default_lang: str = "en") -> None:
+
+    def __init__(
+        self,
+        settings_manager: SettingsManager,
+        locales_dir: str = "locales",
+        default_lang: str = "en",
+    ) -> None:
         """
         Initializes the Translator.
         Args:
@@ -24,10 +31,16 @@ class Translator:
         """
         self.settings_manager = settings_manager
         self.default_lang = default_lang
-        self.translations: dict[str, dict[str, str]] = self._load_translations(locales_dir)
-        self.current_lang: str = self.settings_manager.get_setting("language", self.default_lang)
+        self.translations: dict[str, dict[str, str]] = self._load_translations(
+            locales_dir
+        )
+        self.current_lang: str = self.settings_manager.get_setting(
+            "language", self.default_lang
+        )
 
-        self.settings_manager.event_dispatcher.subscribe("SETTINGS_CHANGED", self._update_language)
+        self.settings_manager.event_dispatcher.subscribe(
+            "SETTINGS_CHANGED", self._update_language
+        )
         logger.info(f"Translator initialized. Current language: {self.current_lang}")
 
     def _load_translations(self, locales_dir: str) -> dict[str, dict[str, str]]:
@@ -63,8 +76,9 @@ class Translator:
         Falls back to the default language if the key is not found in the current one.
         Returns the key itself if not found in the default language either.
         """
-        return self.translations.get(self.current_lang, {}).get(key,
-               self.translations.get(self.default_lang, {}).get(key, key))
+        return self.translations.get(self.current_lang, {}).get(
+            key, self.translations.get(self.default_lang, {}).get(key, key)
+        )
 
     def get(self, key: str, default: str | None = None) -> str:
         """Translates a key with an optional default fallback, similar to dict.get."""

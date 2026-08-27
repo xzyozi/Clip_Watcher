@@ -16,8 +16,9 @@ class BaseToplevelGUI(tk.Toplevel):
         super().__init__(master, **kwargs)
         self.master = master
         self.app = app_instance
-        self.app.theme_manager.apply_theme_to_widget_tree( # type: ignore
-            self, THEMES[self.app.theme_manager.get_current_theme()] # type: ignore
+        self.app.theme_manager.apply_theme_to_widget_tree(  # type: ignore
+            self,
+            THEMES[self.app.theme_manager.get_current_theme()],  # type: ignore
         )
 
     # Placeholder for common widget creation or layout methods

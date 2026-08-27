@@ -13,6 +13,7 @@ class Plugin(ABC):
     A base class for all plugins.
     Plugins can either process text or provide a GUI component, or both.
     """
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -39,7 +40,9 @@ class Plugin(ABC):
         """
         return False
 
-    def create_gui_component(self, parent: ttk.Notebook, app_instance: BaseApplication) -> ttk.Frame | None:
+    def create_gui_component(
+        self, parent: ttk.Notebook, app_instance: BaseApplication
+    ) -> ttk.Frame | None:
         """
         Creates and returns the GUI component for this plugin.
         This method should be overridden by plugins that provide a GUI.

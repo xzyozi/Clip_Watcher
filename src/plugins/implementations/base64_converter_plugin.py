@@ -23,13 +23,15 @@ class Base64ConverterPlugin(Plugin):
             try:
                 # Attempt to decode
                 decoded_bytes = base64.b64decode(text, validate=True)
-                decoded_text = decoded_bytes.decode('utf-8') # Assume UTF-8 for decoded text
+                decoded_text = decoded_bytes.decode(
+                    "utf-8"
+                )  # Assume UTF-8 for decoded text
 
                 # Check if decoded text is printable and doesn't contain too many control characters
                 # This is a heuristic to avoid decoding random binary data into garbage text
-                if all(32 <= ord(c) <= 126 or c in '\n\r\t' for c in decoded_text):
+                if all(32 <= ord(c) <= 126 or c in "\n\r\t" for c in decoded_text):
                     return decoded_text
             except Exception:
-                pass # Not a valid base64 string or not decodable/printable
+                pass  # Not a valid base64 string or not decodable/printable
         # If not Base64 encoded or decoding failed/resulted in non-printable, attempt to encode
-        return base64.b64encode(text.encode('utf-8')).decode('utf-8')
+        return base64.b64encode(text.encode("utf-8")).decode("utf-8")

@@ -20,10 +20,10 @@ class WhitespaceNormalizerPlugin(Plugin):
             # Remove leading/trailing whitespace from the line
             line = line.strip()
             # Replace multiple spaces with a single space
-            line = ' '.join(line.split())
+            line = " ".join(line.split())
             # Replace tabs with spaces
-            line = line.replace('	', ' ')
+            line = line.replace("	", " ")
             normalized_lines.append(line)
 
         # Join lines with normalized line endings
-        return '\n'.join(normalized_lines)
+        return "\n".join(normalized_lines)

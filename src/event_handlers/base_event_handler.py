@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 class BaseEventHandler(ABC):
     """A base class for event handlers to standardize subscription and cleanup."""
 
-    def __init__(self, dispatcher: 'EventDispatcher') -> None:
+    def __init__(self, dispatcher: "EventDispatcher") -> None:
         """
         Initializes the event handler.
 
@@ -30,12 +30,16 @@ class BaseEventHandler(ABC):
 
     @overload
     def subscribe(
-        self, event_name: Literal["SETTINGS_CHANGED"], handler: Callable[[dict[str, Any]], Any]
+        self,
+        event_name: Literal["SETTINGS_CHANGED"],
+        handler: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
     def subscribe(
-        self, event_name: Literal["HISTORY_UPDATED"], handler: Callable[[list[dict[str, Any]]], Any]
+        self,
+        event_name: Literal["HISTORY_UPDATED"],
+        handler: Callable[[list[dict[str, Any]]], Any],
     ) -> None: ...
 
     @overload
@@ -45,7 +49,9 @@ class BaseEventHandler(ABC):
 
     @overload
     def subscribe(
-        self, event_name: Literal["HISTORY_ITEM_EDITED"], handler: Callable[[dict[str, Any]], Any]
+        self,
+        event_name: Literal["HISTORY_ITEM_EDITED"],
+        handler: Callable[[dict[str, Any]], Any],
     ) -> None: ...
 
     @overload
@@ -76,7 +82,6 @@ class BaseEventHandler(ABC):
         """
         for event_name, handler in self._subscriptions:
             # Assuming the dispatcher has an 'unsubscribe' method
-            if hasattr(self.dispatcher, 'unsubscribe'):
+            if hasattr(self.dispatcher, "unsubscribe"):
                 self.dispatcher.unsubscribe(event_name, handler)
         self._subscriptions = []
-

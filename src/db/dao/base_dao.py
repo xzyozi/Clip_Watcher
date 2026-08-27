@@ -21,16 +21,22 @@ class BaseDAO:
     def execute_write(self, query: str, params: tuple[Any, ...] = ()) -> int:
         """書き込みクエリをスレッドセーフに実行し、影響を受けた行数または最後に挿入されたIDを返します。"""
         with self._lock:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
                 conn.commit()
                 return cursor.lastrowid or cursor.rowcount
+            finally:
+                conn.close()
 
     def execute_read(self, query: str, params: tuple[Any, ...] = ()) -> list[Any]:
         """読み込みクエリをスレッドセーフに実行し、結果リストを返します。"""
         with self._lock:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
                 return cursor.fetchall()
+            finally:
+                conn.close()

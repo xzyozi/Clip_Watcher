@@ -33,7 +33,9 @@ class ContextMenuMixin:
     def _on_destroy(self, event: Event) -> None:
         """Unsubscribes the listener when the widget is destroyed."""
         if event.widget == self:
-            self.app.event_dispatcher.unsubscribe("LANGUAGE_CHANGED", self._rebuild_menu)
+            self.app.event_dispatcher.unsubscribe(
+                "LANGUAGE_CHANGED", self._rebuild_menu
+            )
 
     def _rebuild_menu(self, *args: Any) -> None:
         """Clears and rebuilds the menu, typically for language changes."""
@@ -121,4 +123,3 @@ class CustomText(ContextMenuMixin, tk.Text):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-

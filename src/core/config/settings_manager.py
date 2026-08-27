@@ -10,7 +10,9 @@ from . import defaults
 
 
 class SettingsManager(BaseSettingsManager):
-    def __init__(self, event_dispatcher: EventDispatcher, file_path: str = "settings.json") -> None:
+    def __init__(
+        self, event_dispatcher: EventDispatcher, file_path: str = "settings.json"
+    ) -> None:
         self.event_dispatcher = event_dispatcher
         self.file_path = file_path
         self._settings: dict[str, Any] = self._get_default_settings()
@@ -66,9 +68,14 @@ class SettingsManager(BaseSettingsManager):
             with open(filepath, encoding="utf-8") as f:
                 try:
                     loaded_settings = json.load(f)
-                    if "theme" in loaded_settings and "history_limit" in loaded_settings:
+                    if (
+                        "theme" in loaded_settings
+                        and "history_limit" in loaded_settings
+                    ):
                         self.settings.update(loaded_settings)
-                        self.event_dispatcher.dispatch("SETTINGS_CHANGED", self.settings)
+                        self.event_dispatcher.dispatch(
+                            "SETTINGS_CHANGED", self.settings
+                        )
                         return True
                 except (json.JSONDecodeError, TypeError):
                     return False
@@ -85,121 +92,158 @@ class SettingsManager(BaseSettingsManager):
         return [
             # ── General / Appearance ───────────────────────────────────
             SettingField(
-                key="theme", label="Theme",
+                key="theme",
+                label="Theme",
                 widget_type=WidgetType.OPTION_MENU,
-                tab="General", group="Appearance",
-                default="light", choices=["light", "dark"],
+                tab="General",
+                group="Appearance",
+                default="light",
+                choices=["light", "dark"],
             ),
             SettingField(
-                key="language", label="Language",
+                key="language",
+                label="Language",
                 widget_type=WidgetType.OPTION_MENU,
-                tab="General", group="Appearance",
-                default="en", choices=["en", "ja"],
+                tab="General",
+                group="Appearance",
+                default="en",
+                choices=["en", "ja"],
             ),
-
             # ── General / Window Behavior ──────────────────────────────
             SettingField(
-                key="always_on_top", label="Always on Top",
+                key="always_on_top",
+                label="Always on Top",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="General", group="Window Behavior",
+                tab="General",
+                group="Window Behavior",
                 default=False,
             ),
-
             # ── General / Startup ──────────────────────────────────────
             SettingField(
-                key="startup_on_boot", label="Start with Windows",
+                key="startup_on_boot",
+                label="Start with Windows",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="General", group="Startup",
+                tab="General",
+                group="Startup",
                 default=False,
             ),
-
             # ── General / Global Hotkey ────────────────────────────────
             SettingField(
-                key="global_hotkey_enabled", label="Enable Global Hotkey",
+                key="global_hotkey_enabled",
+                label="Enable Global Hotkey",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="General", group="Global Hotkey",
+                tab="General",
+                group="Global Hotkey",
                 default=True,
             ),
             SettingField(
-                key="global_hotkey_combo", label="Show/Hide Hotkey",
+                key="global_hotkey_combo",
+                label="Show/Hide Hotkey",
                 widget_type=WidgetType.HOTKEY_CAPTURE,
-                tab="General", group="Global Hotkey",
+                tab="General",
+                group="Global Hotkey",
                 default="Ctrl+Shift+F",
             ),
-
             # ── History ───────────────────────────────────────────────
             SettingField(
-                key="history_limit", label="History Limit",
+                key="history_limit",
+                label="History Limit",
                 widget_type=WidgetType.SPINBOX,
-                tab="History", group="History Options",
-                default=50,
+                tab="History",
+                group="History Options",
+                default=d.DEFAULT_USER_SETTINGS["history_limit"],
                 min_value=d.HISTORY_LIMIT_MIN,
                 max_value=d.HISTORY_LIMIT_MAX,
                 increment=d.HISTORY_LIMIT_INCREMENT,
                 width=10,
             ),
-
             # ── Notifications / Behavior ───────────────────────────────
             SettingField(
-                key="notifications_enabled", label="Enable Notifications",
+                key="notifications_enabled",
+                label="Enable Notifications",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="Notifications", group="Notification Behavior",
+                tab="Notifications",
+                group="Notification Behavior",
                 default=True,
             ),
             SettingField(
-                key="notification_show_app_name", label="Show App Name in Notification",
+                key="notification_show_app_name",
+                label="Show App Name in Notification",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="Notifications", group="Notification Behavior",
+                tab="Notifications",
+                group="Notification Behavior",
                 default=True,
             ),
             SettingField(
-                key="notification_sound_enabled", label="Enable Notification Sound",
+                key="notification_sound_enabled",
+                label="Enable Notification Sound",
                 widget_type=WidgetType.CHECKBUTTON,
-                tab="Notifications", group="Notification Behavior",
+                tab="Notifications",
+                group="Notification Behavior",
                 default=False,
             ),
-
             # ── Notifications / Content ────────────────────────────────
             SettingField(
-                key="notification_content_length", label="Notification Content Length",
+                key="notification_content_length",
+                label="Notification Content Length",
                 widget_type=WidgetType.SPINBOX,
-                tab="Notifications", group="Notification Content",
-                default=50, min_value=10, max_value=200, increment=10, width=10,
+                tab="Notifications",
+                group="Notification Content",
+                default=50,
+                min_value=10,
+                max_value=200,
+                increment=10,
+                width=10,
             ),
-
             # ── Font / Clipboard Content ───────────────────────────────
             SettingField(
-                key="clipboard_content_font_family", label="Clipboard Content Font",
+                key="clipboard_content_font_family",
+                label="Clipboard Content Font",
                 widget_type=WidgetType.FONT_PICKER,
-                tab="Font", group="Clipboard Content Font",
+                tab="Font",
+                group="Clipboard Content Font",
                 default="TkDefaultFont",
             ),
             SettingField(
-                key="clipboard_content_font_size", label="Size",
+                key="clipboard_content_font_size",
+                label="Size",
                 widget_type=WidgetType.SPINBOX,
-                tab="Font", group="Clipboard Content Font",
-                default=10, min_value=8, max_value=24, increment=1, width=5,
+                tab="Font",
+                group="Clipboard Content Font",
+                default=10,
+                min_value=8,
+                max_value=24,
+                increment=1,
+                width=5,
             ),
-
             # ── Font / History ─────────────────────────────────────────
             SettingField(
-                key="history_font_family", label="History Font",
+                key="history_font_family",
+                label="History Font",
                 widget_type=WidgetType.FONT_PICKER,
-                tab="Font", group="History Font",
+                tab="Font",
+                group="History Font",
                 default="TkDefaultFont",
             ),
             SettingField(
-                key="history_font_size", label="Size",
+                key="history_font_size",
+                label="Size",
                 widget_type=WidgetType.SPINBOX,
-                tab="Font", group="History Font",
-                default=10, min_value=8, max_value=24, increment=1, width=5,
+                tab="Font",
+                group="History Font",
+                default=10,
+                min_value=8,
+                max_value=24,
+                increment=1,
+                width=5,
             ),
-
             # ── Excluded Apps ──────────────────────────────────────────
             SettingField(
-                key="excluded_apps", label="Excluded Applications",
+                key="excluded_apps",
+                label="Excluded Applications",
                 widget_type=WidgetType.LISTBOX_EDIT,
-                tab="Excluded Apps", group="",
+                tab="Excluded Apps",
+                group="",
                 default=[],
             ),
         ]

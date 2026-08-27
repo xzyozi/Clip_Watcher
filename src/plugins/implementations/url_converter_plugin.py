@@ -19,7 +19,7 @@ class URLConverterPlugin(Plugin):
         # Heuristic to check if text is URL-encoded
         # If it contains '%' followed by two hex digits, it's likely URL-encoded
         # This is a simple check and might not be foolproof for all cases.
-        if '%' in text and any(c.isalnum() for c in text.split('%', 1)[1][:2]):
+        if "%" in text and any(c.isalnum() for c in text.split("%", 1)[1][:2]):
             try:
                 # Attempt to decode
                 decoded_text = urllib.parse.unquote(text)
@@ -27,7 +27,7 @@ class URLConverterPlugin(Plugin):
                 if decoded_text != text:
                     return decoded_text
             except Exception:
-                pass # Fallback to encoding if decoding fails or doesn't change
+                pass  # Fallback to encoding if decoding fails or doesn't change
 
         # If not URL-encoded or decoding failed/didn't change, attempt to encode
-        return urllib.parse.quote(text, safe='') # Encode all characters
+        return urllib.parse.quote(text, safe="")  # Encode all characters

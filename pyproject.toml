@@ -20,6 +20,7 @@ dev = [
     "ruff",
     "pytest",
     "pytest-mock",
+    "hypothesis==6.151.5",
 ]
 
 # --- Pytest ---
@@ -38,6 +39,7 @@ no_implicit_optional = true
 show_error_context = true
 show_column_numbers = true
 pretty = true
+explicit_package_bases = true
 exclude = ["venv", "migrations", "tests"]
 
 # --- Ruff ---

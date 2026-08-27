@@ -18,7 +18,13 @@ class HTMLEscapePlugin(Plugin):
 
         # Heuristic: If text contains HTML entities, try to unescape
         # Otherwise, try to escape
-        if '&amp;' in text or '&lt;' in text or '&gt;' in text or '&quot;' in text or '&#39;' in text:
+        if (
+            "&amp;" in text
+            or "&lt;" in text
+            or "&gt;" in text
+            or "&quot;" in text
+            or "&#39;" in text
+        ):
             unescaped_text = html.unescape(text)
             if unescaped_text != text:
                 return unescaped_text

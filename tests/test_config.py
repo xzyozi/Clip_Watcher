@@ -14,6 +14,7 @@ from src.services.history_service import HistoryService
 # SettingsManager Tests (2 Items)
 # ==========================================
 
+
 @pytest.fixture
 def temp_settings_file() -> Any:
     """テスト用の一時的な設定ファイルパスを提供し、テスト後にクリーンアップします。"""
@@ -31,9 +32,13 @@ def temp_settings_file() -> Any:
             pass
 
 
-def test_settings_manager_load_and_save(event_dispatcher: EventDispatcher, temp_settings_file: str) -> None:
+def test_settings_manager_load_and_save(
+    event_dispatcher: EventDispatcher, temp_settings_file: str
+) -> None:
     """設定ファイルのロード・セーブ、および不足キーがある場合のデフォルト復元を検証します。"""
-    manager = SettingsManager(event_dispatcher=event_dispatcher, file_path=temp_settings_file)
+    manager = SettingsManager(
+        event_dispatcher=event_dispatcher, file_path=temp_settings_file
+    )
 
     # 1. 初期状態 (デフォルト) の取得
     assert manager.get_setting("history_limit") > 0
@@ -48,15 +53,21 @@ def test_settings_manager_load_and_save(event_dispatcher: EventDispatcher, temp_
     assert os.path.exists(temp_settings_file) is True
 
     # 3. 再ロードによる復元
-    new_manager = SettingsManager(event_dispatcher=event_dispatcher, file_path=temp_settings_file)
+    new_manager = SettingsManager(
+        event_dispatcher=event_dispatcher, file_path=temp_settings_file
+    )
     new_manager.load_and_notify()
     assert new_manager.get_setting("history_limit") == 15
     assert new_manager.get_setting("theme") == "dark"
 
 
-def test_settings_manager_event_trigger(event_dispatcher: EventDispatcher, temp_settings_file: str) -> None:
+def test_settings_manager_event_trigger(
+    event_dispatcher: EventDispatcher, temp_settings_file: str
+) -> None:
     """設定変更セーブおよびロード時に SETTINGS_CHANGED イベントが正しく発火することを検証します。"""
-    manager = SettingsManager(event_dispatcher=event_dispatcher, file_path=temp_settings_file)
+    manager = SettingsManager(
+        event_dispatcher=event_dispatcher, file_path=temp_settings_file
+    )
 
     received_settings: dict[str, Any] = {}
 
@@ -78,7 +89,10 @@ def test_settings_manager_event_trigger(event_dispatcher: EventDispatcher, temp_
 # ClipboardMonitor / Exclusion & Processes (2 Items)
 # ==========================================
 
-def test_clipboard_monitor_exclusion(mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService) -> None:
+
+def test_clipboard_monitor_exclusion(
+    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+) -> None:
     """除外プロセスが合致した場合に、クリップボードデータ更新がスキップされることを検証します。"""
     # 依存オブジェクトのモック化
     mock_tk_root = mocker.Mock()
@@ -92,7 +106,7 @@ def test_clipboard_monitor_exclusion(mocker: Any, event_dispatcher: EventDispatc
         db_manager=mock_db_manager,
         history_service=history_service,
         history_limit=5,
-        excluded_apps=["KeePass.exe", "PasswordManager.exe"]
+        excluded_apps=["KeePass.exe", "PasswordManager.exe"],
     )
 
     # 1. 通常アプリからのコピー (履歴に追加されるべき)
@@ -112,7 +126,9 @@ def test_clipboard_monitor_exclusion(mocker: Any, event_dispatcher: EventDispatc
     assert history_service.history[0][0] != "Secret Password 123"
 
 
-def test_clipboard_monitor_update_clipboard(mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService) -> None:
+def test_clipboard_monitor_update_clipboard(
+    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+) -> None:
     """update_clipboard 命令時に、OSクリップボードへの書き込みと履歴登録が連動することを検証します。"""
     mock_tk_root = mocker.Mock()
     mock_db_manager = mocker.Mock()
@@ -124,7 +140,7 @@ def test_clipboard_monitor_update_clipboard(mocker: Any, event_dispatcher: Event
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
-        history_limit=5
+        history_limit=5,
     )
 
     # アプリの履歴初期化

@@ -10,6 +10,7 @@ from src.plugins.base_plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
+
 class PluginManager:
     def __init__(self) -> None:
         self.plugins: list[Plugin] = []
@@ -40,7 +41,7 @@ class PluginManager:
         text_plugins: list[Plugin] = []
         for plugin in self.plugins:
             # A plugin is a text plugin if its `process` method is different from the base class's.
-            if plugin.process.__func__ is not Plugin.process.__func__: # type: ignore
+            if plugin.process.__func__ is not Plugin.process.__func__:  # type: ignore
                 text_plugins.append(plugin)
         return text_plugins
 

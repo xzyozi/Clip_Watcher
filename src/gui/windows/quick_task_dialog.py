@@ -12,51 +12,63 @@ if TYPE_CHECKING:
 
 
 class QuickTaskDialog(BaseToplevelGUI):
-    def __init__(self, master: tk.Misc, app_instance: BaseApplication, settings_manager: SettingsManager, tasks: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        master: tk.Misc,
+        app_instance: BaseApplication,
+        settings_manager: SettingsManager,
+        tasks: list[str] | None = None,
+    ) -> None:
         super().__init__(master, app_instance)
         self.settings_manager = settings_manager
         self.title("クイックタスク")
         self.tasks = tasks or []
         self.task_vars: list[tk.StringVar] = []
-        self.delete_on_copy = tk.BooleanVar(value=self.settings_manager.get_setting("quick_task_delete_on_copy"))
+        self.delete_on_copy = tk.BooleanVar(
+            value=self.settings_manager.get_setting("quick_task_delete_on_copy")
+        )
         self._setup_gui()
 
     def _setup_gui(self) -> None:
         # メインフレーム
         main_frame = ttk.Frame(self)
-        main_frame.pack(expand=True, fill='both', padx=10, pady=10)
+        main_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
         # タスクリスト
-        self.task_list = ttk.Treeview(main_frame, columns=('Content',), show='headings', selectmode='browse')
-        self.task_list.heading('Content', text='内容')
-        self.task_list.pack(expand=True, fill='both', side='left')
+        self.task_list = ttk.Treeview(
+            main_frame, columns=("Content",), show="headings", selectmode="browse"
+        )
+        self.task_list.heading("Content", text="内容")
+        self.task_list.pack(expand=True, fill="both", side="left")
 
         # スクロールバー
-        scrollbar = ttk.Scrollbar(main_frame, orient='vertical', command=self.task_list.yview)
-        scrollbar.pack(side='right', fill='y')
+        scrollbar = ttk.Scrollbar(
+            main_frame, orient="vertical", command=self.task_list.yview
+        )
+        scrollbar.pack(side="right", fill="y")
         self.task_list.configure(yscrollcommand=scrollbar.set)
         self.task_list.bind("<Double-1>", lambda event: self._copy_selected())
 
         # ボタンフレーム
         button_frame = ttk.Frame(self)
-        button_frame.pack(fill='x', padx=10, pady=(0, 10))
+        button_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         # コピーボタン
         copy_btn = ttk.Button(button_frame, text="コピー", command=self._copy_selected)
-        copy_btn.pack(side='left', padx=5)
+        copy_btn.pack(side="left", padx=5)
 
         # 削除チェックボックス
         delete_check = ttk.Checkbutton(
             button_frame,
             text="コピー後に削除",
             variable=self.delete_on_copy,
-            command=self._save_delete_on_copy_setting
+            command=self._save_delete_on_copy_setting,
         )
-        delete_check.pack(side='left', padx=5)
+        delete_check.pack(side="left", padx=5)
 
         # 閉じるボタン
         close_btn = ttk.Button(button_frame, text="閉じる", command=self.destroy)
-        close_btn.pack(side='right', padx=5)
+        close_btn.pack(side="right", padx=5)
 
         self._populate_tasks()
 
@@ -81,7 +93,7 @@ class QuickTaskDialog(BaseToplevelGUI):
             # 各タスク項目を改行文字 ("\n") で分割します。
             # これにより、"タスクA\nタスクB" は ["タスクA", "タスクB"] のようなリストになります。
             # 改行が含まれていないタスクは、要素が1つのリストになります (例: ["タスクC"])。
-            lines = task_item.split('\n')
+            lines = task_item.split("\n")
 
             # 分割して得られた行のリストを processed_tasks に追加します。
             # extend を使用することで、リストがネストされず、すべての行がフラットなリストに格納されます。
@@ -94,11 +106,13 @@ class QuickTaskDialog(BaseToplevelGUI):
             if task.strip():
                 # Treeviewウィジェットの末尾にタスクを一件ずつ挿入します。
                 # これにより、ユーザーはUI上で各タスクを個別の行として見ることができます。
-                self.task_list.insert('', 'end', values=(task.strip(),))
+                self.task_list.insert("", "end", values=(task.strip(),))
 
     def _save_delete_on_copy_setting(self) -> None:
         """チェックボックスの状態を保存"""
-        self.settings_manager.set_setting("quick_task_delete_on_copy", self.delete_on_copy.get())
+        self.settings_manager.set_setting(
+            "quick_task_delete_on_copy", self.delete_on_copy.get()
+        )
         self.settings_manager.save_settings()
 
     def _copy_selected(self) -> None:
@@ -109,7 +123,7 @@ class QuickTaskDialog(BaseToplevelGUI):
 
         # 選択された項目の内容を取得
         item = self.task_list.item(selection[0])
-        content: str = item['values'][0]
+        content: str = item["values"][0]
 
         # クリップボードにコピー
         self.clipboard_clear()
@@ -126,8 +140,11 @@ class QuickTaskDialog(BaseToplevelGUI):
     def add_tasks(self, tasks: list[str]) -> None:
         """タスクを追加"""
         for task in tasks:
-            self.task_list.insert('', 'end', values=(task,))
+            self.task_list.insert("", "end", values=(task,))
 
     def get_remaining_tasks(self) -> list[str]:
         """残りのタスクを取得"""
-        return [self.task_list.item(item)['values'][0] for item in self.task_list.get_children()]
+        return [
+            self.task_list.item(item)["values"][0]
+            for item in self.task_list.get_children()
+        ]

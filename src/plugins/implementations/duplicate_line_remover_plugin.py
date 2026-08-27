@@ -20,4 +20,4 @@ class DuplicateLineRemoverPlugin(Plugin):
             if line not in seen_lines:
                 unique_lines.append(line)
                 seen_lines.add(line)
-        return '\n'.join(unique_lines)
+        return "\n".join(unique_lines)

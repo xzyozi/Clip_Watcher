@@ -9,6 +9,7 @@ class AppStatus:
     """
     アプリケーションの全体的なランタイムステータスを保持します。
     """
+
     dependencies: DependencyStatus = field(default_factory=DependencyStatus)
     other_status: dict[str, Any] = field(default_factory=dict)
 

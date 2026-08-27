@@ -21,6 +21,7 @@ class EventDispatcher:
     集中型イベントディスパッチャ。
     イベントの購読と発行を管理します。
     """
+
     def __init__(self) -> None:
         self._listeners: dict[str, list[Callable[..., None]]] = defaultdict(list)
 

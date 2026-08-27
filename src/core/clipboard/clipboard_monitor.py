@@ -16,22 +16,44 @@ except ImportError:
     # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
     pass
 
+from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
+
+# history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
+_default_history_limit = DEFAULT_USER_SETTINGS["history_limit"]
+_DEFAULT_HISTORY_LIMIT: int = (
+    _default_history_limit if isinstance(_default_history_limit, int) else 50
+)
 
 if TYPE_CHECKING:
     from src.services.history_service import HistoryService
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class ClipboardMonitor:
-    def __init__(self, tk_root: tk.Tk, event_dispatcher: EventDispatcher, history_file_path: str, win32_available: bool, db_manager: DatabaseManager, history_service: HistoryService, history_limit: int = 50, excluded_apps: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        tk_root: tk.Tk,
+        event_dispatcher: EventDispatcher,
+        history_file_path: str,
+        win32_available: bool,
+        db_manager: DatabaseManager,
+        history_service: HistoryService,
+        history_limit: int = _DEFAULT_HISTORY_LIMIT,
+        excluded_apps: list[str] | None = None,
+    ) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
-        self.notification_manager = NotificationManager(None) # 設定はイベント経由で渡されます
+        self.notification_manager = NotificationManager(
+            None
+        )  # 設定はイベント経由で渡されます
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
@@ -40,7 +62,9 @@ class ClipboardMonitor:
         self.history_service = history_service
 
         self.history_limit: int = history_limit
-        self.excluded_apps: list[str] = excluded_apps if excluded_apps is not None else []
+        self.excluded_apps: list[str] = (
+            excluded_apps if excluded_apps is not None else []
+        )
         self.history: list[tuple[str, bool, float]] = self._load_history_from_db()
         self._dirty: bool = False
         self._auto_save_interval_ms: int = 5000
@@ -64,7 +88,7 @@ class ClipboardMonitor:
         self.history_service.last_clipboard_data = value
 
     def on_settings_changed(self, settings: dict[str, Any]) -> None:
-        self.history_limit = settings.get("history_limit", 50)
+        self.history_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
         self.excluded_apps = settings.get("excluded_apps", [])
         self.notification_manager.update_settings(settings)
 
@@ -98,9 +122,13 @@ class ClipboardMonitor:
         if not text:
             return
 
-        # テキストが最新の履歴アイテムと同一である場合、重複したエントリの追加を避けます。
-        if self.history and text == self.history[0][0]:
-            return
+        # テキストが直近のクリップボード内容と同一である場合、重複したエントリの
+        # 追加を避けます。ピン留め項目による表示順序（is_pinned優先ソート）に
+        # 影響されないよう、id（挿入順）が最大の項目と比較する。
+        if self.history:
+            last_touched = max(self.history, key=lambda item: item[2])
+            if text == last_touched[0]:
+                return
 
         try:
             # 最初にシステムクリップボードを更新します
@@ -108,8 +136,11 @@ class ClipboardMonitor:
             self.tk_root.clipboard_append(text)
             self.tk_root.update()
         except Exception as e:
-            logging.error(f"プログラムによるクリップボードの更新に失敗しました: {e}", exc_info=True)
-            return # クリップボードの更新に失敗した場合、履歴は変更しません
+            logging.error(
+                f"プログラムによるクリップボードの更新に失敗しました: {e}",
+                exc_info=True,
+            )
+            return  # クリップボードの更新に失敗した場合、履歴は変更しません
 
         # _check_clipboardのロジックを模倣して、履歴を直接更新します
         self.history_service.add_history_item(text)
@@ -124,21 +155,26 @@ class ClipboardMonitor:
                 logging.warning(f"Tkinterランタイムエラー: {e}")
                 time.sleep(1)
             except Exception:
-                logging.error("クリップボード監視ループで予期せぬエラーが発生しました。", exc_info=True)
+                logging.error(
+                    "クリップボード監視ループで予期せぬエラーが発生しました。",
+                    exc_info=True,
+                )
                 time.sleep(5)
 
     def _decode_clipboard_data(self, data: Any) -> str:
         if isinstance(data, bytes):
-            encodings = ['utf-8', 'shift-jis', 'cp932', 'euc-jp', 'latin1']
+            encodings = ["utf-8", "shift-jis", "cp932", "euc-jp", "latin1"]
             for encoding in encodings:
                 try:
                     return data.decode(encoding)
                 except UnicodeDecodeError:
                     continue
-            return data.decode('utf-8', errors='ignore')
+            return data.decode("utf-8", errors="ignore")
         elif isinstance(data, str):
             try:
-                return data.encode('utf-8', errors='surrogateescape').decode('utf-8', errors='ignore')
+                return data.encode("utf-8", errors="surrogateescape").decode(
+                    "utf-8", errors="ignore"
+                )
             except Exception:
                 return data
         return str(data)
@@ -152,35 +188,49 @@ class ClipboardMonitor:
         try:
             return self.tk_root.clipboard_get()
         except (tk.TclError, UnicodeDecodeError) as e:
-            logging.warning(f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。")
+            logging.warning(
+                f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。"
+            )
 
         # 2. win32clipboardが利用可能な場合にフォールバックします
         if not self.win32_available:
-            logging.warning("win32clipboardが利用できないため、フォールバックできません。")
+            logging.warning(
+                "win32clipboardが利用できないため、フォールバックできません。"
+            )
             return None
 
         try:
             win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT): # type: ignore
-                return cast(str, win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT))
-            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT): # type: ignore
+            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):  # type: ignore
+                return cast(
+                    str, win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+                )
+            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):  # type: ignore
                 data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
                 return self._decode_clipboard_data(data)
-            return "" # 処理できないテキスト形式です
+            return ""  # 処理できないテキスト形式です
         except pywintypes.error as e:
-            if e.winerror == 5: # アクセスが拒否されました
-                logging.warning("win32clipboardがクリップボードを開けませんでした（アクセス拒否）。使用中の可能性があります。")
+            if e.winerror == 5:  # アクセスが拒否されました
+                logging.warning(
+                    "win32clipboardがクリップボードを開けませんでした（アクセス拒否）。使用中の可能性があります。"
+                )
             else:
-                logging.error(f"win32clipboardフォールバックが予期せぬエラーで失敗しました: {e}", exc_info=True)
-            return None # 失敗したことを示します
+                logging.error(
+                    f"win32clipboardフォールバックが予期せぬエラーで失敗しました: {e}",
+                    exc_info=True,
+                )
+            return None  # 失敗したことを示します
         except Exception as e:
-            logging.error(f"win32clipboardフォールバックが一般的なエラーで失敗しました: {e}", exc_info=True)
-            return None # 失敗したことを示します
+            logging.error(
+                f"win32clipboardフォールバックが一般的なエラーで失敗しました: {e}",
+                exc_info=True,
+            )
+            return None  # 失敗したことを示します
         finally:
             try:
                 win32clipboard.CloseClipboard()
             except Exception:
-                pass # すでに閉じられているか、開けませんでした。
+                pass  # すでに閉じられているか、開けませんでした。
 
     def _update_history_with_new_entry(self, clipboard_data: str) -> None:
         """新しいクリップボードエントリで履歴を更新します。"""
@@ -199,7 +249,7 @@ class ClipboardMonitor:
             # 1. 堅牢な方法でクリップボードのコンテンツを取得します
             raw_content = self._get_clipboard_content()
             if raw_content is None:
-                return # コンテンツの取得に失敗したか、テキストではありません
+                return  # コンテンツの取得に失敗したか、テキストではありません
 
             # 2. 正規化と検証
             try:
@@ -219,19 +269,22 @@ class ClipboardMonitor:
                 self._update_history_with_new_entry(clipboard_data)
 
         except Exception:
-            logging.error("クリップボードのチェック中に予期せぬエラーが発生しました。", exc_info=True)
+            logging.error(
+                "クリップボードのチェック中に予期せぬエラーが発生しました。",
+                exc_info=True,
+            )
 
     def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
         """Finds a history item by its ID and updates its content."""
         self.history_service.update_history_item_by_id(item_id, new_text)
 
-
-
     def start(self) -> None:
         if not self._running:
             self._running = True
-            self.monitor_thread = threading.Thread(target=self._monitor_clipboard, daemon=True) # type: ignore
-            self.monitor_thread.start() # type: ignore
+            self.monitor_thread = threading.Thread(
+                target=self._monitor_clipboard, daemon=True
+            )  # type: ignore
+            self.monitor_thread.start()  # type: ignore
             self._schedule_auto_save_check()
 
     def _schedule_auto_save_check(self) -> None:

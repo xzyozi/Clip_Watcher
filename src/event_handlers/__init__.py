@@ -25,9 +25,15 @@ def register_class_based_handlers(app_instance: BaseApplication) -> None:
     """
     Initializes and registers all class-based event handlers for the application.
     """
-    app_instance.history_handlers = HistoryEventHandlers(app_instance, app_instance.event_dispatcher, app_instance.undo_manager) # type: ignore
-    app_instance.file_handlers = FileEventHandlers(app_instance, app_instance.event_dispatcher) # type: ignore
-    app_instance.settings_handlers = SettingsEventHandlers(app_instance.event_dispatcher, app_instance.settings_manager) # type: ignore
+    app_instance.history_handlers = HistoryEventHandlers(
+        app_instance, app_instance.event_dispatcher, app_instance.undo_manager
+    )  # type: ignore
+    app_instance.file_handlers = FileEventHandlers(
+        app_instance, app_instance.event_dispatcher
+    )  # type: ignore
+    app_instance.settings_handlers = SettingsEventHandlers(
+        app_instance.event_dispatcher, app_instance.settings_manager
+    )  # type: ignore
 
 
 def start_app() -> None:
@@ -43,14 +49,14 @@ def start_app() -> None:
 
         # --- Path Definitions ---
         if sys.platform == "win32":
-            app_data_dir = os.path.join(os.environ['USERPROFILE'], '.clipWatcher')
+            app_data_dir = os.path.join(os.environ["USERPROFILE"], ".clipWatcher")
         else:
-            app_data_dir = os.path.join(os.path.expanduser('~'), '.clipwatcher')
+            app_data_dir = os.path.join(os.path.expanduser("~"), ".clipwatcher")
         os.makedirs(app_data_dir, exist_ok=True)
 
-        history_file_path = os.path.join(app_data_dir, 'history.json')
-        settings_file_path = os.path.join(app_data_dir, 'settings.json')
-        db_path = os.path.join(app_data_dir, 'clip_watcher.db')
+        history_file_path = os.path.join(app_data_dir, "history.json")
+        settings_file_path = os.path.join(app_data_dir, "settings.json")
+        db_path = os.path.join(app_data_dir, "clip_watcher.db")
 
         # --- Logging ---
         logger = setup_logging()
@@ -59,27 +65,35 @@ def start_app() -> None:
         # --- Migration ---
         try:
             from scripts.migrate_json_to_sqlite import main as run_migration
+
             run_migration()
         except Exception as e:
-            logger.error("マイグレーションの実行中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "マイグレーションの実行中にエラーが発生しました: %s",
+                str(e),
+                exc_info=True,
+            )
 
         # --- Application Setup ---
         root = tk.Tk()
 
         builder = ApplicationBuilder()
-        app = builder.with_event_dispatcher() \
-            .with_dependency_check() \
-            .with_settings(settings_file_path) \
-            .with_database(db_path) \
-            .with_translator() \
-            .with_theme_manager(root) \
-            .with_history_service() \
-            .with_plugin_manager() \
-            .with_window_state_manager(root) \
-            .with_global_hotkey_listener(root) \
-            .with_hotkey_registration_manager() \
-            .with_clipboard_monitor(root, history_file_path) \
+        app = (
+            builder.with_event_dispatcher()
+            .with_dependency_check()
+            .with_settings(settings_file_path)
+            .with_database(db_path)
+            .with_translator()
+            .with_theme_manager(root)
+            .with_icon_manager()
+            .with_history_service()
+            .with_plugin_manager()
+            .with_window_state_manager(root)
+            .with_global_hotkey_listener(root)
+            .with_hotkey_registration_manager()
+            .with_clipboard_monitor(root, history_file_path)
             .build(root)
+        )
 
         logger.info("アプリケーションの初期化が完了しました")
 
@@ -87,7 +101,7 @@ def start_app() -> None:
 
     except Exception as e:
         # Use a local logger variable to avoid UnboundLocalError
-        local_logger = locals().get('logger')
+        local_logger = locals().get("logger")
         if local_logger:
             local_logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
         else:

@@ -2,6 +2,7 @@
 
 GlobalHotkeyListener / parse_hotkey_string / format_hotkey / HotkeyRegistrationManager の単体テスト。
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -76,6 +77,7 @@ def test_hotkey_registration_manager_conflict_fallback() -> None:
 
     # 2. 次にキー B に変更しようとするが競合で失敗する
     mock_listener.start.return_value = False
+
     # 復元でキー A は成功
     def side_effect(mods, vk):
         if vk == ord("A"):
