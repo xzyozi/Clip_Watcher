@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from tkinter import ttk
 from typing import TYPE_CHECKING
 
@@ -32,6 +32,7 @@ class HistoryListComponent(tk.Frame):
         self.displayed_history: list[
             tuple[str, bool, float]
         ] = []  # Will store the full (content, is_pinned, timestamp) tuples
+        self.displayed_hotkey_bindings: dict[int, str] = {}
         self.current_theme: dict[str, str] = {}
         self._updating_history: bool = False
 
@@ -41,14 +42,29 @@ class HistoryListComponent(tk.Frame):
     def _create_widgets(self) -> None:
         # Requirements 5.2: self.tree は History_Caller に対して公開しない内部実装詳細である。
         # 唯一の許容された外部参照元は HistoryContextMenu._get_tree()（context_menu.py）のみ。
-        self.tree = ttk.Treeview(self, show="tree", selectmode="extended")
+        self.tree = ttk.Treeview(
+            self,
+            columns=("hotkey",),
+            show="tree headings",
+            selectmode="extended",
+        )
+        self._apply_translations()
+        self.tree.column("hotkey", width=140, minwidth=100, stretch=False)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.config(yscrollcommand=self.scrollbar.set)
 
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+    def _apply_translations(self) -> None:
+        """現在の言語に対応するTreeview列見出しを設定する。"""
+        self.tree.heading("#0", text=self.app.translator("history_column_label"))
+        self.tree.heading("hotkey", text=self.app.translator("hotkey_column_label"))
+
     def _bind_events(self) -> None:
+        self.app.event_dispatcher.subscribe(
+            "LANGUAGE_CHANGED", self._apply_translations
+        )  # type: ignore
         self.tree.bind("<<TreeviewSelect>>", self._on_history_select)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
         from src.gui.base import context_menu
@@ -128,27 +144,24 @@ class HistoryListComponent(tk.Frame):
         raise ValueError("theme must match a configured THEMES entry")
 
     def update_history(
-        self, history: list[tuple[str, bool, float]], theme: dict[str, str]
+        self,
+        history: list[tuple[str, bool, float]],
+        theme: dict[str, str],
+        hotkey_bindings: Mapping[int, str],
     ) -> None:
-        """履歴データとテーマの内容に基づき、表示ウィジェットの内容を差分更新する。
+        """履歴データ・テーマ・ホットキー割当に基づき、表示を差分更新する。
 
-        Preconditions:
-            - history はタプル (content, is_pinned, item_id) のリストであり、item_id は履歴全体で一意
-            - theme は THEMES に定義されたテーマ辞書と値が一致する dict[str, str]
-
-        Postconditions:
-            - history と theme が直前の表示内容（displayed_history, current_theme）と完全に一致する場合、
-              表示内容の再構築を行わずウィジェット状態を不変のまま早期returnする（Requirements 2.1）
-            - 更新後、Treeview上の表示行の集合は history の各要素の item_id から導出される iid の集合と一致する
-            - 更新後の表示行の並び順は history の順序と一致する（Requirements 2.4）
-            - 更新後の表示行の件数は len(history) と一致する（Requirements 2.5）
-            - 更新前に選択されていた行のうち、更新後も存在する行のみ選択状態が復元される
-            - self._updating_history は処理完了後に必ず False に戻る（例外発生時も finally で保証、Requirements 10.2）
-            - 更新処理の実行中（self._updating_history が True の間）は選択変更イベントの通知処理が抑制される（Requirements 10.1）
+        `hotkey_bindings` はピン留め履歴IDからキー組み合わせへの対応であり、
+        ピン留め済みかつ割当済みの行だけを「ホットキー」列に表示する。
         """
-        # 履歴データとテーマが両方完全に同一の場合は何もしない（スクロールと選択状態を100%保護）
-        if self.displayed_history == history and self.current_theme == theme:
-            return  # 事後条件: ウィジェット状態は不変
+        displayed_hotkey_bindings = dict(hotkey_bindings)
+        # 入力が全て同一の場合は何もしない（スクロールと選択状態を100%保護）。
+        if (
+            self.displayed_history == history
+            and self.current_theme == theme
+            and self.displayed_hotkey_bindings == displayed_hotkey_bindings
+        ):
+            return
 
         # Requirements 10.3: 抑制機構（self._updating_history）の有効化に失敗した場合、
         # 有効化されるまで更新処理本体を開始してはならない。
@@ -166,6 +179,7 @@ class HistoryListComponent(tk.Frame):
             scroll_pos: tuple[float, float] = self.tree.yview()
 
             self.displayed_history = history
+            self.displayed_hotkey_bindings = displayed_hotkey_bindings
             self.current_theme = theme
             pinned_bg_color = theme["pinned_bg"]
             theme_name = self._theme_name(theme)
@@ -181,7 +195,7 @@ class HistoryListComponent(tk.Frame):
 
             # 2. 表示順に挿入・更新・移動
             #    既存行は delete/insert せず item()+move() で内容更新する（Requirements 2.3）
-            for index, (content, is_pinned, _item_id) in enumerate(history):
+            for index, (content, is_pinned, item_id) in enumerate(history):
                 iid = new_iids[index]
                 display_text = self._format_display_text(content, index)
                 # Requirements 7.1: is_pinned が True の行には "pinned" タグを付与する。
@@ -193,9 +207,18 @@ class HistoryListComponent(tk.Frame):
                     if is_pinned and self.app.icon_manager is not None
                     else ""
                 )
+                hotkey_combo = (
+                    displayed_hotkey_bindings.get(int(item_id), "") if is_pinned else ""
+                )
 
                 if iid in existing_iid_set:
-                    self.tree.item(iid, text=display_text, tags=tags, image=icon_image)
+                    self.tree.item(
+                        iid,
+                        text=display_text,
+                        tags=tags,
+                        image=icon_image,
+                        values=(hotkey_combo,),
+                    )
                     self.tree.move(iid, "", index)
                 else:
                     self.tree.insert(
@@ -205,6 +228,7 @@ class HistoryListComponent(tk.Frame):
                         text=display_text,
                         tags=tags,
                         image=icon_image,
+                        values=(hotkey_combo,),
                     )
 
             # Requirements 7.3: "pinned" タグの背景色は theme["pinned_bg"]（pinned_bg_color）から
@@ -264,7 +288,11 @@ class HistoryListComponent(tk.Frame):
         # Requirements 8.1: displayed_history はそのままに新テーマを渡して再呼び出しする。
         # update_history() 側で theme != self.current_theme と判定され、
         # "pinned" タグが現在表示中の履歴データに対して再適用される。
-        self.update_history(self.displayed_history, theme)  # Re-apply pinned colors
+        self.update_history(
+            self.displayed_history,
+            theme,
+            self.displayed_hotkey_bindings,
+        )  # Re-apply pinned colors
 
     def apply_font(self, font: tk.font.Font) -> None:
         """フォント変更をTreeviewへ適用する。

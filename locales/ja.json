@@ -23,6 +23,8 @@
     "waiting_for_clipboard_content": "クリップボードのコンテンツを待っています...",
     "search_label": "検索:",
     "clipboard_history_label": "クリップボード履歴",
+    "history_column_label": "履歴",
+    "hotkey_column_label": "ホットキー",
     "copy_selected_button": "選択項目をコピー",
     "sort_desc_button": "ソート: 降順",
     "sort_asc_button": "ソート: 昇順",
