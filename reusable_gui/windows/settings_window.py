@@ -13,8 +13,8 @@ from __future__ import annotations
 import copy
 import logging
 import tkinter as tk
-from functools import partial
 from collections import defaultdict
+from functools import partial
 from tkinter import filedialog, font, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING, Any
 
