@@ -121,7 +121,9 @@ class HistoryEventHandlers(BaseEventHandler):
 
     def handle_clear_all_history(self) -> None:
         if not self.app.clear_pinned_hotkey_bindings():  # type: ignore
-            logger.error("ホットキー割当を解除できないため、履歴の全削除を中止しました。")
+            logger.error(
+                "ホットキー割当を解除できないため、履歴の全削除を中止しました。"
+            )
             return
         self.app.monitor.clear_history()  # type: ignore
         self.app.gui.update_clipboard_display("", [])  # type: ignore
@@ -134,7 +136,10 @@ class HistoryEventHandlers(BaseEventHandler):
         try:
             for item_id in item_ids:
                 if not self.app.remove_pinned_hotkey_binding(int(item_id)):  # type: ignore
-                    logger.error("ホットキー割当を解除できないため、履歴ID %s の削除を中止しました。", item_id)
+                    logger.error(
+                        "ホットキー割当を解除できないため、履歴ID %s の削除を中止しました。",
+                        item_id,
+                    )
                     continue
                 self.app.monitor.delete_history_item_by_id(item_id)  # type: ignore
             logger.info(f"Deleted {len(item_ids)} selected history item(s).")
@@ -181,7 +186,9 @@ class HistoryEventHandlers(BaseEventHandler):
 
             if is_pinned:
                 if not self.app.remove_pinned_hotkey_binding(int(item_id)):  # type: ignore
-                    logger.error("ホットキー割当を解除できないため、ピン解除を中止しました。")
+                    logger.error(
+                        "ホットキー割当を解除できないため、ピン解除を中止しました。"
+                    )
                     return
                 self.app.monitor.unpin_item_by_id(item_id)  # type: ignore
                 logger.info(f"Unpinned: {content[:50]}...")

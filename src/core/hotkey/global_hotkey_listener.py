@@ -75,9 +75,7 @@ def format_hotkey(modifiers: int, vk_code: int) -> str:
 class GlobalHotkeyListener:
     """複数の Windows グローバルホットキーを単一スレッドで待ち受ける。"""
 
-    def __init__(
-        self, tk_root: tk.Tk, on_triggered: Callable[[int], None]
-    ) -> None:
+    def __init__(self, tk_root: tk.Tk, on_triggered: Callable[[int], None]) -> None:
         self.tk_root = tk_root
         self.on_triggered = on_triggered
         self._thread: threading.Thread | None = None
@@ -100,7 +98,9 @@ class GlobalHotkeyListener:
             self.stop()
             return True
         if sys.platform != "win32":
-            logger.warning("Windows 以外の環境のため、グローバルホットキー登録をスキップします。")
+            logger.warning(
+                "Windows 以外の環境のため、グローバルホットキー登録をスキップします。"
+            )
             return False
 
         self.stop()

@@ -116,9 +116,7 @@ class HotkeyRegistrationManager:
         self._hotkey_to_history = old_hotkey_to_history
         return False
 
-    def _activate_registrations(
-        self, registrations: list[HotkeyRegistration]
-    ) -> bool:
+    def _activate_registrations(self, registrations: list[HotkeyRegistration]) -> bool:
         """単一の従来キーは既存 Interface、それ以外は集合 Interface を使用する。"""
         if not registrations:
             self._listener.stop()

@@ -25,7 +25,9 @@ class PinnedHotkeyDialog(tk.Toplevel):
 
         frame = ttk.Frame(self, padding=12)
         frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(frame, text="Press a modifier and an alphanumeric key:").pack(anchor=tk.W)
+        ttk.Label(frame, text="Press a modifier and an alphanumeric key:").pack(
+            anchor=tk.W
+        )
         entry = ttk.Entry(frame, textvariable=self._combo, width=28, state="readonly")
         entry.pack(fill=tk.X, pady=(6, 12))
         entry.bind("<KeyPress>", self._on_key_press)
@@ -34,13 +36,23 @@ class PinnedHotkeyDialog(tk.Toplevel):
         buttons = ttk.Frame(frame)
         buttons.pack(fill=tk.X)
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
-        ttk.Button(buttons, text="Save", command=self._save).pack(side=tk.RIGHT, padx=(0, 6))
+        ttk.Button(buttons, text="Save", command=self._save).pack(
+            side=tk.RIGHT, padx=(0, 6)
+        )
 
     def _on_key_press(self, event: tk.Event) -> str | None:
         keysym = event.keysym.lower()
         if keysym in {
-            "control_l", "control_r", "shift_l", "shift_r", "alt_l", "alt_r",
-            "super_l", "super_r", "win_l", "win_r",
+            "control_l",
+            "control_r",
+            "shift_l",
+            "shift_r",
+            "alt_l",
+            "alt_r",
+            "super_l",
+            "super_r",
+            "win_l",
+            "win_r",
         }:
             return None
         if keysym in {"backspace", "delete"}:
