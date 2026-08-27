@@ -108,8 +108,12 @@ class MainApplication(BaseApplication):
         self._set_state(ApplicationState.RUNNING)
 
     def get_pinned_hotkey_combo(self, history_id: int) -> str | None:
-        bindings = self._pinned_hotkey_bindings_from_settings()
+        bindings = self.get_pinned_hotkey_bindings()
         return bindings.get(history_id)
+
+    def get_pinned_hotkey_bindings(self) -> dict[int, str]:
+        """現在ピン留めされている履歴のホットキー割当を返す。"""
+        return self._pinned_hotkey_bindings_from_settings()
 
     def open_pinned_hotkey_dialog(self, history_id: int) -> None:
         from src.gui.dialogs.pinned_hotkey_dialog import PinnedHotkeyDialog
@@ -136,6 +140,7 @@ class MainApplication(BaseApplication):
             )
             return False
         self._save_pinned_hotkey_bindings(bindings)
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         return True
 
     def remove_pinned_hotkey_binding(self, history_id: int) -> bool:
@@ -147,6 +152,7 @@ class MainApplication(BaseApplication):
             logger.error("履歴ID %s のホットキー解除に失敗しました。", history_id)
             return False
         self._save_pinned_hotkey_bindings(bindings)
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         return True
 
     def clear_pinned_hotkey_bindings(self) -> bool:
@@ -154,6 +160,7 @@ class MainApplication(BaseApplication):
             logger.error("ピン留めホットキーの一括解除に失敗しました。")
             return False
         self._save_pinned_hotkey_bindings({})
+        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
         return True
 
     def _on_hotkey_triggered(self, hotkey_id: int = GLOBAL_HOTKEY_ID) -> None:

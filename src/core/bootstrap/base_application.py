@@ -53,6 +53,10 @@ class BaseApplication(ReusableBaseApplication):
         """履歴項目に割り当てられたホットキーを返す。"""
         raise NotImplementedError
 
+    def get_pinned_hotkey_bindings(self) -> dict[int, str]:
+        """ピン留め履歴に割り当てられたホットキーのコピーを返す。"""
+        raise NotImplementedError
+
     def open_pinned_hotkey_dialog(self, history_id: int) -> None:
         """履歴項目のホットキー設定ダイアログを開く。"""
         raise NotImplementedError
