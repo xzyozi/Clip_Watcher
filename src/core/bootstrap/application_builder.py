@@ -262,8 +262,8 @@ class ApplicationBuilder:
 
             self.hotkey_listener = GlobalHotkeyListener(
                 master,
-                on_triggered=lambda: event_dispatcher.dispatch(
-                    "GLOBAL_HOTKEY_TRIGGERED"
+                on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
+                    "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
                 ),
             )
             logger.info("グローバルホットキーリスナーを初期化しました")

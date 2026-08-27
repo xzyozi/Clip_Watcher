@@ -40,6 +40,7 @@ DEFAULT_USER_SETTINGS = {
     "quick_task_delete_on_copy": True,
     "global_hotkey_enabled": True,
     "global_hotkey_combo": "Ctrl+Shift+F",
+    "pinned_hotkey_bindings": {},
 }
 
 # Define themes
