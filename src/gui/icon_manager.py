@@ -1,7 +1,6 @@
 """PNGアイコンの元画像と表示用画像を管理する基盤。"""
 
 import os
-import tkinter as tk
 
 from PIL import Image, ImageTk
 
@@ -19,7 +18,7 @@ class IconManager:
         """
         self._icons_dir = icons_dir
         self._source_images: dict[str, Image.Image] = {}
-        self._icon_cache: dict[str, tk.PhotoImage] = {}
+        self._icon_cache: dict[str, ImageTk.PhotoImage] = {}
 
     @staticmethod
     def _cache_key(icon_name: str, theme_name: str) -> str:
@@ -34,7 +33,7 @@ class IconManager:
         colored_image.putalpha(source.getchannel("A"))
         return colored_image
 
-    def get_icon(self, icon_name: str, theme_name: str) -> tk.PhotoImage:
+    def get_icon(self, icon_name: str, theme_name: str) -> ImageTk.PhotoImage:
         """アイコンを取得し、テーマ前景色で変換した表示画像をキャッシュする。"""
         key = self._cache_key(icon_name, theme_name)
         if key in self._icon_cache:

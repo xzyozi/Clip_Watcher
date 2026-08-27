@@ -22,7 +22,10 @@ from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
 
 # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
-_DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
+_default_history_limit = DEFAULT_USER_SETTINGS["history_limit"]
+_DEFAULT_HISTORY_LIMIT: int = (
+    _default_history_limit if isinstance(_default_history_limit, int) else 50
+)
 
 if TYPE_CHECKING:
     from src.services.history_service import HistoryService

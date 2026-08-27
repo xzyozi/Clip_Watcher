@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import logging
 import tkinter as tk
+from functools import partial
 from collections import defaultdict
 from tkinter import filedialog, font, messagebox, simpledialog, ttk
 from typing import TYPE_CHECKING, Any
@@ -160,11 +161,11 @@ class SettingsWindow(tk.Toplevel):
         if hasattr(self.app, "translator") and self.app.translator:
             tr = self.app.translator
             if hasattr(tr, "get") and callable(tr.get):
-                return tr.get(text, text)
+                return str(tr.get(text, text))
             if hasattr(tr, "translate") and callable(tr.translate):
-                return tr.translate(text)
+                return str(tr.translate(text))
             if callable(tr):
-                return tr(text)
+                return str(tr(text))
         return text
 
     def _render_tab(
@@ -349,7 +350,7 @@ class SettingsWindow(tk.Toplevel):
                 return "break"
 
             parts = []
-            state = event.state
+            state = event.state if isinstance(event.state, int) else 0
             if (state & 0x0004) or "control" in keysym:
                 parts.append("Ctrl")
             if (state & 0x0001) or "shift" in keysym:
@@ -400,13 +401,13 @@ class SettingsWindow(tk.Toplevel):
         ttk.Button(
             btn_frame,
             text="Add",
-            command=lambda key=f.key: self._add_list_item(key),
+            command=partial(self._add_list_item, f.key),
         ).pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
         ttk.Button(
             btn_frame,
             text="Remove",
-            command=lambda key=f.key: self._remove_list_item(key),
+            command=partial(self._remove_list_item, f.key),
         ).pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
 
     def _build_action_buttons(self) -> None:

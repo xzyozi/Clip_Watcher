@@ -4,6 +4,7 @@ import calendar
 import logging
 import tkinter as tk
 from datetime import datetime
+from functools import partial
 from tkinter import Event, messagebox, ttk
 from typing import TYPE_CHECKING, Any
 
@@ -202,7 +203,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
                     self.calendar_frame,
                     text=str(day),
                     width=4,
-                    command=lambda d=day: self._select_date(d),
+                    command=partial(self._select_date, day),
                 )  # type: ignore
                 btn.grid(row=r, column=c, padx=1, pady=1)
 

@@ -190,7 +190,7 @@ class HistoryListComponent(tk.Frame):
                 tags: tuple[str, ...] = ("pinned",) if is_pinned else ()
                 icon_image = (
                     self.app.icon_manager.get_icon("pin", theme_name)
-                    if is_pinned
+                    if is_pinned and self.app.icon_manager is not None
                     else ""
                 )
 

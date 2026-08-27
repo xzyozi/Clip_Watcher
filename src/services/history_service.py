@@ -14,7 +14,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
-_DEFAULT_HISTORY_LIMIT: int = DEFAULT_USER_SETTINGS["history_limit"]
+_default_history_limit = DEFAULT_USER_SETTINGS["history_limit"]
+_DEFAULT_HISTORY_LIMIT: int = (
+    _default_history_limit if isinstance(_default_history_limit, int) else 50
+)
 
 
 class HistoryService:

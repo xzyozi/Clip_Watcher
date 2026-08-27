@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from functools import partial
 from tkinter import ttk
 from typing import TYPE_CHECKING
 
@@ -48,7 +49,7 @@ class FormatDialog(BaseToplevelGUI):
             button = ttk.Button(
                 plugin_button_frame,
                 text=plugin.name,
-                command=lambda p=plugin: self._on_plugin_select(p),
+                command=partial(self._on_plugin_select, plugin),
             )  # type: ignore
             button.pack(fill=tk.X, pady=2)  # Pack buttons vertically
 

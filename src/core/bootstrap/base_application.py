@@ -1,74 +1,41 @@
-"""Application interface for type hints"""
+"""Clip Watcher固有のアプリケーション型インターフェース。"""
 
-from abc import ABC, abstractmethod
-from collections.abc import Callable
-from enum import Enum, auto
+from __future__ import annotations
+
+import tkinter as tk
+from typing import TYPE_CHECKING
+
+from reusable_gui.core.bootstrap.base_application import (
+    ApplicationState,
+    BaseApplication as ReusableBaseApplication,
+)
+
+if TYPE_CHECKING:
+    from src.core.clipboard.clipboard_monitor import ClipboardMonitor
+    from src.core.config.settings_manager import SettingsManager
+    from src.core.events.event_dispatcher import EventDispatcher
+    from src.event_handlers.history_handlers import HistoryEventHandlers
+    from src.gui.icon_manager import IconManager
+    from src.gui.main_gui import ClipWatcherGUI
+    from src.gui.theme_manager import ThemeManager
+    from src.plugins.manager import PluginManager
+    from src.services.history_service import HistoryService
+    from src.utils.i18n import Translator
+    from src.utils.undo_manager import UndoManager
 
 
-class ApplicationState(Enum):
-    """Defines the possible states of the application's lifecycle."""
+class BaseApplication(ReusableBaseApplication):
+    """Clip Watcherが提供するサービスを型安全に公開する基底クラス。"""
 
-    INITIALIZING = auto()
-    READY = auto()
-    RUNNING = auto()
-    SHUTTING_DOWN = auto()
-    CLOSED = auto()
-
-
-class BaseApplication(ABC):
-    """Interface definition for the main application."""
-
-    def __init__(self) -> None:
-        self._state = ApplicationState.INITIALIZING
-        self._state_listeners: list[Callable[[ApplicationState], None]] = []
-
-    @property
-    def state(self) -> ApplicationState:
-        """Gets the current state of the application."""
-        return self._state
-
-    def subscribe_to_state(self, callback: Callable[[ApplicationState], None]) -> None:
-        """
-        Registers a callback to be invoked when the application state changes.
-
-        Args:
-            callback: The function to call with the new state.
-        """
-        if callback not in self._state_listeners:
-            self._state_listeners.append(callback)
-
-    def _set_state(self, new_state: ApplicationState) -> None:
-        """
-        Updates the application state and notifies all registered listeners.
-
-        Args:
-            new_state: The new state to set.
-        """
-        if self._state != new_state:
-            self._state = new_state
-            for listener in self._state_listeners:
-                try:
-                    listener(new_state)
-                except Exception as e:
-                    # Log the error but don't let one bad listener stop others.
-                    print(f"Error in state listener for state {new_state}: {e}")
-
-    @abstractmethod
-    def open_settings_window(self) -> None:
-        """Opens the settings window."""
-        pass
-
-    @abstractmethod
-    def on_ready(self) -> None:
-        """Called when the application is fully initialized and ready to run."""
-        pass
-
-    @abstractmethod
-    def on_closing(self) -> None:
-        """Handles the main window closing event."""
-        pass
-
-    @abstractmethod
-    def shutdown(self) -> None:
-        """Performs a clean shutdown of the application."""
-        pass
+    master: tk.Tk
+    settings_manager: SettingsManager
+    history_service: HistoryService
+    monitor: ClipboardMonitor
+    plugin_manager: PluginManager
+    event_dispatcher: EventDispatcher
+    theme_manager: ThemeManager
+    icon_manager: IconManager | None
+    translator: Translator
+    undo_manager: UndoManager
+    history_handlers: HistoryEventHandlers
+    gui: ClipWatcherGUI

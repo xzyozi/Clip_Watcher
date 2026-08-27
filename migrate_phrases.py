@@ -67,14 +67,14 @@ def categorize_phrase(text: str) -> str:
     return "General / Memo"
 
 
-def get_db_path():
+def get_db_path() -> str:
     app_data_dir = os.path.join(
         os.environ.get("USERPROFILE", os.path.expanduser("~")), ".clipWatcher"
     )
     return os.path.join(app_data_dir, "clip_watcher.db")
 
 
-def main():
+def main() -> None:
     json_path = "fixed_phrases.json"
     if not os.path.exists(json_path):
         print(f"Error: {json_path} not found.")

@@ -104,6 +104,15 @@ class BaseContextMenu(ABC):
         self.menu.delete(0, tk.END)
         self.build_menu()
 
+    def _translate(self, key: str) -> str:
+        """翻訳サービスが未設定の場合もメニューキーを安全に表示する。"""
+        return self.translator(key) if self.translator is not None else key
+
+    def _dispatch(self, event_name: str, *args: Any) -> None:
+        """イベントディスパッチャーが設定されている場合にイベントを送出する。"""
+        if self.dispatcher is not None:
+            self.dispatcher.dispatch(event_name, *args)
+
     def show(self, event: tk.Event) -> None:
         """Show the context menu at the event's position."""
         try:
@@ -147,47 +156,45 @@ class HistoryContextMenu(BaseContextMenu):
     def _add_menu_items(self, state: MenuState) -> None:
         """Adds items to the menu based on the provided state."""
         self.menu.add_command(
-            label=self.translator("copy_selected"),  # type: ignore
-            command=lambda: self.dispatcher.dispatch(
+            label=self._translate("copy_selected"),
+            command=lambda: self._dispatch(
                 "HISTORY_COPY_SELECTED", state.selected_ids
-            ),  # type: ignore
+            ),
             state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("open_as_quick_task"),  # type: ignore
-            command=lambda: self.dispatcher.dispatch(
+            label=self._translate("open_as_quick_task"),
+            command=lambda: self._dispatch(
                 "HISTORY_CREATE_QUICK_TASK", state.selected_ids
-            ),  # type: ignore
+            ),
             state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("format"),  # type: ignore
-            command=self.app.history_handlers.format_selected_item,  # type: ignore
+            label=self._translate("format"),
+            command=self.app.history_handlers.format_selected_item,
             state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("delete_selected"),  # type: ignore
-            command=lambda: self.dispatcher.dispatch(
+            label=self._translate("delete_selected"),
+            command=lambda: self._dispatch(
                 "HISTORY_DELETE_SELECTED", state.selected_ids
-            ),  # type: ignore
+            ),
             state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_separator()
         self.menu.add_command(
-            label=self.translator("undo"),  # type: ignore
-            command=lambda: self.dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"),  # type: ignore
+            label=self._translate("undo"),
+            command=lambda: self._dispatch("REQUEST_UNDO_LAST_ACTION"),
             state="normal" if state.can_undo else "disabled",
         )
         self.menu.add_separator()
 
-        pin_unpin_label: str = (
-            self.translator("unpin") if state.is_pinned else self.translator("pin")
-        )  # type: ignore
+        pin_unpin_label = self._translate("unpin" if state.is_pinned else "pin")
         self.menu.add_command(
             label=pin_unpin_label,
-            command=lambda: self.dispatcher.dispatch(
+            command=lambda: self._dispatch(
                 "HISTORY_PIN_UNPIN", state.first_selected_id
-            ),  # type: ignore
+            ),
             state="normal" if state.has_selection else "disabled",
         )
 
@@ -232,17 +239,17 @@ class PhraseListContextMenu(BaseContextMenu):
 
     def build_menu(self) -> None:
         self.menu.add_command(
-            label=self.translator("copy"), command=self.edit_component._copy_phrase
-        )  # type: ignore
+            label=self._translate("copy"), command=self.edit_component._copy_phrase
+        )
         self.menu.add_command(
-            label=self.translator("add"), command=self.edit_component._add_phrase
-        )  # type: ignore
+            label=self._translate("add"), command=self.edit_component._add_phrase
+        )
         self.menu.add_command(
-            label=self.translator("edit"), command=self.edit_component._edit_phrase
-        )  # type: ignore
+            label=self._translate("edit"), command=self.edit_component._edit_phrase
+        )
         self.menu.add_command(
-            label=self.translator("delete"), command=self.edit_component._delete_phrase
-        )  # type: ignore
+            label=self._translate("delete"), command=self.edit_component._delete_phrase
+        )
 
     def show(self, event: tk.Event) -> None:
         try:
