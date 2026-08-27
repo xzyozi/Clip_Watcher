@@ -4,7 +4,7 @@ import os
 import sys
 import tkinter as tk
 from tkinter import messagebox
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from src import event_handlers
 from src.core.bootstrap.base_application import ApplicationState, BaseApplication
@@ -83,8 +83,9 @@ class MainApplication(BaseApplication):
         self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)  # type: ignore
 
         if self.window_state_manager:
+            window_state_manager = self.window_state_manager
             self.event_dispatcher.subscribe(
-                "GLOBAL_HOTKEY_TRIGGERED", lambda *_: self.window_state_manager.toggle()
+                "GLOBAL_HOTKEY_TRIGGERED", lambda *_: window_state_manager.toggle()
             )
 
         self.master.bind("<FocusIn>", self.on_focus_in)
@@ -279,9 +280,10 @@ class MainApplication(BaseApplication):
     def create_toplevel(
         self, toplevel_class: type[tk.Toplevel], *args: Any, **kwargs: Any
     ) -> tk.Toplevel:
-        toplevel_window: tk.Toplevel = toplevel_class(
-            self.master, self, *args, **kwargs
-        )  # type: ignore
+        toplevel_window = cast(
+            tk.Toplevel,
+            cast(Any, toplevel_class)(self.master, self, *args, **kwargs),
+        )
 
         # ToplevelClass might have a wait_window(), so the window could be destroyed
         # by the time we get here. Check if it still exists.

@@ -56,8 +56,12 @@ def create_menu_bar(master: tk.Tk, app_instance: BaseApplication) -> tk.Menu:
     edit_menu.add_separator()
     edit_menu.add_command(
         label=translator("delete_selected_menu_item"),
-        command=app_instance.history_handlers.handle_delete_selected_history,
-    )  # type: ignore
+        command=lambda: app_instance.history_handlers.handle_delete_selected_history(
+            app_instance.gui.history_component.get_ids_for_indices(
+                app_instance.gui.history_component.get_selected_indices()
+            )
+        ),
+    )
     edit_menu.add_command(
         label=translator("delete_all_unpinned_menu_item"),
         command=app_instance.history_handlers.handle_delete_all_unpinned_history,

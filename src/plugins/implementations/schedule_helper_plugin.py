@@ -195,7 +195,8 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         month_calendar = calendar.monthcalendar(self.current_year, self.current_month)
         for r, week in enumerate(month_calendar, 1):
-            for c, day in enumerate(week):  # type: ignore
+            for c, day_value in enumerate(week):
+                day = int(day_value)
                 if day == 0:
                     continue
 

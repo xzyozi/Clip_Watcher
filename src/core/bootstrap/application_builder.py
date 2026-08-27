@@ -172,6 +172,8 @@ class ApplicationBuilder:
             limit = DEFAULT_USER_SETTINGS["history_limit"]
             if self.settings_manager:
                 limit = self.settings_manager.get_setting("history_limit", limit)
+            if not isinstance(limit, int):
+                raise ConfigError("history_limitは整数である必要があります")
             self.history_service = HistoryService(
                 self.db_manager, self.event_dispatcher, history_limit=limit
             )
@@ -252,16 +254,17 @@ class ApplicationBuilder:
 
     def with_global_hotkey_listener(self, master: tk.Tk) -> ApplicationBuilder:
         """グローバルホットキーリスナーの初期化"""
-        if not self.event_dispatcher:
+        event_dispatcher = self.event_dispatcher
+        if event_dispatcher is None:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
             from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
 
             self.hotkey_listener = GlobalHotkeyListener(
                 master,
-                on_triggered=lambda: self.event_dispatcher.dispatch(
+                on_triggered=lambda: event_dispatcher.dispatch(
                     "GLOBAL_HOTKEY_TRIGGERED"
-                ),  # type: ignore
+                ),
             )
             logger.info("グローバルホットキーリスナーを初期化しました")
             return self
