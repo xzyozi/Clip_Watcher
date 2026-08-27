@@ -71,6 +71,7 @@ class MainApplication(BaseApplication):
         self.menubar: tk.Menu | None = None
 
         event_handlers.register_class_based_handlers(self)  # type: ignore
+        self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.gui = ClipWatcherGUI(master, self)
 
         self.event_dispatcher.subscribe(
@@ -82,7 +83,6 @@ class MainApplication(BaseApplication):
         self.event_dispatcher.subscribe(
             "HISTORY_TOGGLE_SORT", self.on_toggle_history_sort
         )  # type: ignore
-        self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
         self.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)  # type: ignore
         self.event_dispatcher.subscribe(
             "GLOBAL_HOTKEY_TRIGGERED", self._on_hotkey_triggered
