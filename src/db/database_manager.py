@@ -15,6 +15,7 @@ from src.db.dto import ClipboardHistoryDTO
 
 logger = logging.getLogger(__name__)
 
+
 class DatabaseManager:
     """
     SQLiteデータベースの初期化、接続管理、マイグレーションを行うマネージャ。
@@ -78,14 +79,26 @@ class DatabaseManager:
                 """)
 
                 # インデックス作成
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_history_hash ON t_clipboard_history(content_hash)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_history_created ON t_clipboard_history(created_at DESC)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_meta_phrase_category ON t_meta_phrase(category_id, sort_order)")
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_history_hash ON t_clipboard_history(content_hash)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_history_created ON t_clipboard_history(created_at DESC)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_meta_phrase_category ON t_meta_phrase(category_id, sort_order)"
+                )
 
                 conn.commit()
-                logger.info("データベーステーブルおよびインデックスの初期化が完了しました。")
+                logger.info(
+                    "データベーステーブルおよびインデックスの初期化が完了しました。"
+                )
             except sqlite3.Error as e:
-                logger.error("データベース初期化中にエラーが発生しました: %s", str(e), exc_info=True)
+                logger.error(
+                    "データベース初期化中にエラーが発生しました: %s",
+                    str(e),
+                    exc_info=True,
+                )
                 raise
             finally:
                 conn.close()
@@ -96,18 +109,25 @@ class DatabaseManager:
         全体のインポート処理は単一トランザクションで行われ、失敗時はロールバックされます。
         """
         if not os.path.exists(history_file_path):
-            logger.info("旧履歴ファイル（%s）が見つかりません。マイグレーションをスキップします。", history_file_path)
+            logger.info(
+                "旧履歴ファイル（%s）が見つかりません。マイグレーションをスキップします。",
+                history_file_path,
+            )
             return
 
-        logger.info("旧履歴ファイル（%s）からのデータ移行を開始します。", history_file_path)
+        logger.info(
+            "旧履歴ファイル（%s）からのデータ移行を開始します。", history_file_path
+        )
         with self._lock:
             conn = None
             try:
-                with open(history_file_path, encoding='utf-8') as f:
+                with open(history_file_path, encoding="utf-8") as f:
                     loaded_data = json.load(f)
 
                 if not isinstance(loaded_data, list):
-                    logger.warning("history.json のデータ形式がリストではありません。移行をスキップします。")
+                    logger.warning(
+                        "history.json のデータ形式がリストではありません。移行をスキップします。"
+                    )
                     return
 
                 conn = self._get_connection()
@@ -133,16 +153,14 @@ class DatabaseManager:
 
                     # DTOを作成してハッシュ・日時初期化を自動で行う
                     dto = ClipboardHistoryDTO(
-                        content=content,
-                        is_pinned=is_pinned,
-                        created_at=created_at
+                        content=content, is_pinned=is_pinned, created_at=created_at
                     )
 
                     # 既に存在するかチェック
                     cursor = conn.cursor()
                     cursor.execute(
                         "SELECT id, is_pinned FROM t_clipboard_history WHERE content_hash = ?",
-                        (dto.content_hash,)
+                        (dto.content_hash,),
                     )
                     row = cursor.fetchone()
 
@@ -151,16 +169,23 @@ class DatabaseManager:
                         merged_pinned = 1 if (existing_pinned or dto.is_pinned) else 0
                         conn.execute(
                             "UPDATE t_clipboard_history SET is_pinned = ?, created_at = ? WHERE id = ?",
-                            (merged_pinned, dto.created_at, existing_id)
+                            (merged_pinned, dto.created_at, existing_id),
                         )
                     else:
                         conn.execute(
                             "INSERT INTO t_clipboard_history (content, content_hash, is_pinned, created_at) VALUES (?, ?, ?, ?)",
-                            (dto.content, dto.content_hash, 1 if dto.is_pinned else 0, dto.created_at)
+                            (
+                                dto.content,
+                                dto.content_hash,
+                                1 if dto.is_pinned else 0,
+                                dto.created_at,
+                            ),
                         )
 
                 conn.commit()
-                logger.info("SQLiteへのデータ移行が成功しました。JSONファイルをバックアップします。")
+                logger.info(
+                    "SQLiteへのデータ移行が成功しました。JSONファイルをバックアップします。"
+                )
 
                 # jsonファイルのバックアップ（リネーム）
                 backup_path = history_file_path + ".bak"
@@ -170,11 +195,19 @@ class DatabaseManager:
                 logger.info("旧履歴ファイルを %s にリネームしました。", backup_path)
 
             except (json.JSONDecodeError, FileNotFoundError, OSError) as e:
-                logger.error("履歴ファイル読み込みまたはリネーム中にエラーが発生しました: %s", str(e), exc_info=True)
+                logger.error(
+                    "履歴ファイル読み込みまたはリネーム中にエラーが発生しました: %s",
+                    str(e),
+                    exc_info=True,
+                )
                 if conn:
                     conn.rollback()
             except sqlite3.Error as e:
-                logger.error("マイグレーションのデータベース挿入中にエラーが発生しました。ロールバックします: %s", str(e), exc_info=True)
+                logger.error(
+                    "マイグレーションのデータベース挿入中にエラーが発生しました。ロールバックします: %s",
+                    str(e),
+                    exc_info=True,
+                )
                 if conn:
                     conn.rollback()
             finally:

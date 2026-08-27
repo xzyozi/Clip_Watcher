@@ -9,6 +9,7 @@ from src.db.dto import CategoryDTO
 
 logger = logging.getLogger(__name__)
 
+
 class CategoryDAO(BaseDAO):
     """メタ管理カテゴリ（t_category）テーブルへのデータアクセスを行うDAO"""
 
@@ -26,7 +27,7 @@ class CategoryDAO(BaseDAO):
 
                 cursor.execute(
                     "INSERT INTO t_category (name, sort_order) VALUES (?, ?)",
-                    (dto.name, max_order + 1)
+                    (dto.name, max_order + 1),
                 )
                 new_id = cursor.lastrowid or -1
                 conn.commit()
@@ -36,7 +37,9 @@ class CategoryDAO(BaseDAO):
                 logger.warning("カテゴリ名 '%s' は既に存在します。", dto.name)
                 return -1
             except sqlite3.Error as e:
-                logger.error("カテゴリの追加中にエラーが発生しました: %s", str(e), exc_info=True)
+                logger.error(
+                    "カテゴリの追加中にエラーが発生しました: %s", str(e), exc_info=True
+                )
                 return -1
             finally:
                 conn.close()
@@ -44,13 +47,16 @@ class CategoryDAO(BaseDAO):
     def get_all(self) -> list[CategoryDTO]:
         """すべてのカテゴリを表示順（sort_order）で取得します。"""
         try:
-            rows = self.execute_read("SELECT id, name, sort_order FROM t_category ORDER BY sort_order ASC")
+            rows = self.execute_read(
+                "SELECT id, name, sort_order FROM t_category ORDER BY sort_order ASC"
+            )
             return [
-                CategoryDTO(id=row[0], name=row[1], sort_order=row[2])
-                for row in rows
+                CategoryDTO(id=row[0], name=row[1], sort_order=row[2]) for row in rows
             ]
         except Exception as e:
-            logger.error("カテゴリ一覧の取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "カテゴリ一覧の取得中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return []
 
     def update(self, dto: CategoryDTO) -> bool:
@@ -59,27 +65,31 @@ class CategoryDAO(BaseDAO):
             return False
         try:
             affected_rows = self.execute_write(
-                "UPDATE t_category SET name = ? WHERE id = ?",
-                (dto.name, dto.id)
+                "UPDATE t_category SET name = ? WHERE id = ?", (dto.name, dto.id)
             )
             return affected_rows > 0
         except sqlite3.IntegrityError:
-            logger.warning("カテゴリ名 '%s' は既に存在するため更新できません。", dto.name)
+            logger.warning(
+                "カテゴリ名 '%s' は既に存在するため更新できません。", dto.name
+            )
             return False
         except Exception as e:
-            logger.error("カテゴリ名の更新中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "カテゴリ名の更新中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return False
 
     def delete(self, category_id: int) -> bool:
         """カテゴリを削除します。"""
         try:
             affected_rows = self.execute_write(
-                "DELETE FROM t_category WHERE id = ?",
-                (category_id,)
+                "DELETE FROM t_category WHERE id = ?", (category_id,)
             )
             return affected_rows > 0
         except Exception as e:
-            logger.error("カテゴリの削除中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "カテゴリの削除中にエラーが発生しました: %s", str(e), exc_info=True
+            )
             return False
 
     def get_meta_phrase_count(self, category_id: int) -> int:
@@ -87,9 +97,13 @@ class CategoryDAO(BaseDAO):
         try:
             rows = self.execute_read(
                 "SELECT COUNT(*) FROM t_meta_phrase WHERE category_id = ?",
-                (category_id,)
+                (category_id,),
             )
             return rows[0][0] if rows else 0
         except Exception as e:
-            logger.error("カテゴリ内定型文の件数取得中にエラーが発生しました: %s", str(e), exc_info=True)
+            logger.error(
+                "カテゴリ内定型文の件数取得中にエラーが発生しました: %s",
+                str(e),
+                exc_info=True,
+            )
             return 0

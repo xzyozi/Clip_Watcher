@@ -17,6 +17,7 @@ class UnitConverterComponent(BaseFrameGUI):
     """
     A GUI component for converting units, including time.
     """
+
     def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
         self.logger = logging.getLogger(__name__)
@@ -30,23 +31,20 @@ class UnitConverterComponent(BaseFrameGUI):
                 "Foot": 0.3048,
                 "Yard": 0.9144,
                 "Kilometer": 1000,
-                "Mile": 1609.34
+                "Mile": 1609.34,
             },
             "Weight": {
                 "Kilogram": 1,
                 "Gram": 0.001,
                 "Pound (lbs)": 0.453592,
-                "Ounce": 0.0283495
+                "Ounce": 0.0283495,
             },
             "Temperature": {
                 "Celsius": "celsius",
                 "Fahrenheit": "fahrenheit",
-                "Kelvin": "kelvin"
+                "Kelvin": "kelvin",
             },
-            "Time": {
-                "Unix Timestamp": "unix",
-                "Datetime String": "datetime"
-            }
+            "Time": {"Unix Timestamp": "unix", "Datetime String": "datetime"},
         }
 
         self.category_var = tk.StringVar(value="Length")
@@ -66,7 +64,11 @@ class UnitConverterComponent(BaseFrameGUI):
         # Category selection
         category_frame = ttk.LabelFrame(main_frame, text="Category")
         category_frame.pack(fill=tk.X, padx=5, pady=5)
-        category_combo = ttk.Combobox(category_frame, textvariable=self.category_var, values=list(self.conversions.keys()))
+        category_combo = ttk.Combobox(
+            category_frame,
+            textvariable=self.category_var,
+            values=list(self.conversions.keys()),
+        )
         category_combo.pack(fill=tk.X, padx=5, pady=5)
         category_combo.bind("<<ComboboxSelected>>", self._on_category_change)
 
@@ -106,14 +108,14 @@ class UnitConverterComponent(BaseFrameGUI):
         if result_text.startswith("Result: "):
             val = result_text[8:].strip()
             if val and val not in ("Error", "Invalid number"):
-                self.app.monitor.update_clipboard(val) # type: ignore
+                self.app.monitor.update_clipboard(val)  # type: ignore
                 self.logger.info(f"Copied to clipboard: {val}")
 
     def _on_category_change(self, event: tk.Event | None = None) -> None:
         category = self.category_var.get()
-        units = list(self.conversions[category].keys()) # type: ignore
-        self.from_unit_combo['values'] = units
-        self.to_unit_combo['values'] = units
+        units = list(self.conversions[category].keys())  # type: ignore
+        self.from_unit_combo["values"] = units
+        self.to_unit_combo["values"] = units
         if units:
             self.from_unit_var.set(units[0])
             self.to_unit_var.set(units[1] if len(units) > 1 else units[0])
@@ -142,9 +144,9 @@ class UnitConverterComponent(BaseFrameGUI):
         if category == "Temperature":
             result = self._convert_temperature(value, from_unit, to_unit)
             self.output_var.set(f"Result: {result:.4f}")
-        else: # Length and Weight
-            base_value = value * self.conversions[category][from_unit] # type: ignore
-            result = base_value / self.conversions[category][to_unit] # type: ignore
+        else:  # Length and Weight
+            base_value = value * self.conversions[category][from_unit]  # type: ignore
+            result = base_value / self.conversions[category][to_unit]  # type: ignore
             self.output_var.set(f"Result: {result:.4f}")
 
     def _convert_temperature(self, value: float, from_unit: str, to_unit: str) -> float:
@@ -152,17 +154,17 @@ class UnitConverterComponent(BaseFrameGUI):
             return value
         # Convert to Celsius first
         if from_unit == "Fahrenheit":
-            celsius = (value - 32) * 5/9
+            celsius = (value - 32) * 5 / 9
         elif from_unit == "Kelvin":
             celsius = value - 273.15
-        else: # from_unit is Celsius
+        else:  # from_unit is Celsius
             celsius = value
         # Convert from Celsius to target unit
         if to_unit == "Fahrenheit":
-            return (celsius * 9/5) + 32
+            return (celsius * 9 / 5) + 32
         elif to_unit == "Kelvin":
             return celsius + 273.15
-        else: # to_unit is Celsius
+        else:  # to_unit is Celsius
             return celsius
 
     def _convert_time(self, input_str: str, from_unit: str, to_unit: str) -> None:
@@ -175,19 +177,19 @@ class UnitConverterComponent(BaseFrameGUI):
                 # From Timestamp to Datetime
                 ts = float(input_str)
                 dt_obj = datetime.fromtimestamp(ts)
-                result = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+                result = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
                 self.output_var.set(f"Result: {result}")
             elif from_unit == "Datetime String":
                 # From Datetime to Timestamp
                 # Try a few common formats
                 dt_obj = None
                 formats_to_try = [
-                    '%Y-%m-%d %H:%M:%S',
-                    '%Y-%m-%d %H:%M',
-                    '%Y-%m-%d',
-                    '%Y/%m/%d %H:%M:%S',
-                    '%Y/%m/%d %H:%M',
-                    '%Y/%m/%d',
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%d %H:%M",
+                    "%Y-%m-%d",
+                    "%Y/%m/%d %H:%M:%S",
+                    "%Y/%m/%d %H:%M",
+                    "%Y/%m/%d",
                 ]
                 for fmt in formats_to_try:
                     try:
@@ -199,16 +201,18 @@ class UnitConverterComponent(BaseFrameGUI):
                 if dt_obj is None:
                     raise ValueError("Invalid datetime format")
 
-                result: float = dt_obj.timestamp() # type: ignore
+                result: float = dt_obj.timestamp()  # type: ignore
                 self.output_var.set(f"Result: {result}")
         except (ValueError, TypeError) as e:
             self.output_var.set("Result: Error")
             self.logger.error(f"Time conversion error: {e}")
 
+
 class UnitConverterPlugin(Plugin):
     """
     Plugin wrapper for the Unit Converter GUI tool.
     """
+
     @property
     def name(self) -> str:
         return "Unit Converter"
@@ -220,5 +224,7 @@ class UnitConverterPlugin(Plugin):
     def has_gui_component(self) -> bool:
         return True
 
-    def create_gui_component(self, parent: ttk.Notebook, app_instance: BaseApplication) -> ttk.Frame | None:
-        return UnitConverterComponent(parent, app_instance) # type: ignore
+    def create_gui_component(
+        self, parent: ttk.Notebook, app_instance: BaseApplication
+    ) -> ttk.Frame | None:
+        return UnitConverterComponent(parent, app_instance)  # type: ignore

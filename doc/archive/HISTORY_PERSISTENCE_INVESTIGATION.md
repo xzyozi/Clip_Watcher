@@ -48,13 +48,14 @@ ClipWatcherのクリップボード履歴に関して、以下の2点の問題�
 ```python
 # src/core/app_main.py (修正イメージ)
 
+
 def on_ready(self) -> None:
     self._set_state(ApplicationState.READY)
-    
+
     # 追加: 初期データをGUIに反映させる
     # last_clipboard_data は読み込み時点では空かもしれないが、履歴(get_history)は存在する可能性がある
     self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
-    
+
     self.monitor.start()
     self._set_state(ApplicationState.RUNNING)
 ```

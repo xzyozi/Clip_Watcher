@@ -2,6 +2,7 @@
 
 SettingsManager と reusable_gui schema のスキーマ設定テスト。
 """
+
 from reusable_gui.core.config.schema import SettingField, WidgetType
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
 from src.core.config.settings_manager import SettingsManager

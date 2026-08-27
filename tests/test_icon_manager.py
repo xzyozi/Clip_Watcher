@@ -14,7 +14,9 @@ from src.core.config.defaults import THEMES
 from src.gui.icon_manager import IconManager
 
 
-def test_icon_manager_initializes_empty_caches_with_configured_icons_directory() -> None:
+def test_icon_manager_initializes_empty_caches_with_configured_icons_directory() -> (
+    None
+):
     """コンストラクタは指定ディレクトリと空の画像キャッシュを保持する。"""
     manager = IconManager(icons_dir="test-assets/icons")
 
@@ -73,18 +75,16 @@ def test_get_icon_returns_the_same_reference_for_repeated_requests_property(
     with TemporaryDirectory() as temporary_directory:
         icons_dir = Path(temporary_directory) / "icons"
         icons_dir.mkdir()
-        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(
-            icons_dir / f"{icon_name}.png"
-        )
+        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / f"{icon_name}.png")
 
         with patch(
-            "src.gui.icon_manager.ImageTk.PhotoImage", side_effect=lambda image: object()
+            "src.gui.icon_manager.ImageTk.PhotoImage",
+            side_effect=lambda image: object(),
         ):
             manager = IconManager(icons_dir=str(icons_dir))
             first_icon = manager.get_icon(icon_name, theme_name)
             repeated_icons = [
-                manager.get_icon(icon_name, theme_name)
-                for _ in range(call_count - 1)
+                manager.get_icon(icon_name, theme_name) for _ in range(call_count - 1)
             ]
 
     assert all(icon is first_icon for icon in repeated_icons)
@@ -159,9 +159,7 @@ def test_get_icon_uses_the_theme_listbox_foreground_color(
         photo_image_inputs.append(image.copy())
         return object()
 
-    monkeypatch.setattr(
-        "src.gui.icon_manager.ImageTk.PhotoImage", capture_photo_image
-    )
+    monkeypatch.setattr("src.gui.icon_manager.ImageTk.PhotoImage", capture_photo_image)
 
     manager = IconManager(icons_dir=str(icons_dir))
     icon = manager.get_icon("pin", theme_name)
@@ -250,9 +248,7 @@ def test_get_icon_regenerates_photo_image_and_reuses_source_after_invalidation_p
     with TemporaryDirectory() as temporary_directory:
         icons_dir = Path(temporary_directory) / "icons"
         icons_dir.mkdir()
-        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(
-            icons_dir / f"{icon_name}.png"
-        )
+        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / f"{icon_name}.png")
 
         with (
             patch("src.gui.icon_manager.Image.open", wraps=Image.open) as image_open,

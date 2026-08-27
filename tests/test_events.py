@@ -10,7 +10,10 @@ from src.utils.undo_manager import UndoManager
 # EventDispatcher Tests (2 Items)
 # ==========================================
 
-def test_event_dispatcher_subscribe_and_dispatch(event_dispatcher: EventDispatcher) -> None:
+
+def test_event_dispatcher_subscribe_and_dispatch(
+    event_dispatcher: EventDispatcher,
+) -> None:
     """イベントの購読と、正しいペイロードを伴う発火を検証します。"""
     received_data: dict[str, Any] = {}
 
@@ -83,10 +86,14 @@ def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object(
 
     logged_errors: list[str] = []
 
-    def mock_log_and_show_error(title: str, message: str, exc_info: bool = False) -> None:
+    def mock_log_and_show_error(
+        title: str, message: str, exc_info: bool = False
+    ) -> None:
         logged_errors.append(message)
 
-    monkeypatch.setattr("src.core.events.event_dispatcher.log_and_show_error", mock_log_and_show_error)
+    monkeypatch.setattr(
+        "src.core.events.event_dispatcher.log_and_show_error", mock_log_and_show_error
+    )
 
     # 1. functools.partial の例
     def failing_target(arg: str) -> None:
@@ -147,8 +154,10 @@ def test_event_dispatcher_event_contracts(event_dispatcher: EventDispatcher) -> 
 # UndoManager Tests (3 Items)
 # ==========================================
 
+
 class DummyCommand:
     """テスト用のシンプルな Command モック。"""
+
     def __init__(self) -> None:
         self.execute_called = 0
         self.undo_called = 0
@@ -170,7 +179,7 @@ def test_undo_manager_execute_command(undo_manager: UndoManager) -> None:
     """コマンド実行時に正しく実行され、Undoスタックが積まれることを検証します。"""
     command = DummyCommand()
 
-    undo_manager.execute_command(command) # type: ignore
+    undo_manager.execute_command(command)  # type: ignore
 
     assert command.execute_called == 1
     assert command.undo_called == 0
@@ -182,7 +191,7 @@ def test_undo_manager_undo_redo_cycle(undo_manager: UndoManager) -> None:
     """UndoとRedoのサイクルで、スタックの状態遷移とコマンドの呼び出しを検証します。"""
     command = DummyCommand()
 
-    undo_manager.execute_command(command) # type: ignore
+    undo_manager.execute_command(command)  # type: ignore
     assert undo_manager.can_undo() is True
     assert undo_manager.can_redo() is False
 
@@ -205,7 +214,10 @@ def test_undo_manager_undo_redo_cycle(undo_manager: UndoManager) -> None:
 # UpdateHistoryCommand Tests (1 Item)
 # ==========================================
 
-def test_update_history_command_execution(mock_monitor: Any, undo_manager: UndoManager) -> None:
+
+def test_update_history_command_execution(
+    mock_monitor: Any, undo_manager: UndoManager
+) -> None:
     """UpdateHistoryCommandの実行とUndoにより、レシーバ(Monitor)が正しい引数で駆動されることを検証します。"""
     item_id = 123.0
     original_text = "Before Edit"
@@ -215,7 +227,7 @@ def test_update_history_command_execution(mock_monitor: Any, undo_manager: UndoM
         monitor=mock_monitor,
         item_id=item_id,
         original_text=original_text,
-        new_text=new_text
+        new_text=new_text,
     )
 
     # 1. コマンド実行の検証
@@ -225,7 +237,9 @@ def test_update_history_command_execution(mock_monitor: Any, undo_manager: UndoM
     # 2. Undo の検証
     mock_monitor.update_history_item_by_id.reset_mock()
     undo_manager.undo()
-    mock_monitor.update_history_item_by_id.assert_called_once_with(item_id, original_text)
+    mock_monitor.update_history_item_by_id.assert_called_once_with(
+        item_id, original_text
+    )
 
     # 3. Redo の検証
     mock_monitor.update_history_item_by_id.reset_mock()

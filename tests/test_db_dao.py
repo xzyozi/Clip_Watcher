@@ -9,6 +9,7 @@ from src.db.dto import CategoryDTO, ClipboardHistoryDTO, MetaPhraseDTO
 # DatabaseManager / Schema Tests
 # ==========================================
 
+
 def test_database_initialization(db_manager: DatabaseManager) -> None:
     """初期化時に3つの主要テーブルおよびインデックスが正常に作成されていることを検証します。"""
     conn = db_manager._get_connection()
@@ -36,6 +37,7 @@ def test_database_initialization(db_manager: DatabaseManager) -> None:
 # ==========================================
 # ClipboardHistoryDAO Tests (4 Items)
 # ==========================================
+
 
 def test_history_dao_add_and_get(db_manager: DatabaseManager) -> None:
     """履歴アイテムを追加し、取得した際に正しく復元されることを検証します。"""
@@ -86,7 +88,8 @@ def test_history_dao_update_content(db_manager: DatabaseManager) -> None:
 
     new_text = "Updated Text"
     import hashlib
-    new_hash = hashlib.sha256(new_text.encode('utf-8')).hexdigest()
+
+    new_hash = hashlib.sha256(new_text.encode("utf-8")).hexdigest()
 
     # 更新実行
     success = dao.update_content(item_id, new_text, new_hash)
@@ -125,6 +128,7 @@ def test_history_dao_pin_item(db_manager: DatabaseManager) -> None:
 # CategoryDAO & MetaPhraseDAO Tests (1 Item)
 # ==========================================
 
+
 def test_fixed_phrase_and_category(db_manager: DatabaseManager) -> None:
     """カテゴリ作成(空タイトル可)とそれに紐づく定型文の登録・取得・削除フローを検証します。"""
     cat_dao = db_manager.category_dao
@@ -137,12 +141,16 @@ def test_fixed_phrase_and_category(db_manager: DatabaseManager) -> None:
 
     # 2. 定型文（空タイトル含む）の追加
     # タイトルあり
-    phrase1 = MetaPhraseDTO(title="挨拶", content="こんにちは、お疲れ様です。", category_id=cat_id)
+    phrase1 = MetaPhraseDTO(
+        title="挨拶", content="こんにちは、お疲れ様です。", category_id=cat_id
+    )
     p1_id = phrase_dao.add(phrase1)
     assert p1_id > 0
 
     # タイトルなし (空タイトル) の登録
-    phrase2 = MetaPhraseDTO(title="", content="タイトルなしの定型文コンテンツです。", category_id=cat_id)
+    phrase2 = MetaPhraseDTO(
+        title="", content="タイトルなしの定型文コンテンツです。", category_id=cat_id
+    )
     p2_id = phrase_dao.add(phrase2)
     assert p2_id > 0
 

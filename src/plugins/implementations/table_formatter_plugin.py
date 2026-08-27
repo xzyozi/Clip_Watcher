@@ -5,7 +5,6 @@ from src.plugins.base_plugin import Plugin
 
 
 class TableFormatterPlugin(Plugin):
-
     @property
     def name(self) -> str:
         return "Table Formatter"
@@ -19,10 +18,10 @@ class TableFormatterPlugin(Plugin):
             return text
 
         # Detect delimiter
-        if '\t' in text and ',' not in text:
-            delimiter = '\t'
-        elif ',' in text:
-            delimiter = ','
+        if "\t" in text and "," not in text:
+            delimiter = "\t"
+        elif "," in text:
+            delimiter = ","
         else:
             return text
 
@@ -50,9 +49,9 @@ class TableFormatterPlugin(Plugin):
                     formatted_row.append(cell.strip().ljust(col_widths[i]))
                 # Ensure row has num_columns items
                 while len(formatted_row) < num_columns:
-                    formatted_row.append(''.ljust(col_widths[len(formatted_row)]))
-                formatted_table.append(' | '.join(formatted_row))
+                    formatted_row.append("".ljust(col_widths[len(formatted_row)]))
+                formatted_table.append(" | ".join(formatted_row))
 
-            return '\n'.join(formatted_table)
+            return "\n".join(formatted_table)
         except Exception:
-            return text # Return original text if formatting fails
+            return text  # Return original text if formatting fails

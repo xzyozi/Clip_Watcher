@@ -16,4 +16,4 @@ class LineSorterPlugin(Plugin):
 
         lines = text.splitlines()
         lines.sort()
-        return '\n'.join(lines)
+        return "\n".join(lines)

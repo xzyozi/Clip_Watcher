@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tkinter as tk
+from functools import partial
 from tkinter import ttk
 from typing import TYPE_CHECKING
 
@@ -13,13 +14,18 @@ if TYPE_CHECKING:
 
 
 class FormatDialog(BaseToplevelGUI):
-    def __init__(self, master: tk.Misc, app_instance: BaseApplication, settings_manager: SettingsManager) -> None:
+    def __init__(
+        self,
+        master: tk.Misc,
+        app_instance: BaseApplication,
+        settings_manager: SettingsManager,
+    ) -> None:
         super().__init__(master, app_instance)
         self.title("Select Formatter")
         self.selected_plugin: Plugin | None = None
         self.settings_manager = settings_manager
 
-        self.geometry("350x300") # Adjusted height for buttons
+        self.geometry("350x300")  # Adjusted height for buttons
         self.grab_set()
 
         self._create_widgets()
@@ -38,11 +44,14 @@ class FormatDialog(BaseToplevelGUI):
         plugin_button_frame = ttk.Frame(main_frame)
         plugin_button_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
-        self.plugins: list[Plugin] = self.app.plugin_manager.get_available_plugins() # type: ignore
+        self.plugins: list[Plugin] = self.app.plugin_manager.get_available_plugins()  # type: ignore
         for plugin in self.plugins:
-            button = ttk.Button(plugin_button_frame, text=plugin.name,
-                                command=lambda p=plugin: self._on_plugin_select(p)) # type: ignore
-            button.pack(fill=tk.X, pady=2) # Pack buttons vertically
+            button = ttk.Button(
+                plugin_button_frame,
+                text=plugin.name,
+                command=partial(self._on_plugin_select, plugin),
+            )  # type: ignore
+            button.pack(fill=tk.X, pady=2)  # Pack buttons vertically
 
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=5)

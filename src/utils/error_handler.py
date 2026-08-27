@@ -3,6 +3,7 @@ from tkinter import messagebox
 
 logger = logging.getLogger(__name__)
 
+
 def log_and_show_error(title: str, message: str, exc_info: bool = False) -> None:
     """
     Logs an error and displays an error message box to the user.

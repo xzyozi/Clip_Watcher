@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 class ApplicationBuilder:
     """アプリケーションの構築を担当するクラス"""
 
@@ -54,18 +55,26 @@ class ApplicationBuilder:
             logger.info("イベントディスパッチャを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"イベントディスパッチャの初期化に失敗: {str(e)}")
-            raise ConfigError(f"イベントディスパッチャの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"イベントディスパッチャの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"イベントディスパッチャの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_database(self, db_path: str) -> ApplicationBuilder:
         """データベースマネージャーの初期化"""
         try:
             from src.db.database_manager import DatabaseManager
+
             self.db_manager = DatabaseManager(db_path)
             logger.info("データベースマネージャーを初期化しました: %s", db_path)
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"データベースの初期化に失敗: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"データベースの初期化に失敗: {str(e)}"
+            )
             raise ConfigError(f"データベースの初期化に失敗しました: {str(e)}") from e
 
     def with_dependency_check(self) -> ApplicationBuilder:
@@ -76,19 +85,27 @@ class ApplicationBuilder:
             logger.info("依存関係のチェックが完了しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"依存関係のチェック中にエラーが発生: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"依存関係のチェック中にエラーが発生: {str(e)}"
+            )
             raise ConfigError(f"依存関係のチェックに失敗しました: {str(e)}") from e
 
-    def with_settings(self, settings_file_path: str = "settings.json") -> ApplicationBuilder:
+    def with_settings(
+        self, settings_file_path: str = "settings.json"
+    ) -> ApplicationBuilder:
         """設定マネージャーの初期化"""
         if not self.event_dispatcher:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
-            self.settings_manager = SettingsManager(self.event_dispatcher, settings_file_path)
+            self.settings_manager = SettingsManager(
+                self.event_dispatcher, settings_file_path
+            )
             logger.info("設定マネージャーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"設定マネージャーの初期化に失敗: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"設定マネージャーの初期化に失敗: {str(e)}"
+            )
             raise ConfigError(f"設定の読み込みに失敗しました: {str(e)}") from e
 
     def with_translator(self) -> ApplicationBuilder:
@@ -100,7 +117,9 @@ class ApplicationBuilder:
             logger.info("翻訳サービスを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"翻訳サービスの初期化に失敗: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"翻訳サービスの初期化に失敗: {str(e)}"
+            )
             raise ConfigError(f"翻訳サービスの初期化に失敗しました: {str(e)}") from e
 
     def with_theme_manager(self, root: tk.Tk) -> ApplicationBuilder:
@@ -110,8 +129,12 @@ class ApplicationBuilder:
             logger.info("テーママネージャーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"テーママネージャーの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー", message=f"テーママネージャーの初期化に失敗: {str(e)}"
+            )
+            raise ConfigError(
+                f"テーママネージャーの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_icon_manager(self, icons_dir: str = "assets/icons") -> ApplicationBuilder:
         """IconManagerを初期化し、ThemeManagerへ登録する。
@@ -138,34 +161,64 @@ class ApplicationBuilder:
     def with_history_service(self) -> ApplicationBuilder:
         """履歴サービスの初期化"""
         if not self.event_dispatcher or not self.db_manager:
-            raise ConfigError("イベントディスパッチャまたはデータベースマネージャーが初期化されていません")
+            raise ConfigError(
+                "イベントディスパッチャまたはデータベースマネージャーが初期化されていません"
+            )
         try:
             from src.services.history_service import HistoryService
+
             # デフォルト設定から履歴数上限を取得（後でSETTINGS_CHANGEDでも同期されます）
             # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
             limit = DEFAULT_USER_SETTINGS["history_limit"]
             if self.settings_manager:
                 limit = self.settings_manager.get_setting("history_limit", limit)
-            self.history_service = HistoryService(self.db_manager, self.event_dispatcher, history_limit=limit)
+            if not isinstance(limit, int):
+                raise ConfigError("history_limitは整数である必要があります")
+            self.history_service = HistoryService(
+                self.db_manager, self.event_dispatcher, history_limit=limit
+            )
             logger.info("履歴サービスを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"履歴サービスの初期化に失敗: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"履歴サービスの初期化に失敗: {str(e)}"
+            )
             raise ConfigError(f"履歴サービスの初期化に失敗しました: {str(e)}") from e
 
-    def with_clipboard_monitor(self, master: tk.Tk, history_file_path: str) -> ApplicationBuilder:
+    def with_clipboard_monitor(
+        self, master: tk.Tk, history_file_path: str
+    ) -> ApplicationBuilder:
         """クリップボードモニターの初期化"""
-        if not self.event_dispatcher or not self.app_status or not self.db_manager or not self.history_service:
-            raise ConfigError("イベントディスパッチャ、アプリケーションステータス、データベースマネージャー、または履歴サービスが初期化されていません")
+        if (
+            not self.event_dispatcher
+            or not self.app_status
+            or not self.db_manager
+            or not self.history_service
+        ):
+            raise ConfigError(
+                "イベントディスパッチャ、アプリケーションステータス、データベースマネージャー、または履歴サービスが初期化されていません"
+            )
 
         try:
             win32_available = self.app_status.dependencies.win32_available
-            self.monitor = ClipboardMonitor(master, self.event_dispatcher, history_file_path, win32_available, self.db_manager, self.history_service)
+            self.monitor = ClipboardMonitor(
+                master,
+                self.event_dispatcher,
+                history_file_path,
+                win32_available,
+                self.db_manager,
+                self.history_service,
+            )
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"クリップボードモニターの初期化に失敗: {str(e)}")
-            raise ConfigError(f"クリップボードモニターの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"クリップボードモニターの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"クリップボードモニターの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_plugin_manager(self) -> ApplicationBuilder:
         """プラグインマネージャーの初期化"""
@@ -174,8 +227,13 @@ class ApplicationBuilder:
             logger.info("プラグインマネージャーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"プラグインマネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"プラグインマネージャーの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"プラグインマネージャーの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"プラグインマネージャーの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_window_state_manager(self, master: tk.Tk) -> ApplicationBuilder:
         """ウィンドウ状態マネージャーの初期化"""
@@ -186,25 +244,38 @@ class ApplicationBuilder:
             logger.info("ウィンドウ状態マネージャーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"ウィンドウ状態マネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"ウィンドウ状態マネージャーの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"ウィンドウ状態マネージャーの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"ウィンドウ状態マネージャーの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_global_hotkey_listener(self, master: tk.Tk) -> ApplicationBuilder:
         """グローバルホットキーリスナーの初期化"""
-        if not self.event_dispatcher:
+        event_dispatcher = self.event_dispatcher
+        if event_dispatcher is None:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
             from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
 
             self.hotkey_listener = GlobalHotkeyListener(
                 master,
-                on_triggered=lambda: self.event_dispatcher.dispatch("GLOBAL_HOTKEY_TRIGGERED"),  # type: ignore
+                on_triggered=lambda: event_dispatcher.dispatch(
+                    "GLOBAL_HOTKEY_TRIGGERED"
+                ),
             )
             logger.info("グローバルホットキーリスナーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"グローバルホットキーリスナーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"グローバルホットキーリスナーの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"グローバルホットキーリスナーの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"グローバルホットキーリスナーの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_hotkey_registration_manager(self) -> ApplicationBuilder:
         """ホットキー登録マネージャーの初期化"""
@@ -214,26 +285,36 @@ class ApplicationBuilder:
             from src.core.hotkey.hotkey_registration_manager import (
                 HotkeyRegistrationManager,
             )
-            self.hotkey_registration_manager = HotkeyRegistrationManager(self.hotkey_listener)
+
+            self.hotkey_registration_manager = HotkeyRegistrationManager(
+                self.hotkey_listener
+            )
             logger.info("ホットキー登録マネージャーを初期化しました")
             return self
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"ホットキー登録マネージャーの初期化に失敗: {str(e)}")
-            raise ConfigError(f"ホットキー登録マネージャーの初期化に失敗しました: {str(e)}") from e
+            log_and_show_error(
+                title="エラー",
+                message=f"ホットキー登録マネージャーの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"ホットキー登録マネージャーの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def build(self, master: tk.Tk) -> MainApplication:
         """アプリケーションのビルド"""
-        if not all([
-            self.settings_manager,
-            self.db_manager,
-            self.history_service,
-            self.monitor,
-            self.plugin_manager,
-            self.event_dispatcher,
-            self.theme_manager,
-            self.translator,
-            self.app_status,
-        ]):
+        if not all(
+            [
+                self.settings_manager,
+                self.db_manager,
+                self.history_service,
+                self.monitor,
+                self.plugin_manager,
+                self.event_dispatcher,
+                self.theme_manager,
+                self.translator,
+                self.app_status,
+            ]
+        ):
             raise ConfigError("必要なコンポーネントが初期化されていません")
 
         try:
@@ -264,5 +345,7 @@ class ApplicationBuilder:
 
             return app
         except Exception as e:
-            log_and_show_error(title="エラー", message=f"アプリケーションのビルドに失敗: {str(e)}")
+            log_and_show_error(
+                title="エラー", message=f"アプリケーションのビルドに失敗: {str(e)}"
+            )
             raise ConfigError(f"アプリケーションの構築に失敗しました: {str(e)}") from e

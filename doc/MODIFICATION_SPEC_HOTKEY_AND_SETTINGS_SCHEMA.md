@@ -366,13 +366,17 @@ class WindowStateManager:
         else:
             self.show()
 
-    def register_strategy(self, state: WindowState, strategy: WindowStateStrategy) -> None:
+    def register_strategy(
+        self, state: WindowState, strategy: WindowStateStrategy
+    ) -> None:
         self._strategies[state] = strategy
 
     def _transition_to(self, new_state: WindowState) -> None:
         strategy = self._strategies.get(new_state)
         if strategy is None:
-            logger.warning("未知のウィンドウ状態への遷移が要求されました: %s", new_state)
+            logger.warning(
+                "未知のウィンドウ状態への遷移が要求されました: %s", new_state
+            )
             return
         strategy.enter(self._root)
         self._state = new_state
@@ -411,7 +415,12 @@ WM_HOTKEY = 0x0312
 WM_QUIT = 0x0012
 HOTKEY_ID = 1
 
-_MODIFIER_MAP = {"ctrl": MOD_CONTROL, "alt": MOD_ALT, "shift": MOD_SHIFT, "win": MOD_WIN}
+_MODIFIER_MAP = {
+    "ctrl": MOD_CONTROL,
+    "alt": MOD_ALT,
+    "shift": MOD_SHIFT,
+    "win": MOD_WIN,
+}
 
 
 def parse_hotkey_string(combo: str) -> tuple[int, int]:
@@ -476,12 +485,16 @@ class GlobalHotkeyListener:
             user32 = ctypes.windll.user32
             self._thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
 
-            ok = user32.RegisterHotKey(None, HOTKEY_ID, modifiers | MOD_NOREPEAT, vk_code)
+            ok = user32.RegisterHotKey(
+                None, HOTKEY_ID, modifiers | MOD_NOREPEAT, vk_code
+            )
             result_holder["ok"] = bool(ok)
             ready_event.set()
 
             if not ok:
-                logger.warning("グローバルホットキーの登録に失敗しました（競合の可能性）。")
+                logger.warning(
+                    "グローバルホットキーの登録に失敗しました（競合の可能性）。"
+                )
                 return
 
             msg = ctypes.wintypes.MSG()
@@ -523,18 +536,26 @@ DEFAULT_USER_SETTINGS = {
 #### 4.6.2 `SettingField` の追加 (`SettingsManager.get_settings_schema()`)
 
 ```python
-SettingField(
-    key="global_hotkey_enabled", label="Enable Global Hotkey",
-    widget_type=WidgetType.CHECKBUTTON,
-    tab="General", group="Global Hotkey",
-    default=True,
-),
-SettingField(
-    key="global_hotkey_combo", label="Show/Hide Hotkey",
-    widget_type=WidgetType.HOTKEY_CAPTURE,
-    tab="General", group="Global Hotkey",
-    default="Ctrl+Shift+F",
-),
+(
+    SettingField(
+        key="global_hotkey_enabled",
+        label="Enable Global Hotkey",
+        widget_type=WidgetType.CHECKBUTTON,
+        tab="General",
+        group="Global Hotkey",
+        default=True,
+    ),
+)
+(
+    SettingField(
+        key="global_hotkey_combo",
+        label="Show/Hide Hotkey",
+        widget_type=WidgetType.HOTKEY_CAPTURE,
+        tab="General",
+        group="Global Hotkey",
+        default="Ctrl+Shift+F",
+    ),
+)
 ```
 
 #### 4.6.3 `WidgetType.HOTKEY_CAPTURE` の追加
@@ -643,21 +664,26 @@ sequenceDiagram
 ```python
 def with_window_state_manager(self, master: tk.Tk) -> ApplicationBuilder:
     from src.core.window.window_state_manager import WindowStateManager
+
     self.window_state_manager = WindowStateManager(master)
     return self
+
 
 def with_global_hotkey_listener(self, master: tk.Tk) -> ApplicationBuilder:
     if not self.event_dispatcher:
         raise ConfigError("イベントディスパッチャが初期化されていません")
     from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
+
     self.hotkey_listener = GlobalHotkeyListener(
         master,
         on_triggered=lambda: self.event_dispatcher.dispatch("GLOBAL_HOTKEY_TRIGGERED"),
     )
     return self
 
+
 def with_hotkey_registration_manager(self) -> ApplicationBuilder:
     from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
+
     self.hotkey_registration_manager = HotkeyRegistrationManager(self.hotkey_listener)
     return self
 ```

@@ -2,6 +2,7 @@
 
 ApplicationBuilder と MainApplication へのホットキー・ウィンドウ状態組み込み検証。
 """
+
 from unittest.mock import MagicMock, patch
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
@@ -11,10 +12,17 @@ from src.core.window.window_state_manager import WindowState
 def test_application_builder_component_injection() -> None:
     mock_root = MagicMock()
 
-    with patch("src.core.window.window_state_manager.WindowStateManager") as mock_wsm_cls, \
-         patch("src.core.hotkey.global_hotkey_listener.GlobalHotkeyListener") as mock_hkl_cls, \
-         patch("src.core.hotkey.hotkey_registration_manager.HotkeyRegistrationManager") as mock_hrm_cls:
-
+    with (
+        patch(
+            "src.core.window.window_state_manager.WindowStateManager"
+        ) as mock_wsm_cls,
+        patch(
+            "src.core.hotkey.global_hotkey_listener.GlobalHotkeyListener"
+        ) as mock_hkl_cls,
+        patch(
+            "src.core.hotkey.hotkey_registration_manager.HotkeyRegistrationManager"
+        ) as mock_hrm_cls,
+    ):
         mock_wsm = MagicMock()
         mock_wsm_cls.return_value = mock_wsm
         mock_hkl = MagicMock()
@@ -54,10 +62,11 @@ def test_main_application_hotkey_and_window_integration() -> None:
     mock_wsm.state = WindowState.VISIBLE
     mock_hrm = MagicMock()
 
-    with patch("src.core.app_main.ClipWatcherGUI"), \
-         patch("src.core.app_main.menu_bar"), \
-         patch("src.event_handlers.register_class_based_handlers"):
-
+    with (
+        patch("src.core.app_main.ClipWatcherGUI"),
+        patch("src.core.app_main.menu_bar"),
+        patch("src.event_handlers.register_class_based_handlers"),
+    ):
         app = MainApplication(
             master=mock_master,
             settings_manager=mock_settings,
@@ -79,7 +88,10 @@ def test_main_application_hotkey_and_window_integration() -> None:
         assert app.icon_manager is mock_icon_manager
 
         mock_dispatcher.subscribe.assert_any_call(
-            "GLOBAL_HOTKEY_TRIGGERED", app.event_dispatcher.subscribe.call_args[0][1] if app.event_dispatcher.subscribe.call_args else MagicMock()
+            "GLOBAL_HOTKEY_TRIGGERED",
+            app.event_dispatcher.subscribe.call_args[0][1]
+            if app.event_dispatcher.subscribe.call_args
+            else MagicMock(),
         )
 
         app.on_ready()
@@ -99,10 +111,11 @@ def test_global_hotkey_triggered_event_dispatch_zero_args() -> None:
     mock_settings.get_setting.side_effect = lambda k, default=None: default
     mock_wsm = MagicMock()
 
-    with patch("src.core.app_main.ClipWatcherGUI"), \
-         patch("src.core.app_main.menu_bar"), \
-         patch("src.event_handlers.register_class_based_handlers"):
-
+    with (
+        patch("src.core.app_main.ClipWatcherGUI"),
+        patch("src.core.app_main.menu_bar"),
+        patch("src.event_handlers.register_class_based_handlers"),
+    ):
         _ = MainApplication(
             master=mock_master,
             settings_manager=mock_settings,
@@ -127,12 +140,13 @@ def test_start_app_builder_chain_includes_icon_manager_after_theme_manager() -> 
     """要件5.4: 起動チェーンはテーママネージャー直後にIconManagerを初期化する。"""
     from src.event_handlers import start_app
 
-    with patch("socket.socket"), \
-         patch("src.event_handlers.setup_logging"), \
-         patch("scripts.migrate_json_to_sqlite.main"), \
-         patch("src.event_handlers.tk.Tk") as mock_tk_cls, \
-         patch("src.event_handlers.ApplicationBuilder") as mock_builder_cls:
-
+    with (
+        patch("socket.socket"),
+        patch("src.event_handlers.setup_logging"),
+        patch("scripts.migrate_json_to_sqlite.main"),
+        patch("src.event_handlers.tk.Tk") as mock_tk_cls,
+        patch("src.event_handlers.ApplicationBuilder") as mock_builder_cls,
+    ):
         mock_root = MagicMock()
         mock_tk_cls.return_value = mock_root
 

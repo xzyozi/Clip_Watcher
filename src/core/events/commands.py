@@ -4,7 +4,14 @@ from src.utils.undo_manager import UndoableCommand
 
 class UpdateHistoryCommand(UndoableCommand):
     """A command to update a history item, which can be undone."""
-    def __init__(self, monitor: ClipboardMonitor, item_id: float, original_text: str, new_text: str):
+
+    def __init__(
+        self,
+        monitor: ClipboardMonitor,
+        item_id: float,
+        original_text: str,
+        new_text: str,
+    ):
         self.monitor = monitor
         self.item_id = item_id
         self.original_text = original_text

@@ -29,7 +29,9 @@ class HistoryListComponent(tk.Frame):
     def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master)
         self.app = app_instance
-        self.displayed_history: list[tuple[str, bool, float]] = []  # Will store the full (content, is_pinned, timestamp) tuples
+        self.displayed_history: list[
+            tuple[str, bool, float]
+        ] = []  # Will store the full (content, is_pinned, timestamp) tuples
         self.current_theme: dict[str, str] = {}
         self._updating_history: bool = False
 
@@ -50,7 +52,10 @@ class HistoryListComponent(tk.Frame):
         self.tree.bind("<<TreeviewSelect>>", self._on_history_select)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
         from src.gui.base import context_menu
-        history_context_menu: HistoryContextMenu = context_menu.HistoryContextMenu(self.master, self.app) # type: ignore
+
+        history_context_menu: HistoryContextMenu = context_menu.HistoryContextMenu(
+            self.master, self.app
+        )  # type: ignore
         self.tree.bind("<Button-3>", history_context_menu.show)
 
     def _on_double_click(self, event: tk.Event) -> None:
@@ -63,7 +68,7 @@ class HistoryListComponent(tk.Frame):
         item_ids: list[float] = self.get_ids_for_indices(selected_indices[:1])
         if item_ids:
             # The event now passes a list of IDs, even if it's just one.
-            self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", item_ids) # type: ignore
+            self.app.event_dispatcher.dispatch("HISTORY_COPY_SELECTED", item_ids)  # type: ignore
 
     def _on_history_select(self, event: tk.Event) -> None:
         # Requirements 10.1: update_history() の実行中（self._updating_history が True の間）は
@@ -71,9 +76,12 @@ class HistoryListComponent(tk.Frame):
         if self._updating_history:
             return
         # This event is now handled by the parent (main_gui) to update the text widget
-        self.app.event_dispatcher.dispatch("HISTORY_SELECTION_CHANGED", { # type: ignore
-            "selected_indices": self.get_selected_indices()
-        })
+        self.app.event_dispatcher.dispatch(
+            "HISTORY_SELECTION_CHANGED",
+            {  # type: ignore
+                "selected_indices": self.get_selected_indices()
+            },
+        )
 
     def get_selected_indices(self) -> tuple[int, ...]:
         """現在選択中の表示行を表示順インデックス（0始まり）の昇順タプルで返す。選択が0件の場合は空タプルを返す。"""
@@ -85,7 +93,11 @@ class HistoryListComponent(tk.Frame):
         `displayed_history` の範囲外のインデックス（負値・上限超過）は結果から除外される。
         `displayed_history` が空の場合は、渡された `indices` の値に関わらず常に空リストを返す。
         """
-        return [self.displayed_history[i][2] for i in indices if 0 <= i < len(self.displayed_history)]
+        return [
+            self.displayed_history[i][2]
+            for i in indices
+            if 0 <= i < len(self.displayed_history)
+        ]
 
     def _iid_for_item_id(self, item_id: float) -> str:
         """履歴item ID（float、一意なタイムスタンプ）からTreeview iid文字列を生成する。"""
@@ -98,7 +110,7 @@ class HistoryListComponent(tk.Frame):
         表示順インデックス（1始まりの番号）を先頭に付与する。
         ピン留めの装飾は背景色タグ（"pinned"）で行うため、ここでは付与しない。
         """
-        display_text = content.replace('\n', ' ').replace('\r', '')
+        display_text = content.replace("\n", " ").replace("\r", "")
         return f"{index + 1}. {display_text[:100]}..."
 
     def _theme_name(self, theme: dict[str, str]) -> str:
@@ -115,7 +127,9 @@ class HistoryListComponent(tk.Frame):
                 return theme_name
         raise ValueError("theme must match a configured THEMES entry")
 
-    def update_history(self, history: list[tuple[str, bool, float]], theme: dict[str, str]) -> None:
+    def update_history(
+        self, history: list[tuple[str, bool, float]], theme: dict[str, str]
+    ) -> None:
         """履歴データとテーマの内容に基づき、表示ウィジェットの内容を差分更新する。
 
         Preconditions:
@@ -176,19 +190,21 @@ class HistoryListComponent(tk.Frame):
                 tags: tuple[str, ...] = ("pinned",) if is_pinned else ()
                 icon_image = (
                     self.app.icon_manager.get_icon("pin", theme_name)
-                    if is_pinned
+                    if is_pinned and self.app.icon_manager is not None
                     else ""
                 )
 
                 if iid in existing_iid_set:
-                    self.tree.item(
-                        iid, text=display_text, tags=tags, image=icon_image
-                    )
+                    self.tree.item(iid, text=display_text, tags=tags, image=icon_image)
                     self.tree.move(iid, "", index)
                 else:
                     self.tree.insert(
-                        "", index, iid=iid, text=display_text, tags=tags,
-                        image=icon_image
+                        "",
+                        index,
+                        iid=iid,
+                        text=display_text,
+                        tags=tags,
+                        image=icon_image,
                     )
 
             # Requirements 7.3: "pinned" タグの背景色は theme["pinned_bg"]（pinned_bg_color）から
@@ -198,7 +214,9 @@ class HistoryListComponent(tk.Frame):
             # 3. 選択・スクロール状態の復元
             # Requirements 3.1, 3.2: 更新前に選択されていた行のうち、更新後も存在する（tree.exists）行のみを
             # 選択状態に復元する。存在しない行は restored_selection から自動的に除外される。
-            restored_selection = tuple(iid for iid in prev_selection if self.tree.exists(iid))
+            restored_selection = tuple(
+                iid for iid in prev_selection if self.tree.exists(iid)
+            )
             # Requirements 3.3: 更新前が空選択（prev_selection == ()）の場合、restored_selection も
             # 空タプルになり、この if は False となるため selection_set() は呼ばれず、更新後も選択0件のままになる。
             # （selection_set() を空タプルで呼び出すと環境によって tk.TclError になる可能性があるため、
@@ -246,7 +264,7 @@ class HistoryListComponent(tk.Frame):
         # Requirements 8.1: displayed_history はそのままに新テーマを渡して再呼び出しする。
         # update_history() 側で theme != self.current_theme と判定され、
         # "pinned" タグが現在表示中の履歴データに対して再適用される。
-        self.update_history(self.displayed_history, theme) # Re-apply pinned colors
+        self.update_history(self.displayed_history, theme)  # Re-apply pinned colors
 
     def apply_font(self, font: tk.font.Font) -> None:
         """フォント変更をTreeviewへ適用する。

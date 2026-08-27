@@ -12,7 +12,9 @@ def test_initial_history_is_empty(history_service: HistoryService) -> None:
     assert history_service.last_clipboard_data == ""
 
 
-def test_add_history_item(history_service: HistoryService, event_dispatcher: EventDispatcher) -> None:
+def test_add_history_item(
+    history_service: HistoryService, event_dispatcher: EventDispatcher
+) -> None:
     """新しい履歴項目を追加した際の、状態更新とイベント通知を検証します。"""
     event_data: dict[str, Any] = {}
 
@@ -150,7 +152,14 @@ def test_delete_all_unpinned_history(history_service: HistoryService) -> None:
 
 def test_import_history(history_service: HistoryService) -> None:
     """テキストリストを一括インポートした際に、DBへ正しく追加され最大上限でクリーンアップされることを検証します。"""
-    import_data = ["Imported A", "Imported B", "Imported C", "Imported D", "Imported E", "Imported F"]
+    import_data = [
+        "Imported A",
+        "Imported B",
+        "Imported C",
+        "Imported D",
+        "Imported E",
+        "Imported F",
+    ]
 
     # 6件インポートするが上限は5件
     history_service.import_history(import_data)
@@ -277,7 +286,9 @@ def test_settings_changed_limit_increase_recovers_items_beyond_previous_limit(
     # 上書きされてしまうため、i=0 のケースを避けて 1 始まりの値を使う。
     for i in range(7):
         db_manager.history_dao.add_item(
-            ClipboardHistoryDTO(content=f"Preloaded {i}", is_pinned=False, created_at=float(i + 1))
+            ClipboardHistoryDTO(
+                content=f"Preloaded {i}", is_pinned=False, created_at=float(i + 1)
+            )
         )
 
     db_items = db_manager.history_dao.get_items(limit=None)
@@ -286,7 +297,9 @@ def test_settings_changed_limit_increase_recovers_items_beyond_previous_limit(
     # 起動シーケンスを再現: デフォルト値（小さい上限）で HistoryService を初期化する。
     # コンストラクタ内の load_history() が limit=3 で読み込むため、
     # この時点のメモリ内履歴は3件のみになる。
-    service = HistoryService(db_manager=db_manager, event_dispatcher=event_dispatcher, history_limit=3)
+    service = HistoryService(
+        db_manager=db_manager, event_dispatcher=event_dispatcher, history_limit=3
+    )
     assert len(service.history) == 3
 
     # settings.json 読み込み完了後に発火する SETTINGS_CHANGED を再現する

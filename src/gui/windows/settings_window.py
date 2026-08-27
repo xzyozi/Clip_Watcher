@@ -4,7 +4,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from reusable_gui.core.config.schema import SettingField
-from reusable_gui.windows.settings_window import SettingsWindow as ReusableSettingsWindow
+from reusable_gui.windows.settings_window import (
+    SettingsWindow as ReusableSettingsWindow,
+)
 from src.plugins.settings_schema_provider import PluginSettingsSchemaProvider
 
 if TYPE_CHECKING:
@@ -36,7 +38,10 @@ class SettingsWindow(ReusableSettingsWindow):
     def _get_schema(self) -> list[SettingField]:
         core_schema = self.settings_manager.get_settings_schema()
         plugin_schema: list[SettingField] = []
-        if hasattr(self.app_instance, "plugin_manager") and self.app_instance.plugin_manager:
+        if (
+            hasattr(self.app_instance, "plugin_manager")
+            and self.app_instance.plugin_manager
+        ):
             provider = PluginSettingsSchemaProvider(self.app_instance.plugin_manager)
             plugin_schema = provider.get_fields()
         return [*core_schema, *plugin_schema]

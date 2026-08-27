@@ -2,6 +2,7 @@
 
 WindowStateManager の状態遷移と Strategy 実行の検証テスト。
 """
+
 import tkinter as tk
 from unittest.mock import MagicMock
 

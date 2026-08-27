@@ -23,6 +23,7 @@ from src.plugins.manager import PluginManager
 # PluginManager Scan & Load Tests (3 Items)
 # ==========================================
 
+
 def test_plugin_manager_scan_and_load() -> None:
     """PluginManagerがロードを実行し、実装されたプラグインが検知されることを検証します。"""
     manager = PluginManager()
@@ -40,7 +41,11 @@ def test_plugin_manager_broken_plugin_safety(mocker: Any) -> None:
     # pkgutil.iter_modules の出力をモックし、正常なモジュール名と「壊れたモジュール名」を返させる
     mock_module_info = [
         (None, "src.plugins.implementations.uppercase_converter_plugin", False),
-        (None, "src.plugins.implementations.broken_plugin_simulation", False),  # 存在しない・壊れたモジュール
+        (
+            None,
+            "src.plugins.implementations.broken_plugin_simulation",
+            False,
+        ),  # 存在しない・壊れたモジュール
     ]
     mocker.patch("pkgutil.iter_modules", return_value=mock_module_info)
 
@@ -71,33 +76,39 @@ def test_gui_plugins_filtering() -> None:
 # Parameterized Text Conversion Tests (1 Item)
 # ==========================================
 
+
 @pytest.mark.parametrize(
     "plugin_class, input_text, expected_output",
     [
         # 1. 大文字変換
         (UppercaseConverterPlugin, "hello world", "HELLO WORLD"),
         (UppercaseConverterPlugin, "", ""),
-
         # 2. URLエンコード / デコード (URLConverterPlugin)
         # ※ URL変換プラグインのデフォルトの挙動（エンコードかデコードか）を検証
         (URLConverterPlugin, "hello world", "hello%20world"),
-        (URLConverterPlugin, "hello%20world", "hello world"), # 再トグルでデコードされる仕様を検証
-
+        (
+            URLConverterPlugin,
+            "hello%20world",
+            "hello world",
+        ),  # 再トグルでデコードされる仕様を検証
         # 3. 重複行削除 (DuplicateLineRemoverPlugin)
-        (DuplicateLineRemoverPlugin, "line1\nline2\nline1\nline3", "line1\nline2\nline3"),
+        (
+            DuplicateLineRemoverPlugin,
+            "line1\nline2\nline1\nline3",
+            "line1\nline2\nline3",
+        ),
         (DuplicateLineRemoverPlugin, "single", "single"),
-
         # 4. HTMLエスケープ (HTMLEscapePlugin)
         (HTMLEscapePlugin, "<div>&hello</div>", "&lt;div&gt;&amp;hello&lt;/div&gt;"),
-
         # 5. 行ソート (LineSorterPlugin)
         (LineSorterPlugin, "c\na\nb", "a\nb\nc"),
-
         # 6. 空白・改行正規化 (WhitespaceNormalizerPlugin)
         (WhitespaceNormalizerPlugin, "  hello   \n\n  world  ", "hello\n\nworld"),
-    ]
+    ],
 )
-def test_text_plugins_conversion(plugin_class: type[Plugin], input_text: str, expected_output: str) -> None:
+def test_text_plugins_conversion(
+    plugin_class: type[Plugin], input_text: str, expected_output: str
+) -> None:
     """各テキスト変換プラグインが、ダミー値や極端な値に対して期待通り処理できるかを検証します。"""
     plugin = plugin_class()
     result = plugin.process(input_text)

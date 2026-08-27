@@ -212,6 +212,7 @@ import threading
 import sqlite3
 from typing import Any
 
+
 class BaseDAO:
     def __init__(self, db_path: str, lock: threading.Lock) -> None:
         self.db_path = db_path
@@ -258,5 +259,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 # 例: トランザクション失敗時のロールバック記録
-logger.error("マイグレーション処理中に例外が発生したためロールバックしました。: %s", str(e), exc_info=True)
+logger.error(
+    "マイグレーション処理中に例外が発生したためロールバックしました。: %s",
+    str(e),
+    exc_info=True,
+)
 ```

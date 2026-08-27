@@ -16,8 +16,10 @@ if TYPE_CHECKING:
 
 # --- State Management (as per review suggestion 2.2) ---
 
+
 class MenuState(NamedTuple):
     """Represents the state of the history menu at a given moment."""
+
     has_selection: bool
     selected_indices: tuple[int, ...]
     selected_ids: list[float]
@@ -25,33 +27,41 @@ class MenuState(NamedTuple):
     is_pinned: bool
     can_undo: bool
 
+
 class HistoryMenuStateProvider:
     """
     Provides the state for the history context menu by decoupling state
     calculation from the UI.
     """
+
     def __init__(self, app: BaseApplication) -> None:
         self.app = app
 
     def get_menu_state(self, tree: ttk.Treeview) -> MenuState:
         """Calculates and returns the current state of the menu."""
-        history_component: HistoryListComponent = self.app.gui.history_component # type: ignore
-        selected_indices: tuple[int, ...] = tuple(sorted(tree.index(iid) for iid in tree.selection()))
+        history_component: HistoryListComponent = self.app.gui.history_component  # type: ignore
+        selected_indices: tuple[int, ...] = tuple(
+            sorted(tree.index(iid) for iid in tree.selection())
+        )
         has_selection: bool = bool(selected_indices)
 
-        selected_ids: list[float] = history_component.get_ids_for_indices(list(selected_indices)) # type: ignore
+        selected_ids: list[float] = history_component.get_ids_for_indices(
+            list(selected_indices)
+        )  # type: ignore
         first_selected_id: float | None = selected_ids[0] if selected_ids else None
 
         is_pinned: bool = False
         if has_selection:
             # Use the already available displayed_history in the component
-            history_data: list[tuple[str, bool, float]] = history_component.displayed_history # type: ignore
+            history_data: list[tuple[str, bool, float]] = (
+                history_component.displayed_history
+            )  # type: ignore
             first_selected_index = selected_indices[0]
             if first_selected_index < len(history_data):
                 # Tuple is (content, is_pinned, timestamp)
                 is_pinned = history_data[first_selected_index][1]
 
-        can_undo: bool = self.app.undo_manager.can_undo() # type: ignore
+        can_undo: bool = self.app.undo_manager.can_undo()  # type: ignore
 
         return MenuState(
             has_selection=has_selection,
@@ -62,11 +72,19 @@ class HistoryMenuStateProvider:
             can_undo=can_undo,
         )
 
+
 # --- Base Classes ---
+
 
 class BaseContextMenu(ABC):
     """Base class for context menus."""
-    def __init__(self, master: tk.Misc, translator: Translator | None = None, dispatcher: EventDispatcher | None = None) -> None:
+
+    def __init__(
+        self,
+        master: tk.Misc,
+        translator: Translator | None = None,
+        dispatcher: EventDispatcher | None = None,
+    ) -> None:
         self.master = master
         self.menu = tk.Menu(master, tearoff=0)
         self.translator = translator
@@ -86,6 +104,15 @@ class BaseContextMenu(ABC):
         self.menu.delete(0, tk.END)
         self.build_menu()
 
+    def _translate(self, key: str) -> str:
+        """翻訳サービスが未設定の場合もメニューキーを安全に表示する。"""
+        return self.translator(key) if self.translator is not None else key
+
+    def _dispatch(self, event_name: str, *args: Any) -> None:
+        """イベントディスパッチャーが設定されている場合にイベントを送出する。"""
+        if self.dispatcher is not None:
+            self.dispatcher.dispatch(event_name, *args)
+
     def show(self, event: tk.Event) -> None:
         """Show the context menu at the event's position."""
         try:
@@ -93,15 +120,18 @@ class BaseContextMenu(ABC):
         finally:
             self.menu.grab_release()
 
+
 # --- Concrete Implementations ---
+
 
 class HistoryContextMenu(BaseContextMenu):
     """Context menu for the history listbox, with state management separated."""
+
     def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         self.app = app_instance
         self.tree: ttk.Treeview | None = None
         self.state_provider = HistoryMenuStateProvider(app_instance)
-        super().__init__(master, app_instance.translator, app_instance.event_dispatcher) # type: ignore
+        super().__init__(master, app_instance.translator, app_instance.event_dispatcher)  # type: ignore
 
     def build_menu(self) -> None:
         # Dynamic menu, built just before showing.
@@ -113,7 +143,7 @@ class HistoryContextMenu(BaseContextMenu):
 
     def _get_tree(self) -> ttk.Treeview:
         if not self.tree:
-            self.tree = self.app.gui.history_component.tree # type: ignore
+            self.tree = self.app.gui.history_component.tree  # type: ignore
         return self.tree
 
     def _build_dynamic_menu(self) -> None:
@@ -126,38 +156,44 @@ class HistoryContextMenu(BaseContextMenu):
     def _add_menu_items(self, state: MenuState) -> None:
         """Adds items to the menu based on the provided state."""
         self.menu.add_command(
-            label=self.translator("copy_selected"), # type: ignore
-            command=lambda: self.dispatcher.dispatch("HISTORY_COPY_SELECTED", state.selected_ids), # type: ignore
-            state="normal" if state.has_selection else "disabled"
+            label=self._translate("copy_selected"),
+            command=lambda: self._dispatch("HISTORY_COPY_SELECTED", state.selected_ids),
+            state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("open_as_quick_task"), # type: ignore
-            command=lambda: self.dispatcher.dispatch("HISTORY_CREATE_QUICK_TASK", state.selected_ids), # type: ignore
-            state="normal" if state.has_selection else "disabled"
+            label=self._translate("open_as_quick_task"),
+            command=lambda: self._dispatch(
+                "HISTORY_CREATE_QUICK_TASK", state.selected_ids
+            ),
+            state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("format"), # type: ignore
-            command=self.app.history_handlers.format_selected_item, # type: ignore
-            state="normal" if state.has_selection else "disabled"
+            label=self._translate("format"),
+            command=self.app.history_handlers.format_selected_item,
+            state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_command(
-            label=self.translator("delete_selected"), # type: ignore
-            command=lambda: self.dispatcher.dispatch("HISTORY_DELETE_SELECTED", state.selected_ids), # type: ignore
-            state="normal" if state.has_selection else "disabled"
+            label=self._translate("delete_selected"),
+            command=lambda: self._dispatch(
+                "HISTORY_DELETE_SELECTED", state.selected_ids
+            ),
+            state="normal" if state.has_selection else "disabled",
         )
         self.menu.add_separator()
         self.menu.add_command(
-            label=self.translator("undo"), # type: ignore
-            command=lambda: self.dispatcher.dispatch("REQUEST_UNDO_LAST_ACTION"), # type: ignore
-            state="normal" if state.can_undo else "disabled"
+            label=self._translate("undo"),
+            command=lambda: self._dispatch("REQUEST_UNDO_LAST_ACTION"),
+            state="normal" if state.can_undo else "disabled",
         )
         self.menu.add_separator()
 
-        pin_unpin_label: str = self.translator("unpin") if state.is_pinned else self.translator("pin") # type: ignore
+        pin_unpin_label = self._translate("unpin" if state.is_pinned else "pin")
         self.menu.add_command(
             label=pin_unpin_label,
-            command=lambda: self.dispatcher.dispatch("HISTORY_PIN_UNPIN", state.first_selected_id), # type: ignore
-            state="normal" if state.has_selection else "disabled"
+            command=lambda: self._dispatch(
+                "HISTORY_PIN_UNPIN", state.first_selected_id
+            ),
+            state="normal" if state.has_selection else "disabled",
         )
 
     def show(self, event: tk.Event) -> None:
@@ -187,16 +223,31 @@ class HistoryContextMenu(BaseContextMenu):
 
 class PhraseListContextMenu(BaseContextMenu):
     """Context menu for the phrase listbox."""
-    def __init__(self, master: tk.Misc, app: BaseApplication, phrase_list_component: PhraseListComponent, phrase_edit_component: PhraseEditComponent) -> None:
+
+    def __init__(
+        self,
+        master: tk.Misc,
+        app: BaseApplication,
+        phrase_list_component: PhraseListComponent,
+        phrase_edit_component: PhraseEditComponent,
+    ) -> None:
         self.list_component = phrase_list_component
         self.edit_component = phrase_edit_component
-        super().__init__(master, app.translator, app.event_dispatcher) # type: ignore
+        super().__init__(master, app.translator, app.event_dispatcher)  # type: ignore
 
     def build_menu(self) -> None:
-        self.menu.add_command(label=self.translator("copy"), command=self.edit_component._copy_phrase) # type: ignore
-        self.menu.add_command(label=self.translator("add"), command=self.edit_component._add_phrase) # type: ignore
-        self.menu.add_command(label=self.translator("edit"), command=self.edit_component._edit_phrase) # type: ignore
-        self.menu.add_command(label=self.translator("delete"), command=self.edit_component._delete_phrase) # type: ignore
+        self.menu.add_command(
+            label=self._translate("copy"), command=self.edit_component._copy_phrase
+        )
+        self.menu.add_command(
+            label=self._translate("add"), command=self.edit_component._add_phrase
+        )
+        self.menu.add_command(
+            label=self._translate("edit"), command=self.edit_component._edit_phrase
+        )
+        self.menu.add_command(
+            label=self._translate("delete"), command=self.edit_component._delete_phrase
+        )
 
     def show(self, event: tk.Event) -> None:
         try:
