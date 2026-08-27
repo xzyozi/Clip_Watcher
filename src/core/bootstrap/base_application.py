@@ -49,6 +49,18 @@ class BaseApplication(ReusableBaseApplication):
     always_on_top_var: tk.BooleanVar
     theme_var: tk.StringVar
 
+    def get_pinned_hotkey_combo(self, history_id: int) -> str | None:
+        """履歴項目に割り当てられたホットキーを返す。"""
+        raise NotImplementedError
+
+    def open_pinned_hotkey_dialog(self, history_id: int) -> None:
+        """履歴項目のホットキー設定ダイアログを開く。"""
+        raise NotImplementedError
+
+    def remove_pinned_hotkey_binding(self, history_id: int) -> bool:
+        """履歴項目のホットキー割当を解除する。"""
+        raise NotImplementedError
+
     def create_toplevel(
         self, toplevel_class: type[tk.Toplevel], *args: Any, **kwargs: Any
     ) -> Any:

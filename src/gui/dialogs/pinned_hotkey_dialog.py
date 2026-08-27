@@ -20,7 +20,8 @@ class PinnedHotkeyDialog(tk.Toplevel):
 
         self.title("Assign Hotkey")
         self.resizable(False, False)
-        self.transient(master)
+        if isinstance(master, tk.Wm):
+            self.transient(master)
         self.grab_set()
 
         frame = ttk.Frame(self, padding=12)

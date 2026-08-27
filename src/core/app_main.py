@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from src.core.clipboard.clipboard_monitor import ClipboardMonitor
     from src.core.config.settings_manager import SettingsManager
     from src.core.events.event_dispatcher import EventDispatcher
+    from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
     from src.db.database_manager import DatabaseManager
     from src.gui.icon_manager import IconManager
     from src.gui.theme_manager import ThemeManager
@@ -46,7 +47,7 @@ class MainApplication(BaseApplication):
         app_status: Any,
         icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
-        hotkey_registration_manager: Any | None = None,
+        hotkey_registration_manager: HotkeyRegistrationManager | None = None,
     ) -> None:
         super().__init__()
         self.master = master

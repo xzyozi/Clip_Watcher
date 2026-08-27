@@ -196,13 +196,13 @@ class HistoryContextMenu(BaseContextMenu):
             state="normal" if state.has_selection else "disabled",
         )
 
-        can_manage_hotkey = (
+        first_selected_id = state.first_selected_id
+        if (
             state.is_pinned
             and len(state.selected_ids) == 1
-            and state.first_selected_id is not None
-        )
-        if can_manage_hotkey:
-            history_id = int(state.first_selected_id)
+            and first_selected_id is not None
+        ):
+            history_id = int(first_selected_id)
             existing_combo = self.app.get_pinned_hotkey_combo(history_id)
             self.menu.add_command(
                 label=self._translate(
