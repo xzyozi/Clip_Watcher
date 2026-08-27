@@ -196,6 +196,26 @@ class HistoryContextMenu(BaseContextMenu):
             state="normal" if state.has_selection else "disabled",
         )
 
+        can_manage_hotkey = (
+            state.is_pinned
+            and len(state.selected_ids) == 1
+            and state.first_selected_id is not None
+        )
+        if can_manage_hotkey:
+            history_id = int(state.first_selected_id)
+            existing_combo = self.app.get_pinned_hotkey_combo(history_id)
+            self.menu.add_command(
+                label=self._translate(
+                    "change_hotkey" if existing_combo else "assign_hotkey"
+                ),
+                command=lambda: self.app.open_pinned_hotkey_dialog(history_id),
+            )
+            if existing_combo:
+                self.menu.add_command(
+                    label=self._translate("remove_hotkey"),
+                    command=lambda: self.app.remove_pinned_hotkey_binding(history_id),
+                )
+
     def show(self, event: tk.Event) -> None:
         """Show the context menu, syncing selection to the right-clicked row.
 

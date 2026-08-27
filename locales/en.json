@@ -11,10 +11,12 @@
     "pin_unpin": "Pin/Unpin",
     "pin": "Pin",
     "unpin": "Unpin",
+    "assign_hotkey": "Assign Hotkey",
+    "change_hotkey": "Change Hotkey",
+    "remove_hotkey": "Remove Hotkey",
     "add": "Add",
     "edit": "Edit",
     "delete": "Delete",
-
     "app_title": "ClipWatcher",
     "clipboard_tab": "Clipboard",
     "current_clipboard_content_label": "Current Clipboard Content",
@@ -27,7 +29,6 @@
     "format_button": "Format",
     "quit_button": "Quit",
     "fixed_phrases_tab": "Fixed Phrases",
-
     "file_menu": "File",
     "settings_menu_item": "Settings...",
     "export_history_menu_item": "Export History...",
@@ -53,8 +54,24 @@
     "help_menu": "Help",
     "how_to_use_menu_item": "How to Use",
     "about_menu_item": "About",
-    "days_short": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    "weekdays_full": ["Mon", "Tue", "Wed", "Thu", "Fri", "Satur", "Sun"],
+    "days_short": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+    ],
+    "weekdays_full": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Satur",
+        "Sun"
+    ],
     "status_saved": "Saved.",
     "status_added_new": "Added as new item.",
     "meta_management_tab": "Meta Management",
