@@ -552,7 +552,10 @@ class SettingsWindow(tk.Toplevel):
             logger.info("Settings restored to defaults.")
 
     def destroy(self) -> None:
-        if not self.settings_saved:
+        if (
+            not self.settings_saved
+            and self.settings_manager.settings != self.initial_settings
+        ):
             self.settings_manager.settings = copy.deepcopy(self.initial_settings)
             self.settings_manager.notify_listeners()
         super().destroy()
