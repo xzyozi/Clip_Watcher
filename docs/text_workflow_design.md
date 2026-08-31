@@ -116,7 +116,7 @@ class WorkflowResult:
 - JSON 定義された分類ルール (`rules.json`) を評価。
 - `priority` 昇順・`rule_id` 昇順でマッチングを行い、最初にマッチしたカテゴリを割り当てる。
 - 正規表現マッチング (`regex`)、部分一致 (`contains` / `containsAny`)、文字長制限 (`minLength`, `maxLength`) をサポート。
-- 詳細なルール記述方法や逆引きレシピについては [HOWTO_TEXT_WORKFLOW_RULES.md](file:///c:/Users/xzyoi/Desktop/python/tool/Clip_Watcher/doc/HOWTO_TEXT_WORKFLOW_RULES.md) を参照。
+- 詳細なルール記述方法や逆引きレシピについては [HOWTO_TEXT_WORKFLOW_RULES.md](HOWTO_TEXT_WORKFLOW_RULES.md) を参照。
 
 ```json
 /* rules.json の例 */
