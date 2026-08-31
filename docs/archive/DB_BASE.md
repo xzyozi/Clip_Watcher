@@ -1,3 +1,11 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "src/db/database_manager.py および src/db/dao/"
+reason: "SQLite移行時の設計検討と拡張案を保存するため"
+---
+
 # データベース設計書 (SQLite)
 
 > **アーカイブ資料**: 本書はSQLite移行時の設計検討と拡張案の記録です。現行スキーマの正本は `src/db/database_manager.py` と `src/db/dao/` です。現在実装されているテーブルは `t_clipboard_history`、`t_category`、`t_meta_phrase` であり、本文中の `content_type`、`source_app`、`t_fixed_phrase`、タグ関連テーブルは現行実装には含まれない将来案です。

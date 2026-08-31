@@ -1,4 +1,14 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "現行コードおよびdocs/design/"
+reason: "履歴保存と初期表示に関する当時の調査・修正方針を保存するため"
+---
+
 # 内部ヒストリ保存に関する調査報告
+
+> **アーカイブ資料**: 本書は当時の調査記録であり、現行仕様の正本ではありません。現行コードおよび `docs/design/` を確認してください。
 
 ## 概要
 ClipWatcherのクリップボード履歴に関して、以下の2点の問題について調査を行いました。

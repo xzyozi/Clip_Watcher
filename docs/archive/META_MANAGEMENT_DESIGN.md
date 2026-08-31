@@ -1,3 +1,11 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "src/db/database_manager.py および src/db/dao/"
+reason: "SQLite移行とメタ管理機能の当時の詳細設計を保存するため"
+---
+
 # メタ管理機能 & SQLite移行 詳細設計書
 
 > **アーカイブ資料**: 本書はSQLite移行とメタ管理機能を検討した時点の詳細設計です。現行のDDLとDAO実装の正本は `src/db/database_manager.py` および `src/db/dao/` です。本文のUI・移行フロー・実装例は当時の設計記録として保持しており、現行機能を判断する際はコードと現行文書を優先してください。

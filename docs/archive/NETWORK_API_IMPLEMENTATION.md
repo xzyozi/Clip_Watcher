@@ -1,4 +1,14 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "現行コードおよびdocs/design/"
+reason: "Network APIの未採用実装提案を保存するため"
+---
+
 # Network API 実装手順書
+
+> **アーカイブ資料・未採用提案**: 本書は現行仕様の正本ではありません。現行コードおよび `docs/design/` を確認してください。再採用する場合は、新規要件、脅威分析、DD/DSを新たに整備する必要があります。
 
 本ドキュメントは、「EXTENSIBILITY_PROPOSAL_STD_LIB.md」で提案された「ネットワークインターフェース (Local Network API)」機能の実装手順を詳細に記述する。
 

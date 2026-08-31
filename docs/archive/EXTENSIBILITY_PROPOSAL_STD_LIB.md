@@ -1,3 +1,11 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "src/core/text_workflow/ および現行コード"
+reason: "標準ライブラリでの拡張機能に関する未実装提案を保存するため"
+---
+
 # 拡張性向上のための機能提案（標準モジュール活用編）
 
 > **アーカイブ資料・未実装提案**: 本書は将来案の記録であり、現行機能の仕様ではありません。現行のText Workflowは `src/core/text_workflow/` を正本とし、任意のPython・バッチ・外部プロセスを実行しません。したがって、Macro Supportに記載された `subprocess` によるスクリプト実行は採用していません。`network_api.*` 設定、`HistoryManager`、`JsonHistoryStorage`、`SqliteHistoryStorage` も現行の設定またはモジュールではありません。任意スクリプト実行を新たに検討・実装する場合は、セキュリティリスクを評価したうえで、ユーザーからの明示的な承認を得る必要があります。

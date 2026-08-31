@@ -1,4 +1,14 @@
+---
+document_type: archive
+status: archived
+archived_at: 2026-08-31
+current_authority: "現行コードおよびdocs/design/"
+reason: "GUIモジュールの再利用性に関する当時の整理を保存するため"
+---
+
 # 再利用可能なGUIモジュール一覧
+
+> **アーカイブ資料**: 本書は当時の構成整理であり、現行仕様の正本ではありません。現行コードおよび `docs/design/` を確認してください。
 
 本ドキュメントでは、ClipWatcherプロジェクト内のGUI関連モジュールのうち、他のコンポーネントや将来の拡張、あるいは他のTkinterプロジェクトで流用・再利用が可能なものをまとめます。
 
