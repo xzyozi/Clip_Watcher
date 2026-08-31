@@ -73,7 +73,7 @@ CI では同等の検証を `uv` 経由で実行します。
 より詳細な機能仕様や設計については、`docs/` フォルダ内のドキュメントを参照してください。
 - [基本仕様書 (SPECIFICATION.md)](docs/SPECIFICATION.md)
 - [アーキテクチャ概要 (ARCHITECTURE_OVERVIEW.md)](docs/ARCHITECTURE_OVERVIEW.md)
-- [設定画面・グローバルホットキー改造仕様書](docs/MODIFICATION_SPEC_HOTKEY_AND_SETTINGS_SCHEMA.md)
+- [設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書](docs/design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
 
 ## 注意事項
 - 一部の環境やセキュリティ設定によっては、クリップボードアクセスが制限される場合があります。

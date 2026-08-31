@@ -1,13 +1,32 @@
-# 改造仕様書: 設定画面のスキーマ駆動化 と グローバルホットキー機能の追加
+---
+title: "設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書"
+document_type: "detailed_design"
+version: "1.0"
+created_at: "2026-08-18"
+updated_at: "2026-08-31"
+author: "未記載"
+purpose: "設定画面のスキーマ駆動化、グローバルホットキーの集合登録、失敗時の復元契約を定義し、実装・変更時の不整合を防ぐため"
+related_documents:
+  - "../ARCHITECTURE_OVERVIEW.md"
+  - "../SPECIFICATION.md"
+  - "../PINNED_HOTKEY_INTEGRATION_DESIGN.md"
+---
 
-| 項目   | 内容                                                                                                                            |
-| :----- | :------------------------------------------------------------------------------------------------------------------------------ |
-| 作成日 | 2026年8月18日                                                                                                                   |
-| 対象   | `src/gui/windows/settings_window.py`, `src/core/config/settings_manager.py`, `reusable_gui/`, `src/core/`（新設サブパッケージ） |
+# 詳細設計書（設定画面スキーマ駆動化とグローバルホットキー連携）
+**設定画面のスキーマ駆動化、ウィンドウ状態管理、ホットキー集合登録の制御仕様**
+
+| 項目 | 内容 |
+| :--- | :--- |
+| 文書番号 | CW-DD-001 |
+| ドキュメント名 | 設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書 |
+| 版数 | Rev.1.0 |
+| 改訂日 | 2026-08-31 |
+| 作成日 | 2026-08-18 |
+| 作成者 | 未記載 |
 
 ---
 
-## 1. 目的と背景
+## 1. 概要とSSOT境界
 
 ### 1.1 目的
 1. 現在手書きで実装されている `src/gui/windows/settings_window.py` を、
@@ -33,7 +52,7 @@
 
 ---
 
-## 2. スコープ
+## 2. スコープとSSOT境界
 
 ### 2.1 対応する変更
 - `src/gui/windows/settings_window.py` を `reusable_gui/windows/settings_window.py`
@@ -126,44 +145,14 @@ classDiagram
 
 ### 3.3 Modulesタブのスキーマ合成
 
-`SettingsManager` が `PluginManager` に依存してはならないため、
-`get_settings_schema()` 内でプラグインを検索しない。代わりに
-`src/plugins/settings_schema_provider.py` に
-`PluginSettingsSchemaProvider` を新設する。
+`SettingsManager` は `PluginManager` に依存せず、コア設定だけの定義を保持する。`PluginSettingsSchemaProvider` がGUIプラグインからModulesタブ用の `SettingField` を生成し、`AppSettingsWindow` がコア設定スキーマと合成する。
 
-```python
-class PluginSettingsSchemaProvider:
-    def __init__(self, plugin_manager: PluginManager) -> None:
-        self._plugin_manager = plugin_manager
+| 要素 | 入力 | 出力・契約 |
+| :--- | :--- | :--- |
+| `PluginSettingsSchemaProvider` | `PluginManager` が返すGUIプラグイン | プラグインごとに `show_{plugin}_tab` キーを持つ `SettingField` |
+| `AppSettingsWindow._get_schema()` | コア設定スキーマ、プラグイン設定スキーマ | 両方を結合した設定画面用スキーマ |
 
-    def get_fields(self) -> list[SettingField]:
-        fields: list[SettingField] = []
-        for plugin in self._plugin_manager.get_gui_plugins():
-            setting_key = f"show_{plugin.name.lower().replace(' ', '_')}_tab"
-            fields.append(
-                SettingField(
-                    key=setting_key,
-                    label=f"Show {plugin.name} Tab",
-                    widget_type=WidgetType.CHECKBUTTON,
-                    tab="Modules",
-                    group="Main Window Tabs",
-                    default=True,
-                )
-            )
-        return fields
-```
-
-`AppSettingsWindow._get_schema()` は以下のように合成する。
-
-```python
-return [
-    *self.settings_manager.get_settings_schema(),
-    *PluginSettingsSchemaProvider(self.app.plugin_manager).get_fields(),
-]
-```
-
-これにより、GUIプラグインを追加・削除してもModulesタブの表示切替項目が
-自動追従し、設定管理層とプラグイン管理層は直接結合しない。
+この分離により、GUIプラグインの追加・削除はModulesタブの設定項目に自動追従し、設定管理層とプラグイン管理層の直接結合を防ぐ。
 
 ### 3.4 移行手順
 
@@ -313,202 +302,59 @@ src/core/
 
 #### 4.5.1 `WindowState` / `WindowStateManager`
 
-```python
-# src/core/window/window_state_manager.py
-from __future__ import annotations
+`WindowStateManager` はメインウィンドウの表示状態を保持し、状態ごとのUI操作をStrategyとして分離する。
 
-import logging
-import tkinter as tk
-from enum import Enum, auto
-from typing import Protocol
+| 操作 | 事前条件 | 結果・事後条件 |
+| :--- | :--- | :--- |
+| `show()` | なし | 状態を `VISIBLE` にし、ウィンドウを表示・前面化する |
+| `minimize()` | なし | 状態を `MINIMIZED` にし、ウィンドウを最小化する |
+| `toggle()` | 現在状態が `VISIBLE` または `MINIMIZED` | 2状態を相互に遷移させる |
+| `register_strategy(state, strategy)` | 有効な状態とStrategy | 指定状態の遷移処理を置き換える |
 
-logger = logging.getLogger(__name__)
-
-
-class WindowState(Enum):
-    VISIBLE = auto()
-    MINIMIZED = auto()
-    # 将来追加: HIDDEN_TO_TRAY = auto()
-
-
-class WindowStateStrategy(Protocol):
-    def enter(self, root: tk.Tk) -> None: ...
-
-
-class VisibleStrategy:
-    def enter(self, root: tk.Tk) -> None:
-        root.deiconify()
-        root.lift()
-        root.focus_force()
-
-
-class MinimizedStrategy:
-    def enter(self, root: tk.Tk) -> None:
-        root.iconify()
-
-
-class WindowStateManager:
-    def __init__(self, root: tk.Tk) -> None:
-        self._root = root
-        self._state = WindowState.VISIBLE
-        self._strategies: dict[WindowState, WindowStateStrategy] = {
-            WindowState.VISIBLE: VisibleStrategy(),
-            WindowState.MINIMIZED: MinimizedStrategy(),
-        }
-        root.bind("<Unmap>", self._on_unmap, add="+")
-        root.bind("<Map>", self._on_map, add="+")
-
-    @property
-    def state(self) -> WindowState:
-        return self._state
-
-    def show(self) -> None:
-        self._transition_to(WindowState.VISIBLE)
-
-    def minimize(self) -> None:
-        self._transition_to(WindowState.MINIMIZED)
-
-    def toggle(self) -> None:
-        if self._state == WindowState.VISIBLE:
-            self.minimize()
-        else:
-            self.show()
-
-    def register_strategy(
-        self, state: WindowState, strategy: WindowStateStrategy
-    ) -> None:
-        self._strategies[state] = strategy
-
-    def _transition_to(self, new_state: WindowState) -> None:
-        strategy = self._strategies.get(new_state)
-        if strategy is None:
-            logger.warning(
-                "未知のウィンドウ状態への遷移が要求されました: %s", new_state
-            )
-            return
-        strategy.enter(self._root)
-        self._state = new_state
-
-    def _on_unmap(self, event: tk.Event) -> None:
-        if event.widget == self._root:
-            self._state = WindowState.MINIMIZED
-
-    def _on_map(self, event: tk.Event) -> None:
-        if event.widget == self._root:
-            self._state = WindowState.VISIBLE
-```
+`<Unmap>` と `<Map>` のイベントはOS操作による最小化・表示を状態に反映する。未定義の状態への遷移要求は警告を記録し、ウィンドウ操作を行わない。
 
 #### 4.5.2 `GlobalHotkeyListener` とキー文字列変換
 
-`GlobalHotkeyListener` は、登録ID・修飾キー・仮想キーコードを持つ `HotkeyRegistration` の集合を、単一のWindowsメッセージスレッドで処理する。`GLOBAL_HOTKEY_ID = 1` は表示/最小化キー専用の予約IDであり、ピン留め履歴のIDは `2` から採番する。
+`GlobalHotkeyListener` は、登録ID・修飾キー・仮想キーコードからなる `HotkeyRegistration` の集合を単一のWindowsメッセージスレッドで処理する。表示/最小化キーの予約IDは `1`、ピン留め履歴キーのIDは `2` から採番する。
 
-```python
-@dataclass(frozen=True)
-class HotkeyRegistration:
-    hotkey_id: int
-    modifiers: int
-    vk_code: int
+| API | 入力 | 結果・失敗契約 |
+| :--- | :--- | :--- |
+| `start(modifiers, vk_code)` | 単一の表示/最小化キー | 予約ID `1` を用いて `start_many()` へ委譲する互換API |
+| `start_many(registrations)` | `HotkeyRegistration` の集合 | 重複IDを拒否する。登録途中で失敗した場合は、同一スレッドで登録済みの全IDを逆順に解除する |
+| `stop()` | なし | メッセージループを停止し、登録済みの全IDを解除する |
 
+`WM_HOTKEY` の通知には登録IDを付与し、`tk_root.after()` を介してメインスレッドへ渡す。キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化し、`Ctrl`、`Alt`、`Shift`、`Win` と英数字の主キーを受け付ける。
 
-class GlobalHotkeyListener:
-    def start(self, modifiers: int, vk_code: int) -> bool:
-        """表示/最小化キーだけを登録する互換API。"""
-
-    def start_many(self, registrations: Iterable[HotkeyRegistration]) -> bool:
-        """登録集合を置き換え、失敗時は全件を解除する。"""
-
-    def stop(self) -> None:
-        """登録済みの全ホットキーを解除する。"""
-```
-
-`start_many()` は重複する登録IDを拒否し、いずれかの `RegisterHotKey` が失敗した場合は、同じスレッドで既に登録したIDを逆順に解除する。`WM_HOTKEY` の通知には `wParam` の登録IDを付け、`tk_root.after()` を介してメインスレッドのコールバックへ渡す。単一キー用の `start()` は、予約ID `1` の登録を `start_many()` へ委譲する後方互換APIとして残す。
-
-キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化する。修飾キーは `Ctrl`、`Alt`、`Shift`、`Win`、主キーは英数字を受け付ける。
-
-`HotkeyRegistrationManager` は `reconfigure_all(global_enabled, global_combo, pinned_bindings)` により候補集合を検証・登録する。表示/最小化キーとピン留めキーの重複を拒否し、登録に失敗した場合は旧集合を復元する。`history_id_for_hotkey()` により、アプリケーション層はWin32の登録詳細を持たずにピン留め履歴を特定できる。
+`HotkeyRegistrationManager.reconfigure_all(global_enabled, global_combo, pinned_bindings)` は候補集合を検証・登録する。表示/最小化キーとピン留めキーの重複を拒否し、失敗時は旧集合を復元する。`history_id_for_hotkey()` により、アプリケーション層はWin32の登録詳細を持たずにピン留め履歴を特定できる。
 
 ### 4.6 設定への統合
 
-#### 4.6.1 デフォルト設定 (`src/core/config/defaults.py`)
+#### 4.6.1 設定項目
 
-```python
-DEFAULT_USER_SETTINGS = {
-    ...
-    "global_hotkey_enabled": True,
-    "global_hotkey_combo": "Ctrl+Shift+F",
-    "pinned_hotkey_bindings": {},
-}
-```
+| 設定キー | 型 | 既定値 | 用途 |
+| :--- | :--- | :--- | :--- |
+| `global_hotkey_enabled` | `bool` | `True` | 表示/最小化キーの有効状態 |
+| `global_hotkey_combo` | `str` | `Ctrl+Shift+F` | 表示/最小化キーの正規化済み文字列 |
+| `pinned_hotkey_bindings` | `dict[str, str]` | `{}` | 履歴ID文字列からピン留めキー文字列への対応 |
 
-#### 4.6.2 `SettingField` の追加 (`SettingsManager.get_settings_schema()`)
+#### 4.6.2 設定画面スキーマ
 
-```python
-(
-    SettingField(
-        key="global_hotkey_enabled",
-        label="Enable Global Hotkey",
-        widget_type=WidgetType.CHECKBUTTON,
-        tab="General",
-        group="Global Hotkey",
-        default=True,
-    ),
-)
-(
-    SettingField(
-        key="global_hotkey_combo",
-        label="Show/Hide Hotkey",
-        widget_type=WidgetType.HOTKEY_CAPTURE,
-        tab="General",
-        group="Global Hotkey",
-        default="Ctrl+Shift+F",
-    ),
-)
-```
+`global_hotkey_enabled` はチェックボックス、`global_hotkey_combo` は `HOTKEY_CAPTURE` により入力する。いずれもGeneralタブのGlobal Hotkeyグループに配置する。`HOTKEY_CAPTURE` は修飾キー単独では値を確定せず、`Ctrl`、`Alt`、`Shift`、`Win` と英数字から正規化済みの文字列を生成する。競合検証・登録・エラー表示は、UI部品ではなく保存時のアプリケーション層が担当する。
 
-#### 4.6.3 `WidgetType.HOTKEY_CAPTURE` の追加
+#### 4.6.3 `WidgetType.HOTKEY_CAPTURE`
 
-`reusable_gui/core/config/schema.py`:
-
-```python
-class WidgetType(Enum):
-    ...
-    HOTKEY_CAPTURE = auto()
-    """str値（例: "Ctrl+Shift+F"）。フォーカス中のキー入力を取得して
-    正規化したホットキー文字列を保持する専用ウィジェット。競合検証・登録・
-    エラー表示はアプリケーション側のApply/Save処理が担当する。"""
-```
-
-`reusable_gui/windows/settings_window.py` の `_render_field()` に
-以下のケースを追加する（汎用ウィジェットとして実装）。
-
-- `ttk.Entry` は直接編集不可 (`readonly`) とし、フォーカス中の
-  `<KeyPress>` を捕捉して `Ctrl+Shift+F` 形式の文字列を `StringVar` に保存する。
-- 修飾キー単独の押下は値を変更しない。
-- 対応する修飾キーは `Ctrl` / `Alt` / `Shift` / `Win`、主キーは初期実装で
-  英数字に限定する。不正な組み合わせは画面上で確定しない。
-- **テスト登録ボタンは設けない。** 競合チェックはApply/Save時の1経路に統一する。
+`HOTKEY_CAPTURE` はホットキー文字列を保持する設定UIの種別である。編集用Entryは直接入力を受け付けず、フォーカス中のキー入力から正規化済みのキー文字列を生成する。テスト登録ボタンは設けず、競合確認はApply/Save時の登録成否だけを正とする。
 
 #### 4.6.4 Apply/Save時の検証と登録
 
-UIは `GlobalHotkeyListener` の低水準な登録APIを直接呼び出さず、`HotkeyRegistrationManager` を経由して状態を変更する。
+UIは `GlobalHotkeyListener` の低水準APIを直接呼び出さず、`HotkeyRegistrationManager` を経由して登録状態を変更する。
 
-```python
-class HotkeyRegistrationManager:
-    def reconfigure(self, enabled: bool, combo: str) -> bool:
-        """表示/最小化キーを再構成し、現在のピン留め割当を維持する。"""
+| API | 用途 | 成功時 | 失敗時 |
+| :--- | :--- | :--- | :--- |
+| `reconfigure(enabled, combo)` | 表示/最小化キーの変更 | 現在のピン留め割当を維持して再構成する | 旧集合を維持し、設定を保存しない |
+| `reconfigure_all(global_enabled, global_combo, pinned_bindings)` | ピン留め割当の設定・変更・解除・一括解除 | 候補集合を原子的に適用し、成功後に設定と一覧を更新する | 旧集合を復元し、割当と表示を維持する |
 
-    def reconfigure_all(
-        self,
-        global_enabled: bool,
-        global_combo: str,
-        pinned_bindings: Mapping[int, str],
-    ) -> bool:
-        """表示/最小化キーとピン留めキーの候補集合を原子的に再構成する。"""
-```
-
-設定画面で表示/最小化キーを保存する際は `reconfigure()` を使い、ピン留め履歴の割当・変更・解除・一括解除では `reconfigure_all()` を使う。後者の候補は `pinned_hotkey_bindings` として履歴IDの文字列をキー、正規化済みのキー文字列を値にして永続化する。
-
-両APIは、候補キーの書式と集合内の重複を検証してから登録する。登録に失敗した場合は旧集合を復元し、設定または割当を保存しない。成功時だけ新しい設定を保存し、履歴一覧を更新する。
+両APIはキー書式と集合内の重複を検証してから登録する。`pinned_hotkey_bindings` は履歴IDの文字列をキー、正規化済みキー文字列を値として永続化する。
 
 ### 4.7 アプリライフサイクルへの組み込み
 
@@ -543,37 +389,13 @@ sequenceDiagram
 
 #### 4.7.1 `ApplicationBuilder` への追加
 
-```python
-def with_window_state_manager(self, master: tk.Tk) -> ApplicationBuilder:
-    from src.core.window.window_state_manager import WindowStateManager
+| ビルダー操作 | 生成物 | 配線契約 |
+| :--- | :--- | :--- |
+| `with_window_state_manager(master)` | `WindowStateManager` | メインウィンドウの状態遷移を管理する |
+| `with_global_hotkey_listener(master)` | `GlobalHotkeyListener` | `GLOBAL_HOTKEY_TRIGGERED` イベントへ登録IDを渡す |
+| `with_hotkey_registration_manager()` | `HotkeyRegistrationManager` | Listenerの集合登録と失敗時復元を管理する |
 
-    self.window_state_manager = WindowStateManager(master)
-    return self
-
-
-def with_global_hotkey_listener(self, master: tk.Tk) -> ApplicationBuilder:
-    if not self.event_dispatcher:
-        raise ConfigError("イベントディスパッチャが初期化されていません")
-    from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
-
-    self.hotkey_listener = GlobalHotkeyListener(
-        master,
-        on_triggered=lambda hotkey_id: self.event_dispatcher.dispatch(
-            "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
-        ),
-    )
-    return self
-
-
-def with_hotkey_registration_manager(self) -> ApplicationBuilder:
-    from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
-
-    self.hotkey_registration_manager = HotkeyRegistrationManager(self.hotkey_listener)
-    return self
-```
-
-`build()` の必須コンポーネント検証リストと `MainApplication` コンストラクタに
-`window_state_manager`, `hotkey_registration_manager` を追加する。
+`build()` はこれらを `MainApplication` へ注入する。イベントディスパッチャが未初期化の場合、Listenerの構築は設定エラーとして失敗する。
 
 #### 4.7.2 `MainApplication` への追加
 
@@ -582,7 +404,7 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 - ピン留め割当の設定・変更・解除・一括解除は、再構成成功後だけ `pinned_hotkey_bindings` を保存し、履歴一覧を更新する。ピン解除、履歴削除、全履歴削除時も対応する割当を解除する。
 - `shutdown()` は `HotkeyRegistrationManager.stop()` を呼び、登録済みの全IDを解除する。
 
-### 4.8 競合時の挙動仕様
+### 4.8 エラー処理・失敗契約
 
 | ケース                         | 挙動                                                                                                                                |
 | :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
@@ -615,7 +437,7 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 
 ---
 
-## 6. 検証計画
+## 6. テスト・検証要件
 
 1. **単体テスト（`pytest`）**
    - `parse_hotkey_string` / `format_hotkey` の相互変換（正常系・異常系）。
@@ -672,3 +494,10 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
   スキーマおよび新設定画面には表示しない。将来、正式な設定画面タブ切替を
   要求する場合はスキーマ化し、不要と決定した場合は設定ファイル移行を伴う
   段階的な廃止を行う。
+---
+
+## 9. 改訂履歴
+
+| 版数 | 改訂日 | 変更者 | 変更内容・変更理由 (Why) |
+| :--- | :--- | :--- | :--- |
+| Rev.1.0 | 2026-08-31 | 未記載 | 文書を詳細設計書として命名・分類し、テンプレート準拠のメタデータ、設計契約、改訂履歴へ整形 |
