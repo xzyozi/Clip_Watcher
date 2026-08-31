@@ -39,7 +39,7 @@
 
 ### `GlobalHotkeyListener`
 
-複数の `HotkeyRegistration` を単一の Windows メッセージスレッドで登録・解除する深いモジュールとする。Interface は `start(registrations) -> bool` と `stop()` の2操作に限定し、ID採番、Win32 API、スレッド、`after()` によるメインスレッド復帰を実装内に隠蔽する。
+複数の `HotkeyRegistration` を単一の Windows メッセージスレッドで登録・解除する深いモジュールとする。集合登録の正規Interfaceは `start_many(registrations) -> bool` と `stop()` であり、ID採番、Win32 API、スレッド、`after()` によるメインスレッド復帰を実装内に隠蔽する。表示/最小化キーだけを扱う既存呼び出しには、予約ID `1` を使って `start_many()` へ委譲する互換API `start(modifiers, vk_code) -> bool` を提供する。
 
 ### `HotkeyRegistrationManager`
 

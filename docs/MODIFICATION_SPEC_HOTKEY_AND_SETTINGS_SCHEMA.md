@@ -47,12 +47,12 @@
 - 新設: `src/core/hotkey/` （グローバルホットキー検知・登録状態の管理）
 - 新設: `src/core/window/` （ウィンドウ表示状態管理）
 - `SettingsManager` のデフォルト設定に `global_hotkey_enabled`,
-  `global_hotkey_combo` を追加する。
+  `global_hotkey_combo`, `pinned_hotkey_bindings` を追加する。
+- 表示/最小化キー（予約ID `1`）と、ピン留め履歴に割り当てる複数キー
+  （ID `2` 以降）を、同じ登録集合として管理する。
 - `ApplicationBuilder` / `MainApplication` へのライフサイクル組み込み。
 
 ### 2.2 対応しない変更（別スコープ）
-- 複数のグローバルホットキーの同時サポート。本改造は表示/最小化用の
-  単一ホットキーだけを対象とし、`HOTKEY_ID=1` 固定で実装する。
 - システムトレイ常駐の実際の実装（`WindowState` の拡張余地のみ確保）。
 - 設定画面のUIデザイン刷新（レイアウト・配色は既存のまま踏襲）。
 - 現在UI生成コードがコメントアウトされ、実運用で機能していない
@@ -275,12 +275,19 @@ classDiagram
         -_thread: threading.Thread
         -_thread_id: int
         +start(modifiers, vk_code) bool
+        +start_many(registrations) bool
         +stop()
+    }
+    class HotkeyRegistrationManager {
+        +reconfigure(enabled, combo) bool
+        +reconfigure_all(global_enabled, global_combo, pinned_bindings) bool
+        +history_id_for_hotkey(hotkey_id) int | None
     }
     WindowStateStrategy <|.. VisibleStrategy
     WindowStateStrategy <|.. MinimizedStrategy
     WindowStateManager --> WindowState
     WindowStateManager --> WindowStateStrategy : uses
+    HotkeyRegistrationManager --> GlobalHotkeyListener : manages registrations
     GlobalHotkeyListener ..> WindowStateManager : "dispatch経由で疎結合"
 ```
 
@@ -288,16 +295,17 @@ classDiagram
 
 ```text
 src/core/
-├── hotkey/                          # [新設]
+├── hotkey/
 │   ├── __init__.py
-│   ├── global_hotkey_listener.py    # GlobalHotkeyListener, キー文字列変換
-│   └── exceptions.py                # HotkeyRegistrationError（必要時）
-└── window/                          # [新設]
+│   ├── global_hotkey_listener.py    # Listener, HotkeyRegistration, キー文字列変換
+│   ├── hotkey_registration_manager.py # 集合検証・ID採番・失敗時復元
+│   └── paste_sender.py              # WindowsPasteSender
+└── window/
     ├── __init__.py
     └── window_state_manager.py      # WindowState, WindowStateStrategy, WindowStateManager
 ```
 
-- `hotkey/` は `clipboard/` と同じOS監視インフラの層に置き、キー入力の検知処理をUI状態管理から分離する。
+- `hotkey/` は `clipboard/` と同じOS監視インフラの層に置き、キー入力の検知、集合登録、入力送信をUI状態管理から分離する。
 - `window/` はアプリのUI状態管理として独立させ、将来トレイ格納の
   `TrayHiddenStrategy` 等を追加する際もこのパッケージ内に収める。
 
@@ -392,134 +400,32 @@ class WindowStateManager:
 
 #### 4.5.2 `GlobalHotkeyListener` とキー文字列変換
 
+`GlobalHotkeyListener` は、登録ID・修飾キー・仮想キーコードを持つ `HotkeyRegistration` の集合を、単一のWindowsメッセージスレッドで処理する。`GLOBAL_HOTKEY_ID = 1` は表示/最小化キー専用の予約IDであり、ピン留め履歴のIDは `2` から採番する。
+
 ```python
-# src/core/hotkey/global_hotkey_listener.py
-from __future__ import annotations
-
-import ctypes
-import ctypes.wintypes
-import logging
-import threading
-import tkinter as tk
-from collections.abc import Callable
-
-logger = logging.getLogger(__name__)
-
-MOD_ALT = 0x0001
-MOD_CONTROL = 0x0002
-MOD_SHIFT = 0x0004
-MOD_WIN = 0x0008
-MOD_NOREPEAT = 0x4000
-
-WM_HOTKEY = 0x0312
-WM_QUIT = 0x0012
-HOTKEY_ID = 1
-
-_MODIFIER_MAP = {
-    "ctrl": MOD_CONTROL,
-    "alt": MOD_ALT,
-    "shift": MOD_SHIFT,
-    "win": MOD_WIN,
-}
-
-
-def parse_hotkey_string(combo: str) -> tuple[int, int]:
-    """
-    "Ctrl+Shift+F" のような文字列を (modifiers, vk_code) に変換する。
-    不正な形式の場合は ValueError を投げる。
-    """
-    parts = [p.strip().lower() for p in combo.split("+") if p.strip()]
-    if len(parts) < 2:
-        raise ValueError(f"ホットキー文字列の形式が不正です: {combo!r}")
-
-    modifiers = 0
-    key_part = parts[-1]
-    for mod in parts[:-1]:
-        if mod not in _MODIFIER_MAP:
-            raise ValueError(f"不明な修飾キーです: {mod!r}")
-        modifiers |= _MODIFIER_MAP[mod]
-
-    if len(key_part) != 1 or not key_part.isalnum():
-        raise ValueError(f"対応していないキーです: {key_part!r}")
-    vk_code = ord(key_part.upper())
-    return modifiers, vk_code
-
-
-def format_hotkey(modifiers: int, vk_code: int) -> str:
-    """(modifiers, vk_code) から "Ctrl+Shift+F" 形式の文字列を生成する。"""
-    parts = []
-    if modifiers & MOD_CONTROL:
-        parts.append("Ctrl")
-    if modifiers & MOD_ALT:
-        parts.append("Alt")
-    if modifiers & MOD_SHIFT:
-        parts.append("Shift")
-    if modifiers & MOD_WIN:
-        parts.append("Win")
-    parts.append(chr(vk_code))
-    return "+".join(parts)
+@dataclass(frozen=True)
+class HotkeyRegistration:
+    hotkey_id: int
+    modifiers: int
+    vk_code: int
 
 
 class GlobalHotkeyListener:
-    """
-    RegisterHotKey を用いてグローバルホットキーを監視するクラス。
-    OSクリップボード監視 (ClipboardMonitor) と同様に、専用スレッド +
-    tk_root.after() でメインスレッドへ安全に橋渡しする。
-    """
-
-    def __init__(self, tk_root: tk.Tk, on_triggered: Callable[[], None]) -> None:
-        self.tk_root = tk_root
-        self.on_triggered = on_triggered
-        self._thread: threading.Thread | None = None
-        self._thread_id: int | None = None
-        self._running = False
-
     def start(self, modifiers: int, vk_code: int) -> bool:
-        if self._running:
-            self.stop()
+        """表示/最小化キーだけを登録する互換API。"""
 
-        result_holder: dict[str, bool] = {}
-        ready_event = threading.Event()
-
-        def _run() -> None:
-            user32 = ctypes.windll.user32
-            self._thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
-
-            ok = user32.RegisterHotKey(
-                None, HOTKEY_ID, modifiers | MOD_NOREPEAT, vk_code
-            )
-            result_holder["ok"] = bool(ok)
-            ready_event.set()
-
-            if not ok:
-                logger.warning(
-                    "グローバルホットキーの登録に失敗しました（競合の可能性）。"
-                )
-                return
-
-            msg = ctypes.wintypes.MSG()
-            self._running = True
-            try:
-                while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
-                    if msg.message == WM_HOTKEY and msg.wParam == HOTKEY_ID:
-                        self.tk_root.after(0, self.on_triggered)
-            finally:
-                user32.UnregisterHotKey(None, HOTKEY_ID)
-                self._running = False
-
-        self._thread = threading.Thread(target=_run, daemon=True)
-        self._thread.start()
-        ready_event.wait(timeout=1.0)
-        return result_holder.get("ok", False)
+    def start_many(self, registrations: Iterable[HotkeyRegistration]) -> bool:
+        """登録集合を置き換え、失敗時は全件を解除する。"""
 
     def stop(self) -> None:
-        if self._thread_id is not None:
-            ctypes.windll.user32.PostThreadMessageW(self._thread_id, WM_QUIT, 0, 0)
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
-        self._thread = None
-        self._thread_id = None
+        """登録済みの全ホットキーを解除する。"""
 ```
+
+`start_many()` は重複する登録IDを拒否し、いずれかの `RegisterHotKey` が失敗した場合は、同じスレッドで既に登録したIDを逆順に解除する。`WM_HOTKEY` の通知には `wParam` の登録IDを付け、`tk_root.after()` を介してメインスレッドのコールバックへ渡す。単一キー用の `start()` は、予約ID `1` の登録を `start_many()` へ委譲する後方互換APIとして残す。
+
+キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化する。修飾キーは `Ctrl`、`Alt`、`Shift`、`Win`、主キーは英数字を受け付ける。
+
+`HotkeyRegistrationManager` は `reconfigure_all(global_enabled, global_combo, pinned_bindings)` により候補集合を検証・登録する。表示/最小化キーとピン留めキーの重複を拒否し、登録に失敗した場合は旧集合を復元する。`history_id_for_hotkey()` により、アプリケーション層はWin32の登録詳細を持たずにピン留め履歴を特定できる。
 
 ### 4.6 設定への統合
 
@@ -530,6 +436,7 @@ DEFAULT_USER_SETTINGS = {
     ...
     "global_hotkey_enabled": True,
     "global_hotkey_combo": "Ctrl+Shift+F",
+    "pinned_hotkey_bindings": {},
 }
 ```
 
@@ -583,50 +490,25 @@ class WidgetType(Enum):
 
 #### 4.6.4 Apply/Save時の検証と登録
 
-`GlobalHotkeyListener` の低水準な `start()` / `stop()` を直接UIから呼ばず、
-`src/core/hotkey/hotkey_registration_manager.py` に
-`HotkeyRegistrationManager` を新設して状態変更を一元管理する。
+UIは `GlobalHotkeyListener` の低水準な登録APIを直接呼び出さず、`HotkeyRegistrationManager` を経由して状態を変更する。
 
 ```python
 class HotkeyRegistrationManager:
     def reconfigure(self, enabled: bool, combo: str) -> bool:
-        """候補設定を検証し、成功時だけ登録状態を切り替える。"""
+        """表示/最小化キーを再構成し、現在のピン留め割当を維持する。"""
+
+    def reconfigure_all(
+        self,
+        global_enabled: bool,
+        global_combo: str,
+        pinned_bindings: Mapping[int, str],
+    ) -> bool:
+        """表示/最小化キーとピン留めキーの候補集合を原子的に再構成する。"""
 ```
 
-Apply/Saveの処理は以下の順序とする。
+設定画面で表示/最小化キーを保存する際は `reconfigure()` を使い、ピン留め履歴の割当・変更・解除・一括解除では `reconfigure_all()` を使う。後者の候補は `pinned_hotkey_bindings` として履歴IDの文字列をキー、正規化済みのキー文字列を値にして永続化する。
 
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Window as AppSettingsWindow
-    participant Manager as HotkeyRegistrationManager
-    participant Listener as GlobalHotkeyListener
-    participant Settings as SettingsManager
-
-    User->>Window: Apply / Save
-    Window->>Manager: reconfigure(enabled, combo)
-    alt 登録または解除に成功
-        Manager-->>Window: True
-        Window->>Settings: _collect_values()
-        Window->>Settings: notify_listeners() / save_settings()
-    else キー競合・不正な形式・登録失敗
-        Manager-->>Window: False
-        Window->>Window: エラー表示、設定値は未保存
-    end
-```
-
-`HotkeyRegistrationManager.reconfigure()` の規則:
-
-1. 現在の登録設定と候補設定が同一なら何もしないで成功とする。
-2. 無効化要求なら、現在の登録を解除して成功とする。
-3. 有効な候補ではキー文字列を解析し、登録を試行する。
-4. 新規登録に失敗した場合は、現在の有効な登録を可能な限り維持・復元し、
-   `False` を返す。
-5. `False` の場合、`AppSettingsWindow._validate_pending_values()` は
-   `_collect_values()` を呼ばず、既存の `settings.json` と有効ホットキーを保つ。
-
-この方式により、テスト用・本登録用という二重の競合判定経路を作らず、
-保存時の実際の登録成否だけを正として扱う。
+両APIは、候補キーの書式と集合内の重複を検証してから登録する。登録に失敗した場合は旧集合を復元し、設定または割当を保存しない。成功時だけ新しい設定を保存し、履歴一覧を更新する。
 
 ### 4.7 アプリライフサイクルへの組み込み
 
@@ -644,16 +526,16 @@ sequenceDiagram
     Builder->>HRM: with_hotkey_registration_manager(listener)
     Builder->>App: build()
     App->>App: on_ready()
-    App->>HRM: reconfigure(設定値)
+    App->>HRM: reconfigure_all(グローバル設定, pinned_hotkey_bindings)
     Note over HRM: 失敗時はエラー通知、起動は継続
 
-    Note over HK,ED: ユーザーがCtrl+Shift+Fを押下
-    HK->>ED: dispatch("GLOBAL_HOTKEY_TRIGGERED")
+    Note over HK,ED: ユーザーが登録済みのホットキーを押下
+    HK->>ED: dispatch("GLOBAL_HOTKEY_TRIGGERED", hotkey_id)
     ED->>App: 通知
     App->>WSM: toggle()
 
     Note over App: Apply/Saveによる設定変更
-    App->>HRM: AppSettingsWindowから再構成済み
+    App->>HRM: 設定画面またはピン留め操作で再構成
 
     Note over App: on_closing() / shutdown()
     App->>HRM: stop() (確実な解放)
@@ -676,7 +558,9 @@ def with_global_hotkey_listener(self, master: tk.Tk) -> ApplicationBuilder:
 
     self.hotkey_listener = GlobalHotkeyListener(
         master,
-        on_triggered=lambda: self.event_dispatcher.dispatch("GLOBAL_HOTKEY_TRIGGERED"),
+        on_triggered=lambda hotkey_id: self.event_dispatcher.dispatch(
+            "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
+        ),
     )
     return self
 
@@ -693,19 +577,16 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 
 #### 4.7.2 `MainApplication` への追加
 
-- `on_ready()`: `HotkeyRegistrationManager.reconfigure()` に設定値を渡す。
-  失敗時は `show_error_message` でユーザーに通知するが、起動は継続する。
-- `AppSettingsWindow` は `self.app.hotkey_registration_manager` を使用して
-  保存前検証・再構成を行う。`SETTINGS_CHANGED` の受信で重複登録しない。
-- `event_dispatcher.subscribe("GLOBAL_HOTKEY_TRIGGERED", lambda _: self.window_state_manager.toggle())`
-  を `__init__` で登録する。
-- `shutdown()`: `self.hotkey_registration_manager.stop()` を追加する。
+- `on_ready()` は、設定値を正規化したピン留め割当とともに `_reconfigure_hotkeys_from_settings()` で登録する。登録に失敗しても、エラーを表示してアプリケーションの起動は継続する。
+- `GLOBAL_HOTKEY_TRIGGERED` は登録IDを伴う。予約ID `1` は `WindowStateManager.toggle()` を呼び、ピン留めIDは `history_id_for_hotkey()` で履歴IDへ変換して、クリップボード更新・通知音・75ms後の `WindowsPasteSender` による貼り付けを行う。
+- ピン留め割当の設定・変更・解除・一括解除は、再構成成功後だけ `pinned_hotkey_bindings` を保存し、履歴一覧を更新する。ピン解除、履歴削除、全履歴削除時も対応する割当を解除する。
+- `shutdown()` は `HotkeyRegistrationManager.stop()` を呼び、登録済みの全IDを解除する。
 
 ### 4.8 競合時の挙動仕様
 
 | ケース                         | 挙動                                                                                                                                |
 | :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
-| 起動時にデフォルトキーが競合   | `reconfigure()` が `False` を返す。ログwarning出力とエラーダイアログ表示後、アプリは起動を継続し、ホットキー機能のみ無効にする。    |
+| 起動時に登録集合が競合         | `reconfigure_all()` が `False` を返す。ログwarning出力とエラーダイアログ表示後、アプリは起動を継続し、ホットキー機能のみ無効にする。 |
 | Apply/Save時に新しいキーが競合 | エラーを表示してApply/Saveを中止する。候補設定は `settings.json` に保存せず、可能な限り従来の有効なホットキー登録を維持・復元する。 |
 | 不正なキー形式                 | エラーを表示してApply/Saveを中止する。既存設定・登録状態を変更しない。                                                              |
 | アプリ終了時                   | `shutdown()` で必ず `UnregisterHotKey` を実行し、他アプリが同キーを登録できる状態に戻す。                                           |
@@ -724,7 +605,8 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 | `reusable_gui/windows/settings_window.py`                | `_get_schema()`、`_validate_pending_values()` フック、`HOTKEY_CAPTURE` のレンダリング処理追加 |
 | `src/core/hotkey/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/hotkey/global_hotkey_listener.py`（新規）      | OSホットキーの検知、キー文字列変換                                                            |
-| `src/core/hotkey/hotkey_registration_manager.py`（新規） | Apply/Save時の検証、登録切替、失敗時の復元                                                    |
+| `src/core/hotkey/hotkey_registration_manager.py`（新規） | 集合検証、ID採番、登録切替、失敗時の復元                                                       |
+| `src/core/hotkey/paste_sender.py`（新規）                | アクティブウィンドウへの `Ctrl+V` 送信                                                        |
 | `src/core/window/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/window/window_state_manager.py`（新規）        | ウィンドウ状態遷移とStrategy管理                                                              |
 | `src/core/bootstrap/application_builder.py`              | Hotkey・Window関連コンポーネントのビルドステップ追加                                          |
@@ -768,7 +650,9 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 ## 7. 確定事項
 
 - デフォルトのグローバルホットキーは `Ctrl+Shift+F` とする。
-- ホットキーの動作は、メインウィンドウの表示と最小化のトグルとする。
+- 表示/最小化キーには予約ID `1` を使用し、ピン留め履歴キーはID `2` 以降を使用する。
+- ピン留め履歴の割当は `pinned_hotkey_bindings` に保存し、重複キーを拒否する。登録失敗時は旧集合を復元し、終了時は全IDを解除する。
+- ホットキーの動作は、予約IDではメインウィンドウの表示/最小化トグル、ピン留めIDでは対象履歴の自動貼り付けとする。
 - `HOTKEY_CAPTURE` ウィジェットにはテスト登録ボタンを設けない。
   競合検証・登録切替はApply/Save時に `HotkeyRegistrationManager` の
   単一経路で実施し、失敗時は設定を保存しない。
@@ -779,13 +663,6 @@ def with_hotkey_registration_manager(self) -> ApplicationBuilder:
 
 ## 8. 将来の検討事項（本改造では対応不要）
 
-- **複数ホットキーの採番・解放**: 今回は表示/最小化用の単一キーだけを
-  対象とし、`HOTKEY_ID=1` 固定でよい。第2のホットキー要件が確定した時点で、
-  `HotkeyRegistrationManager` にID採番・登録一覧・一括解放を持たせる設計を
-  検討する。現時点での先行実装は不要。
-  詳細な設計検討結果（ID範囲・競合検知単位・データ構造変更案・ハンドラ
-  振り分け方式の選択肢）は `.kiro/specs/pin-treeview-hotkey-investigation/
-  investigation_report.md` の Multi_Hotkey_Section を参照。
 - **トレイ格納状態**: スコープ外であり、トレイアイコンやWndProcを含む実装は
   行わない。将来 `HIDDEN_TO_TRAY` と `TrayHiddenStrategy` を追加できるよう、
   `WindowState` / `WindowStateStrategy` の拡張点だけを維持する。
