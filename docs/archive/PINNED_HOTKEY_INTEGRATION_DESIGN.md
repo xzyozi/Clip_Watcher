@@ -2,13 +2,13 @@
 document_type: archive
 status: archived
 archived_at: 2026-08-31
-current_authority: "../design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md および src/core/hotkey/"
+current_authority: "../design/CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md および src/core/hotkey/"
 reason: "ピン留め履歴と個別グローバルホットキーの前身設計を保存するため"
 ---
 
 # ピン留め履歴と個別グローバルホットキーの連携（前身設計）
 
-> **アーカイブ資料**: 本書は `CW-DD-001` の前身設計です。現行仕様は [CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md](../design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md) および `src/core/hotkey/` を確認してください。
+> **アーカイブ資料**: 本書は `CLW-DD-001` の前身設計です。現行仕様は [CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md](../design/CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md) および `src/core/hotkey/` を確認してください。
 
 ## 1. 目的
 

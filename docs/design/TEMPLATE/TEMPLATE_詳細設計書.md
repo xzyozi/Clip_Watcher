@@ -1,5 +1,6 @@
 ---
 title: "詳細設計書"
+file_name: "[PROJECT_PREFIX]-DD-[NUMBER]_[DOCUMENT_TITLE].md"
 document_type: "detailed_design"
 version: "1.0"
 created_at: "YYYY-MM-DD"
@@ -14,14 +15,15 @@ related_documents:
 # 詳細設計書（機能・モジュール制御仕様）
 **[サブタイトル・担当機能の制御仕様]**
 
-| 項目           | 内容                                           |
-| :------------- | :--------------------------------------------- |
-| 文書番号       | [PROJECT_PREFIX]-DD-[NUMBER] （例: CW-DD-001） |
-| ドキュメント名 | [詳細設計書名]                                 |
-| 版数           | [Rev.1.0 (新規作成)]                           |
-| 改訂日         | [YYYY-MM-DD]                                   |
-| 作成日         | [YYYY-MM-DD]                                   |
-| 作成者         | [作成者 / チーム名]                            |
+| 項目           | 内容                                             |
+| :------------- | :----------------------------------------------- |
+| 文書番号       | [PROJECT_PREFIX]-DD-[NUMBER] （例: CLW-DD-001）   |
+| ファイル名     | [PROJECT_PREFIX]-DD-[NUMBER]_[DOCUMENT_TITLE].md |
+| ドキュメント名 | [詳細設計書名]                                   |
+| 版数           | [Rev.1.0 (新規作成)]                             |
+| 改訂日         | [YYYY-MM-DD]                                     |
+| 作成日         | [YYYY-MM-DD]                                     |
+| 作成者         | [作成者 / チーム名]                              |
 
 ---
 

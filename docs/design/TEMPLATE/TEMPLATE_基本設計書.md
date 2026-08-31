@@ -1,5 +1,6 @@
 ---
 title: "基本設計書"
+file_name: "[PROJECT_PREFIX]-BD-[NUMBER]_[DOCUMENT_TITLE].md"
 document_type: "basic_design"
 version: "1.0"
 created_at: "YYYY-MM-DD"
@@ -15,14 +16,15 @@ related_documents:
 # 基本設計書（基本仕様・システム全体アーキテクチャ定義）
 **[サブタイトル・アーキテクチャ概要]**
 
-| 項目           | 内容                                           |
-| :------------- | :--------------------------------------------- |
-| 文書番号       | [PROJECT_PREFIX]-BD-[NUMBER] （例: CW-BD-001） |
-| ドキュメント名 | [基本設計書名]                                 |
-| 版数           | [Rev.1.0 (新規作成)]                           |
-| 改訂日         | [YYYY-MM-DD]                                   |
-| 作成日         | [YYYY-MM-DD]                                   |
-| 作成者         | [作成者 / チーム名]                            |
+| 項目           | 内容                                             |
+| :------------- | :----------------------------------------------- |
+| 文書番号       | [PROJECT_PREFIX]-BD-[NUMBER] （例: CLW-BD-001）   |
+| ファイル名     | [PROJECT_PREFIX]-BD-[NUMBER]_[DOCUMENT_TITLE].md |
+| ドキュメント名 | [基本設計書名]                                   |
+| 版数           | [Rev.1.0 (新規作成)]                             |
+| 改訂日         | [YYYY-MM-DD]                                     |
+| 作成日         | [YYYY-MM-DD]                                     |
+| 作成者         | [作成者 / チーム名]                              |
 
 ---
 

@@ -2,12 +2,12 @@
 title: "Text Workflow 分類ルールの作成・設定ガイド"
 document_type: how_to
 updated_at: 2026-08-31
-canonical_source: "../design/CW-DD-003_TextWorkflow詳細設計書.md"
+canonical_source: "../design/CLW-DD-003_TextWorkflow詳細設計書.md"
 ---
 
 # How-To: Text Workflow 分類ルールの作成・設定ガイド
 
-本ガイドは、[TextWorkflow詳細設計書](../design/CW-DD-003_TextWorkflow詳細設計書.md) が定義する分類ルールを利用者が設定する方法を説明します。入力テキスト（クリップボードの内容や明示的テキスト）を「議事録」「コード」「URL」等へ自動判別・分類するための `rules.json` を作成します。
+本ガイドは、[TextWorkflow詳細設計書](../design/CLW-DD-003_TextWorkflow詳細設計書.md) が定義する分類ルールを利用者が設定する方法を説明します。入力テキスト（クリップボードの内容や明示的テキスト）を「議事録」「コード」「URL」等へ自動判別・分類するための `rules.json` を作成します。
 
 ---
 

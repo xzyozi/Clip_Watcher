@@ -71,11 +71,11 @@ CI では同等の検証を `uv` 経由で実行します。
 
 より詳細な設計・運用資料は `docs/` を参照してください。
 
-- [全体アーキテクチャ基本設計書（CW-BD-001）](docs/design/CW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md)
-- [機能基本設計書（CW-BD-002）](docs/design/CW-BD-002_ClipWatcher機能基本設計書.md)
-- [設定画面・グローバルホットキー詳細設計書（CW-DD-001）](docs/design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
-- [コア層起動監視イベント制御詳細設計書（CW-DD-002）](docs/design/CW-DD-002_コア層起動監視イベント制御詳細設計書.md)
-- [TextWorkflow詳細設計書（CW-DD-003）](docs/design/CW-DD-003_TextWorkflow詳細設計書.md)
+- [全体アーキテクチャ基本設計書（CLW-BD-001）](docs/design/CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md)
+- [機能基本設計書（CLW-BD-002）](docs/design/CLW-BD-002_ClipWatcher機能基本設計書.md)
+- [設定画面・グローバルホットキー詳細設計書（CLW-DD-001）](docs/design/CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
+- [コア層起動監視イベント制御詳細設計書（CLW-DD-002）](docs/design/CLW-DD-002_コア層起動監視イベント制御詳細設計書.md)
+- [TextWorkflow詳細設計書（CLW-DD-003）](docs/design/CLW-DD-003_TextWorkflow詳細設計書.md)
 - [開発環境セットアップ](docs/setup/toml_project_setup.md)
 - [Text Workflow 分類ルールガイド](docs/how-to/HOWTO_TEXT_WORKFLOW_RULES.md)
 

@@ -1,5 +1,6 @@
 ---
 title: "データ構造・状態設計書"
+file_name: "[PROJECT_PREFIX]-DS-[NUMBER]_[DOCUMENT_TITLE].md"
 document_type: "data_structure_specification"
 version: "1.0"
 created_at: "YYYY-MM-DD"
@@ -14,14 +15,15 @@ related_documents:
 # データ構造・状態設計書（スキーマ・永続化・状態定義）
 **[サブタイトル・管理データ構造と永続化仕様]**
 
-| 項目           | 内容                                           |
-| :------------- | :--------------------------------------------- |
-| 文書番号       | [PROJECT_PREFIX]-DS-[NUMBER] （例: CW-DS-001） |
-| ドキュメント名 | [データ構造仕様書名]                           |
-| 版数           | [Rev.1.0 (新規作成)]                           |
-| 改訂日         | [YYYY-MM-DD]                                   |
-| 作成日         | [YYYY-MM-DD]                                   |
-| 作成者         | [作成者 / チーム名]                            |
+| 項目           | 内容                                             |
+| :------------- | :----------------------------------------------- |
+| 文書番号       | [PROJECT_PREFIX]-DS-[NUMBER] （例: CLW-DS-001）   |
+| ファイル名     | [PROJECT_PREFIX]-DS-[NUMBER]_[DOCUMENT_TITLE].md |
+| ドキュメント名 | [データ構造仕様書名]                             |
+| 版数           | [Rev.1.0 (新規作成)]                             |
+| 改訂日         | [YYYY-MM-DD]                                     |
+| 作成日         | [YYYY-MM-DD]                                     |
+| 作成者         | [作成者 / チーム名]                              |
 
 ---
 

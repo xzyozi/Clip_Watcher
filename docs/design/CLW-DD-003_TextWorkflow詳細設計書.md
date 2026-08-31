@@ -1,5 +1,6 @@
 ---
 title: "TextWorkflow詳細設計書"
+file_name: "CLW-DD-003_TextWorkflow詳細設計書.md"
 document_type: "detailed_design"
 version: "1.0"
 created_at: "2026-08-31"
@@ -7,21 +8,22 @@ updated_at: "2026-08-31"
 author: "未記載"
 purpose: "TextWorkflowの入力・出力DTO、処理パイプライン、設定境界、失敗契約を定義するため"
 related_documents:
-  - "CW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
+  - "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
   - "../how-to/HOWTO_TEXT_WORKFLOW_RULES.md"
 ---
 
 # 詳細設計書（TextWorkflow）
 **テキスト分類、テンプレート展開、正規化、実行履歴の制御仕様**
 
-| 項目           | 内容                   |
-| :------------- | :--------------------- |
-| 文書番号       | CW-DD-003              |
-| ドキュメント名 | TextWorkflow詳細設計書 |
-| 版数           | Rev.1.0                |
-| 改訂日         | 2026-08-31             |
-| 作成日         | 2026-08-31             |
-| 作成者         | 未記載                 |
+| 項目           | 内容                                |
+| :------------- | :---------------------------------- |
+| 文書番号       | CLW-DD-003                           |
+| ファイル名     | CLW-DD-003_TextWorkflow詳細設計書.md |
+| ドキュメント名 | TextWorkflow詳細設計書              |
+| 版数           | Rev.1.0                             |
+| 改訂日         | 2026-08-31                          |
+| 作成日         | 2026-08-31                          |
+| 作成者         | 未記載                              |
 
 ---
 
