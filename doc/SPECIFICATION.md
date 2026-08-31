@@ -6,7 +6,7 @@
 
 ### **2. 開発環境**
 
-  * **言語**: Python 3.x
+  * **言語**: Python 3.10+
   * **GUIライブラリ**: Tkinter (Python標準ライブラリ), ttk
   * **データストア**: SQLite (履歴およびメタデータ管理用)
   * **外部ライブラリ**:
@@ -16,9 +16,10 @@
 **インストール**:
 
 ```bash
-pip install -r requirements.txt
-# 開発時のみ
-poetry install
+# 実行用の依存関係
+python -m pip install -e .
+# 開発時のみ（テスト・静的解析ツールを含む）
+python -m pip install -e ".[dev]"
 ```
 
 ### **3. 主な機能**

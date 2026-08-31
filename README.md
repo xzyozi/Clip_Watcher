@@ -18,8 +18,8 @@ ClipWatcherは、ユーザーのクリップボードを自動的に監視し、
 ```
 Clip_Watcher/
 ├── clip_watcher.py             # アプリケーションのエントリーポイント
-├── requirements.txt            # 依存ライブラリ
-├── pyproject.toml              # (Poetry 等のパッケージ管理)
+├── requirements.txt            # 直接インストール用の依存ライブラリ一覧
+├── pyproject.toml              # setuptools のプロジェクト設定・依存関係
 ├── src/
 │   ├── core/                   # コア機能
 │   │   ├── bootstrap/          # アプリケーション起動と依存性注入
@@ -43,29 +43,37 @@ Clip_Watcher/
 - **データベース**: SQLite (Python内蔵 `sqlite3`)
 - **外部ライブラリ**: `psutil`, `pywin32` など
 
-## 実行方法
+## セットアップと実行
 
-1. 依存ライブラリをインストールします。
+1. 実行用の依存関係をインストールします。
    ```bash
-   pip install -r requirements.txt
+   python -m pip install -e .
    ```
 2. メインファイルを実行します。
    ```bash
    python clip_watcher.py
    ```
 
-## テストの実行
+## 開発時の検証
 
-プロジェクトでは `pytest` を使用しています。
+開発用依存関係を含めてインストールします。
+
 ```bash
+python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy .
 python -m pytest
 ```
+
+CI では同等の検証を `uv` 経由で実行します。
 
 ## 詳細なドキュメント
 
 より詳細な機能仕様や設計については、`doc/` フォルダ内のドキュメントを参照してください。
 - [基本仕様書 (SPECIFICATION.md)](doc/SPECIFICATION.md)
 - [アーキテクチャ概要 (ARCHITECTURE_OVERVIEW.md)](doc/ARCHITECTURE_OVERVIEW.md)
+- [設定画面・グローバルホットキー改造仕様書](doc/MODIFICATION_SPEC_HOTKEY_AND_SETTINGS_SCHEMA.md)
 
 ## 注意事項
 - 一部の環境やセキュリティ設定によっては、クリップボードアクセスが制限される場合があります。
