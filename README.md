@@ -32,7 +32,7 @@ Clip_Watcher/
 │   ├── event_handlers/         # UIアクションとロジックを繋ぐハンドラ群
 │   ├── plugins/                # 拡張プラグイン (テキスト変換 / GUIツール)
 │   └── utils/                  # ユーティリティ (ログ設定、エラー処理)
-├── doc/                        # ドキュメント (仕様書、アーキテクチャ)
+├── docs/                       # ドキュメント (仕様書、アーキテクチャ)
 └── tests/                      # テストコード (pytest)
 ```
 
@@ -70,10 +70,10 @@ CI では同等の検証を `uv` 経由で実行します。
 
 ## 詳細なドキュメント
 
-より詳細な機能仕様や設計については、`doc/` フォルダ内のドキュメントを参照してください。
-- [基本仕様書 (SPECIFICATION.md)](doc/SPECIFICATION.md)
-- [アーキテクチャ概要 (ARCHITECTURE_OVERVIEW.md)](doc/ARCHITECTURE_OVERVIEW.md)
-- [設定画面・グローバルホットキー改造仕様書](doc/MODIFICATION_SPEC_HOTKEY_AND_SETTINGS_SCHEMA.md)
+より詳細な機能仕様や設計については、`docs/` フォルダ内のドキュメントを参照してください。
+- [基本仕様書 (SPECIFICATION.md)](docs/SPECIFICATION.md)
+- [アーキテクチャ概要 (ARCHITECTURE_OVERVIEW.md)](docs/ARCHITECTURE_OVERVIEW.md)
+- [設定画面・グローバルホットキー改造仕様書](docs/MODIFICATION_SPEC_HOTKEY_AND_SETTINGS_SCHEMA.md)
 
 ## 注意事項
 - 一部の環境やセキュリティ設定によっては、クリップボードアクセスが制限される場合があります。
