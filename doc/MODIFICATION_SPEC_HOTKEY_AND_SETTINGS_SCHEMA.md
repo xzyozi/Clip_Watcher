@@ -296,8 +296,7 @@ src/core/
     └── window_state_manager.py      # WindowState, WindowStateStrategy, WindowStateManager
 ```
 
-- `hotkey/` は `clipboard/` と同じ「OS監視インフラ」の並びに置く
-  （`review_2026_05_31_architecture_directory_review.md` のディレクトリ方針に整合）。
+- `hotkey/` は `clipboard/` と同じOS監視インフラの層に置き、キー入力の検知処理をUI状態管理から分離する。
 - `window/` はアプリのUI状態管理として独立させ、将来トレイ格納の
   `TrayHiddenStrategy` 等を追加する際もこのパッケージ内に収める。
 
