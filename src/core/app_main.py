@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_PASTE_INITIAL_DELAY_MS = 75
+_PASTE_RETRY_INTERVAL_MS = 25
+_PASTE_RELEASE_TIMEOUT_MS = 500
+
 
 class MainApplication(BaseApplication):
     def __init__(
@@ -183,7 +187,9 @@ class MainApplication(BaseApplication):
                 self.master.clipboard_clear()
                 self.master.clipboard_append(content)
                 self.monitor.notification_manager.play_notification_sound()
-                self.master.after(75, self._paste_into_active_window)
+                self.master.after(
+                    _PASTE_INITIAL_DELAY_MS, self._paste_into_active_window
+                )
                 logger.info(
                     "ピン留め履歴をホットキーでクリップボードへ設定し、自動貼り付けを予約しました: ID=%s",
                     history_id,
@@ -196,10 +202,25 @@ class MainApplication(BaseApplication):
         )
         self.remove_pinned_hotkey_binding(history_id)
 
-    def _paste_into_active_window(self) -> None:
+    def _paste_into_active_window(self, waited_ms: int = 0) -> None:
         from src.core.hotkey.paste_sender import WindowsPasteSender
 
-        if not WindowsPasteSender().paste_active_window():
+        paste_sender = WindowsPasteSender()
+        if not paste_sender.are_modifiers_released():
+            if waited_ms >= _PASTE_RELEASE_TIMEOUT_MS:
+                logger.warning(
+                    "ホットキーの修飾キーが解放されないため、自動貼り付けを中止しました。"
+                )
+                return
+            self.master.after(
+                _PASTE_RETRY_INTERVAL_MS,
+                lambda: self._paste_into_active_window(
+                    waited_ms + _PASTE_RETRY_INTERVAL_MS
+                ),
+            )
+            return
+
+        if not paste_sender.paste_active_window():
             logger.warning(
                 "自動貼り付けに失敗しました。クリップボードには内容が設定されています。"
             )
