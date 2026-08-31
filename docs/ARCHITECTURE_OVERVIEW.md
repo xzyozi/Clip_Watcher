@@ -24,7 +24,7 @@
 
 クリップボードの変更がUIに反映されるまでの基本的なデータフローは以下の通りです。
 
-```
+```text
 OSクリップボード -> [ClipboardMonitor] --(監視)--> [EventDispatcher] --("CLIPBOARD_CHANGED" イベント)--> [MainApplication] -> [ClipWatcherGUI] -> [HistoryListComponent]
 ```
 

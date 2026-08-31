@@ -6,13 +6,13 @@
 
 コア層は、関心の分離（Separation of Concerns）に基づき、以下のサブパッケージに分割されています。
 
-| サブパッケージ | 主な役割と構成クラス |
-| :--- | :--- |
-| `bootstrap/` | **起動と依存関係の構築**<br>・`ApplicationBuilder`: 各サービス・UIを生成し依存性を注入（DI）する。<br>・`BaseApplication`: アプリケーションの基底インターフェース。<br>・`DependencyChecker`: 起動前の環境・依存ライブラリのチェック。 |
-| `clipboard/` | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。 |
-| `events/` | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。 |
-| `config/` | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。 |
-| `app_main.py` | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。 |
+| サブパッケージ | 主な役割と構成クラス                                                                                                                                                                                                                   |
+| :------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bootstrap/`   | **起動と依存関係の構築**<br>・`ApplicationBuilder`: 各サービス・UIを生成し依存性を注入（DI）する。<br>・`BaseApplication`: アプリケーションの基底インターフェース。<br>・`DependencyChecker`: 起動前の環境・依存ライブラリのチェック。 |
+| `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                 |
+| `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                         |
+| `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                       |
+| `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                               |
 
 ---
 
@@ -47,7 +47,8 @@ sequenceDiagram
     App->>GUI: mainloop() (Tkinterイベントループ開始)
 ```
 
-**【起動時のポイント】**
+### 起動時のポイント
+
 - **DI (依存性注入)**: サービスやハンドラは互いに直接インスタンス化せず、`ApplicationBuilder` が必要なオブジェクト（`EventDispatcher` など）をコンストラクタ経由で渡します。これにより循環参照を防いでいます。
 
 ---

@@ -1,8 +1,9 @@
 # 改造仕様書: 設定画面のスキーマ駆動化 と グローバルホットキー機能の追加
 
-作成日: 2026年8月18日
-対象: `src/gui/windows/settings_window.py`, `src/core/config/settings_manager.py`,
-      `reusable_gui/`, `src/core/`（新設サブパッケージ）
+| 項目   | 内容                                                                                                                            |
+| :----- | :------------------------------------------------------------------------------------------------------------------------------ |
+| 作成日 | 2026年8月18日                                                                                                                   |
+| 対象   | `src/gui/windows/settings_window.py`, `src/core/config/settings_manager.py`, `reusable_gui/`, `src/core/`（新設サブパッケージ） |
 
 ---
 
