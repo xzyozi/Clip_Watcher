@@ -1,52 +1,62 @@
-# プロジェクトセットアップガイド (Hatch版)
+# `pyproject.toml` によるプロジェクトセットアップガイド
 
-このプロジェクトは、依存関係と開発環境の管理に [Hatch](https://hatch.pypa.io/latest/) を使用します。プロジェクトルートにある `pyproject.toml` ファイルが、従来の `setup.py` の役割を置き換えます。
+このプロジェクトは、`pyproject.toml` をパッケージメタデータと依存関係の正本として使用します。ビルドバックエンドは `setuptools.build_meta` です。Hatch、`setup.py`、Playwright、requirementsファイルの生成は利用しません。
 
 ---
 
-## 1. 初回のみ必要な準備
+## 1. 前提条件
 
-作業を始める前に、Hatchをインストールする必要があります。この作業は一度だけで結構です。
+- Python 3.10 以降
+- Git
+- 開発・CIと同じコマンドを使う場合は [uv](https://docs.astral.sh/uv/)（任意）
 
-```shell
-pip install hatch
+---
+
+## 2. 開発環境の作成
+
+リポジトリのルートで、仮想環境を作成して有効化します。
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+PowerShellの実行ポリシーにより有効化できない場合は、現在のシェルに限って次のコマンドを実行してから再試行します。
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
 ---
 
-## 2. プロジェクトのセットアップ
+## 3. パッケージのインストール
 
-プロジェクトの環境構築、すべての依存関係のインストール、Playwrightが必要とするブラウザのダウンロードを行うには、プロジェクトのルートディレクトリで以下のコマンドを実行してください。
+アプリケーションの実行に必要な依存だけをインストールする場合は、次を実行します。
 
-```shell
-hatch run setup
+```powershell
+python -m pip install -e .
 ```
 
-このコマンド一つで、以下の処理が自動的に実行されます。
+開発用のテスト・静的解析ツールも含める場合は、`dev` extrasを指定します。
 
-1. プロジェクト専用の仮想環境がなければ作成します。
-2. `pyproject.toml` に指定された、アプリケーション用および開発用のすべての依存関係をインストールします。
-3. `[tool.hatch.scripts]` に定義されたセットアップスクリプトを実行します。これには以下の処理が含まれます。
-   - `requirements.in` から `requirements.txt` を生成する。
-   - `requirements.txt` の内容と環境を完全に同期させる。
-   - Playwrightが必要とするブラウザドライバをインストールする。
+```powershell
+python -m pip install -e ".[dev]"
+```
+
+editable installのため、`src/` 配下のソースを変更した後にパッケージを再インストールする必要はありません。依存定義を変更した場合だけ、該当するインストールコマンドを再実行してください。
 
 ---
 
-## 3. 仮想環境のアクティベート
+## 4. 検証コマンド
 
-プロジェクトの環境内で作業（例：スクリプトの手動実行など）を行いたい場合は、以下のコマンドで仮想環境のシェルに入ることができます。
+CIでは `uv` を用いて、次のコマンドを実行します。
 
-```shell
-hatch shell
+```powershell
+uv pip install --system -e ".[dev]"
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy .
+uv run pytest
 ```
 
----
-
-## 4. テストの実行
-
-このプロジェクトでは、`pytest` を使用してテストを実行するよう設定されています。以下のコマンドでテストスイート全体を実行できます。
-
-```shell
-hatch run test
-```
+ローカルでも `uv` を導入している場合は同じコマンドを利用できます。導入していない場合は、仮想環境を有効化したうえで `ruff check .`、`ruff format --check .`、`mypy .`、`pytest` を実行してください。
