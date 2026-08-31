@@ -1,67 +1,77 @@
+---
+document_type: operation
+updated_at: 2026-08-31
+canonical_source: .github/workflows/branch-cleanup.yml, .github/workflows/ci.yml
+---
+
 # Git Flow 運用規約 ＆ ブランチ自動管理ガイド
 
-本ドキュメントは、プロジェクトにおける **Git Flow 運用ルール**、および **GitHub / CI/CD / ローカル Git** を活用したブランチの自動クリーンアップ・管理仕様を定義します。
+本書は Git Flow の運用ルールと、リポジトリに定義された CI・ブランチクリーンアップの実態を定義します。
 
----
+## 1. ブランチ戦略
 
-## 1. ブランチ戦略 (Git Flow 概要)
+| 種別                | 用途                       | 分岐元・マージ先                               |
+| :------------------ | :------------------------- | :--------------------------------------------- |
+| `main`              | 本番環境用の安定ブランチ   | 長期維持                                       |
+| `develop`           | 開発成果を集約するブランチ | 長期維持                                       |
+| `feat/<機能名>`     | 新機能開発                 | `develop` から分岐し、PR で `develop` へマージ |
+| `fix/<修正内容>`    | バグ修正                   | `develop` から分岐し、PR で `develop` へマージ |
+| `docs/<文書名>`     | 文書更新                   | 対応する変更先へ PR でマージ                   |
+| `hotfix/<緊急修正>` | 本番障害の緊急修正         | `main` から分岐し、`main` と `develop` へ反映  |
 
-### 1.1 主要ブランチ (Long-lived Branches)
+## 2. CI とリモートの自動管理
 
-- **`main`**: 本番環境用ブランチ。常時デプロイ可能・安定したコードを保持します。
-- **`develop`**: 開発用メインブランチ。最新の開発成果が集約されます。
+### 2.1 CI
 
-### 1.2 サポートブランチ (Short-lived Branches)
+[ci.yml](../../.github/workflows/ci.yml) は `main` と `develop` への push、および両ブランチを対象とする PR で起動します。`windows-latest` 上で依存を導入し、Ruff の lint・format check、Mypy、Pytest を実行します。CI の必須設定や保護ルールは GitHub 側の設定に依存するため、本書だけで有効化を保証しません。
 
-- **`feat/<機能名>`**: 新機能開発用ブランチ。`develop` から分岐し、`develop` へ PR を作成してマージします。
-- **`fix/<修正内容>`**: バグ修正用ブランチ。`develop` から分岐し、`develop` へマージします。
-- **`docs/<ドキュメント名>`**: ドキュメント更新専用ブランチ。
-- **`hotfix/<緊急修正>`**: 本番の急激な不具合修正用。`main` から分岐し、`main` および `develop` へマージします。
+### 2.2 マージ済みリモートブランチのクリーンアップ
 
----
+[branch-cleanup.yml](../../.github/workflows/branch-cleanup.yml) は毎週月曜 00:00 UTC と手動実行で起動します。`origin/develop` にマージ済みのリモートブランチを調べ、`main`、`develop`、`HEAD` を保護して、それ以外のブランチを削除します。`origin/main` へのマージだけでは削除対象になりません。
 
-## 2. CI/CD ＆ リモート自動化 (GitHub / GitHub Actions)
+GitHub の **Automatically delete head branches** はリポジトリ設定です。利用する場合は GitHub の `Settings` > `General` > `Pull Requests` で有効化してください。ワークフローの動作とは独立しているため、設定状態は GitHub 管理画面で確認します。
 
-不要なリモートブランチが残留しないよう、以下の2層の自動クリーンアップを組み込んでいます。
+## 3. ローカル追跡ブランチの整理
 
-### 2.1 GitHub 設定: PRマージ後のリモートブランチ自動削除
+### 3.1 自動 prune
 
-- GitHubの管理画面 (`Settings` > `General` > `Pull Requests`) にて **`Automatically delete head branches`** を有効化。
-- PRが `develop` または `main` にマージされた時点で、リモートの作業ブランチが自動削除されます。
+リモートで削除された追跡情報を更新時に取り除くには、次を一度実行します。
 
-### 2.2 GitHub Actions: 定期クリーンアップ ワークフロー
-
-- 設定ファイル: [branch-cleanup.yml](../../.github/workflows/branch-cleanup.yml)
-- **トリガー**: 毎週月曜午前 0:00 (UTC) または 手動実行 (`workflow_dispatch`)
-- **機能**: `develop` にマージ済みのリモートブランチを自動検出して一括削除（`main`, `develop` は自動保護）。
-
----
-
-## 3. ローカル Git 開発環境の自動化設定
-
-リモートで削除されたブランチがローカル環境に古い追跡情報 (`[gone]`) として残るのを防ぐため、以下の設定を推奨します。
-
-### 3.1 `git fetch` への自動 Prune 設定
-
-以下のコマンドを実行すると、`git fetch` や `git pull` を行うたびに、リモートで消えたブランチのローカル追跡情報を自動的に削除します。
-
-```bash
+```powershell
 git config --global fetch.prune true
 ```
 
-### 3.2 ローカル `[gone]` ブランチを一括削除する Git エイリアス
+### 3.2 Git Bash の一括削除エイリアス
 
-追跡元リモートブランチが消えたローカルブランチを一括で整理・削除するコマンドを追加します。
+次のエイリアスは `grep`、`awk`、`xargs` を使用するため、**Git Bash 専用**です。Windows PowerShell 共通のコマンドではありません。
 
 ```bash
-# エイリアスの設定 (PowerShell / Git Bash 共通)
 git config --global alias.cleanup "!git branch -vv | grep '\[gone\]' | awk '{print $1}' | xargs -r git branch -d"
-```
-
-#### 使い方
-
-```bash
 git cleanup
 ```
 
-実行すると、リモートで既にマージ・削除されたローカルブランチが一括で安全に削除されます。
+### 3.3 Windows PowerShell の安全な代替手順
+
+Windows PowerShell では、POSIX ツールに依存せず、まず削除候補だけを表示して確認します。
+
+```powershell
+git fetch --prune
+$goneBranches = git for-each-ref --format="%(refname:short)|%(upstream:track)" refs/heads |
+    Where-Object { $_ -match "\|\[gone\]$" } |
+    ForEach-Object { ($_ -split "\|", 2)[0] }
+$goneBranches
+```
+
+表示内容を確認して削除してよい場合だけ、`DELETE` と入力します。`git branch -d` は未マージのブランチを削除しません。
+
+```powershell
+if ((Read-Host "表示したブランチを削除する場合は DELETE と入力") -eq "DELETE") {
+    $goneBranches | ForEach-Object { git branch -d $_ }
+}
+```
+
+## 改訂履歴
+
+| 日付       | 変更内容                                                                                                                                         |
+| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-31 | 軽量メタデータと改訂履歴を追加。現行 CI・週次クリーンアップの対象を明記し、Git Bash 専用エイリアスと Windows PowerShell の安全な代替手順を分離。 |

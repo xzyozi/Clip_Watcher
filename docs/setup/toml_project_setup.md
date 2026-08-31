@@ -1,55 +1,53 @@
+---
+document_type: operation
+updated_at: 2026-08-31
+canonical_source: pyproject.toml
+---
+
 # `pyproject.toml` によるプロジェクトセットアップガイド
 
-このプロジェクトは、`pyproject.toml` をパッケージメタデータと依存関係の正本として使用します。ビルドバックエンドは `setuptools.build_meta` です。Hatch、`setup.py`、Playwright、requirementsファイルの生成は利用しません。
-
----
+このプロジェクトは `pyproject.toml` をパッケージメタデータと依存関係の正本として使用します。ビルドバックエンドは `setuptools.build_meta` です。Hatch、`setup.py`、Playwright、requirements ファイルの生成は利用しません。
 
 ## 1. 前提条件
 
 - Python 3.10 以降
 - Git
-- 開発・CIと同じコマンドを使う場合は [uv](https://docs.astral.sh/uv/)（任意）
-
----
+- 開発・CI と同じコマンドを使う場合は [uv](https://docs.astral.sh/uv/)（任意）
 
 ## 2. 開発環境の作成
 
-リポジトリのルートで、仮想環境を作成して有効化します。
+リポジトリのルートで仮想環境を作成して有効化します。
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-PowerShellの実行ポリシーにより有効化できない場合は、現在のシェルに限って次のコマンドを実行してから再試行します。
+PowerShell の実行ポリシーにより有効化できない場合は、現在のシェルに限って次を実行してから再試行します。
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
----
-
 ## 3. パッケージのインストール
 
-アプリケーションの実行に必要な依存だけをインストールする場合は、次を実行します。
+アプリケーションに必要な依存だけを導入する場合は、次を実行します。
 
 ```powershell
 python -m pip install -e .
 ```
 
-開発用のテスト・静的解析ツールも含める場合は、`dev` extrasを指定します。
+開発用のテスト・静的解析ツールも導入する場合は、`dev` extras を指定します。
 
 ```powershell
 python -m pip install -e ".[dev]"
 ```
 
-editable installのため、`src/` 配下のソースを変更した後にパッケージを再インストールする必要はありません。依存定義を変更した場合だけ、該当するインストールコマンドを再実行してください。
-
----
+editable install のため、`src/` 配下のソースを変更した後に再インストールは不要です。依存定義を変更したときだけ、該当するインストールコマンドを再実行してください。依存を追加・更新する規約は [dependency_management.md](dependency_management.md) を参照してください。
 
 ## 4. 検証コマンド
 
-CIでは `uv` を用いて、次のコマンドを実行します。
+CI は `windows-latest` 上で `uv` を使用し、次を実行します。
 
 ```powershell
 uv pip install --system -e ".[dev]"
@@ -59,4 +57,10 @@ uv run mypy .
 uv run pytest
 ```
 
-ローカルでも `uv` を導入している場合は同じコマンドを利用できます。導入していない場合は、仮想環境を有効化したうえで `ruff check .`、`ruff format --check .`、`mypy .`、`pytest` を実行してください。
+ローカルで `uv` を利用できる場合は同じコマンドを使用できます。利用しない場合は仮想環境を有効化してから、`ruff check .`、`ruff format --check .`、`mypy .`、`pytest` を実行してください。
+
+## 改訂履歴
+
+| 日付       | 変更内容                                                                                 |
+| :--------- | :--------------------------------------------------------------------------------------- |
+| 2026-08-31 | 軽量メタデータと改訂履歴を追加し、依存管理文書との責務境界と現行 CI の実行環境を明確化。 |
