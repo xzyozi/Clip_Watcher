@@ -52,7 +52,7 @@ related_documents:
 graph TD
     GUI[GUI / Clipboard Monitor] -->|WorkflowRequest| WS[TextWorkflowService]
     CLI[CLI Runner] -->|WorkflowRequest| WS
-    
+
     subgraph "TextWorkflow Core (src/core/text_workflow/)"
         WS --> TW[TextWorkflow Manager]
         CR[ConfigurationResolver] --> TW
@@ -61,11 +61,11 @@ graph TD
         TW --> NM[Normalizer]
         TW --> EH[ExecutionHistory]
     end
-    
+
     CF --> Rules[rules.json]
     TR --> Templates[templates.json]
     EH --> DB[(Local SQLite / Private Store)]
-    
+
     TW -->|WorkflowResult| WS
     WS -->|Event / Callback| GUI
 ```

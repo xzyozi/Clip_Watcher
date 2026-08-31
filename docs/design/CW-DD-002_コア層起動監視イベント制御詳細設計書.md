@@ -58,16 +58,16 @@ sequenceDiagram
 
     Main->>Start: start_app() 呼び出し
     Start->>Builder: ApplicationBuilder() インスタンス化
-    
+
     Builder->>Builder: 1. 依存ライブラリチェック (DependencyChecker)
     Builder->>Core: 2. 基本サービス初期化 (EventDispatcher, SettingsManager)
     Builder->>Core: 3. DB & サービス層初期化 (DatabaseManager, HistoryService...)
     Builder->>Core: 4. モニター初期化 (ClipboardMonitor)
     Builder->>Builder: 5. イベントハンドラ登録 (History/File/Settings...)
-    
+
     Builder->>GUI: 6. GUI構築 (ClipWatcherGUI)
     Builder->>Builder: 7. プラグイン読み込み (PluginManager)
-    
+
     Builder->>App: build() 完了 (MainApplication 返却)
     Start->>App: run() 呼び出し
     App->>Core: ClipboardMonitor.start() (監視スレッド開始)
@@ -102,7 +102,7 @@ sequenceDiagram
             Monitor->>Dispatcher: dispatch("CLIPBOARD_CHANGED", テキスト)
         end
     end
-    
+
     Dispatcher->>App: イベント通知
     App->>GUI: update_clipboard_display() 呼び出し
     GUI->>DB: 最新の履歴リストを取得
@@ -129,10 +129,10 @@ sequenceDiagram
 
     User->>GUI: 履歴の編集・フォーマット操作
     GUI->>Handlers: dispatch("HISTORY_ITEM_EDITED", データ)
-    
+
     Handlers->>Cmd: UpdateHistoryCommand(対象ID, 新テキスト) 生成
     Handlers->>Undo: execute_command(Cmd)
-    
+
     Undo->>Cmd: execute()
     Cmd->>DB: update_history_item_by_id() (DB更新)
     Cmd->>App: GUI更新要求
