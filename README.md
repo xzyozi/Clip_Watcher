@@ -18,7 +18,6 @@ ClipWatcherは、ユーザーのクリップボードを自動的に監視し、
 ```
 Clip_Watcher/
 ├── clip_watcher.py             # アプリケーションのエントリーポイント
-├── requirements.txt            # 直接インストール用の依存ライブラリ一覧
 ├── pyproject.toml              # setuptools のプロジェクト設定・依存関係
 ├── src/
 │   ├── core/                   # コア機能
@@ -32,7 +31,7 @@ Clip_Watcher/
 │   ├── event_handlers/         # UIアクションとロジックを繋ぐハンドラ群
 │   ├── plugins/                # 拡張プラグイン (テキスト変換 / GUIツール)
 │   └── utils/                  # ユーティリティ (ログ設定、エラー処理)
-├── docs/                       # ドキュメント (仕様書、アーキテクチャ)
+├── docs/                       # 設計・運用・how-to・アーカイブ資料
 └── tests/                      # テストコード (pytest)
 ```
 
@@ -70,10 +69,15 @@ CI では同等の検証を `uv` 経由で実行します。
 
 ## 詳細なドキュメント
 
-より詳細な機能仕様や設計については、`docs/` フォルダ内のドキュメントを参照してください。
-- [基本仕様書 (SPECIFICATION.md)](docs/SPECIFICATION.md)
-- [アーキテクチャ概要 (ARCHITECTURE_OVERVIEW.md)](docs/ARCHITECTURE_OVERVIEW.md)
-- [設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書](docs/design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
+より詳細な設計・運用資料は `docs/` を参照してください。
+
+- [全体アーキテクチャ基本設計書（CW-BD-001）](docs/design/CW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md)
+- [機能基本設計書（CW-BD-002）](docs/design/CW-BD-002_ClipWatcher機能基本設計書.md)
+- [設定画面・グローバルホットキー詳細設計書（CW-DD-001）](docs/design/CW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
+- [コア層起動監視イベント制御詳細設計書（CW-DD-002）](docs/design/CW-DD-002_コア層起動監視イベント制御詳細設計書.md)
+- [TextWorkflow詳細設計書（CW-DD-003）](docs/design/CW-DD-003_TextWorkflow詳細設計書.md)
+- [開発環境セットアップ](docs/setup/toml_project_setup.md)
+- [Text Workflow 分類ルールガイド](docs/how-to/HOWTO_TEXT_WORKFLOW_RULES.md)
 
 ## 注意事項
 - 一部の環境やセキュリティ設定によっては、クリップボードアクセスが制限される場合があります。

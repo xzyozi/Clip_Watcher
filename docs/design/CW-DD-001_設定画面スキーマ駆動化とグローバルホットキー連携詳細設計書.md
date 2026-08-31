@@ -7,22 +7,22 @@ updated_at: "2026-08-31"
 author: "未記載"
 purpose: "設定画面のスキーマ駆動化、グローバルホットキーの集合登録、失敗時の復元契約を定義し、実装・変更時の不整合を防ぐため"
 related_documents:
-  - "../ARCHITECTURE_OVERVIEW.md"
-  - "../SPECIFICATION.md"
-  - "../PINNED_HOTKEY_INTEGRATION_DESIGN.md"
+  - "CW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
+  - "CW-BD-002_ClipWatcher機能基本設計書.md"
+  - "../archive/PINNED_HOTKEY_INTEGRATION_DESIGN.md"
 ---
 
 # 詳細設計書（設定画面スキーマ駆動化とグローバルホットキー連携）
 **設定画面のスキーマ駆動化、ウィンドウ状態管理、ホットキー集合登録の制御仕様**
 
-| 項目 | 内容 |
-| :--- | :--- |
-| 文書番号 | CW-DD-001 |
+| 項目           | 内容                                                       |
+| :------------- | :--------------------------------------------------------- |
+| 文書番号       | CW-DD-001                                                  |
 | ドキュメント名 | 設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書 |
-| 版数 | Rev.1.0 |
-| 改訂日 | 2026-08-31 |
-| 作成日 | 2026-08-18 |
-| 作成者 | 未記載 |
+| 版数           | Rev.1.0                                                    |
+| 改訂日         | 2026-08-31                                                 |
+| 作成日         | 2026-08-18                                                 |
+| 作成者         | 未記載                                                     |
 
 ---
 
@@ -147,10 +147,10 @@ classDiagram
 
 `SettingsManager` は `PluginManager` に依存せず、コア設定だけの定義を保持する。`PluginSettingsSchemaProvider` がGUIプラグインからModulesタブ用の `SettingField` を生成し、`AppSettingsWindow` がコア設定スキーマと合成する。
 
-| 要素 | 入力 | 出力・契約 |
-| :--- | :--- | :--- |
-| `PluginSettingsSchemaProvider` | `PluginManager` が返すGUIプラグイン | プラグインごとに `show_{plugin}_tab` キーを持つ `SettingField` |
-| `AppSettingsWindow._get_schema()` | コア設定スキーマ、プラグイン設定スキーマ | 両方を結合した設定画面用スキーマ |
+| 要素                              | 入力                                     | 出力・契約                                                     |
+| :-------------------------------- | :--------------------------------------- | :------------------------------------------------------------- |
+| `PluginSettingsSchemaProvider`    | `PluginManager` が返すGUIプラグイン      | プラグインごとに `show_{plugin}_tab` キーを持つ `SettingField` |
+| `AppSettingsWindow._get_schema()` | コア設定スキーマ、プラグイン設定スキーマ | 両方を結合した設定画面用スキーマ                               |
 
 この分離により、GUIプラグインの追加・削除はModulesタブの設定項目に自動追従し、設定管理層とプラグイン管理層の直接結合を防ぐ。
 
@@ -304,12 +304,12 @@ src/core/
 
 `WindowStateManager` はメインウィンドウの表示状態を保持し、状態ごとのUI操作をStrategyとして分離する。
 
-| 操作 | 事前条件 | 結果・事後条件 |
-| :--- | :--- | :--- |
-| `show()` | なし | 状態を `VISIBLE` にし、ウィンドウを表示・前面化する |
-| `minimize()` | なし | 状態を `MINIMIZED` にし、ウィンドウを最小化する |
-| `toggle()` | 現在状態が `VISIBLE` または `MINIMIZED` | 2状態を相互に遷移させる |
-| `register_strategy(state, strategy)` | 有効な状態とStrategy | 指定状態の遷移処理を置き換える |
+| 操作                                 | 事前条件                                | 結果・事後条件                                      |
+| :----------------------------------- | :-------------------------------------- | :-------------------------------------------------- |
+| `show()`                             | なし                                    | 状態を `VISIBLE` にし、ウィンドウを表示・前面化する |
+| `minimize()`                         | なし                                    | 状態を `MINIMIZED` にし、ウィンドウを最小化する     |
+| `toggle()`                           | 現在状態が `VISIBLE` または `MINIMIZED` | 2状態を相互に遷移させる                             |
+| `register_strategy(state, strategy)` | 有効な状態とStrategy                    | 指定状態の遷移処理を置き換える                      |
 
 `<Unmap>` と `<Map>` のイベントはOS操作による最小化・表示を状態に反映する。未定義の状態への遷移要求は警告を記録し、ウィンドウ操作を行わない。
 
@@ -317,11 +317,11 @@ src/core/
 
 `GlobalHotkeyListener` は、登録ID・修飾キー・仮想キーコードからなる `HotkeyRegistration` の集合を単一のWindowsメッセージスレッドで処理する。表示/最小化キーの予約IDは `1`、ピン留め履歴キーのIDは `2` から採番する。
 
-| API | 入力 | 結果・失敗契約 |
-| :--- | :--- | :--- |
-| `start(modifiers, vk_code)` | 単一の表示/最小化キー | 予約ID `1` を用いて `start_many()` へ委譲する互換API |
+| API                         | 入力                        | 結果・失敗契約                                                                           |
+| :-------------------------- | :-------------------------- | :--------------------------------------------------------------------------------------- |
+| `start(modifiers, vk_code)` | 単一の表示/最小化キー       | 予約ID `1` を用いて `start_many()` へ委譲する互換API                                     |
 | `start_many(registrations)` | `HotkeyRegistration` の集合 | 重複IDを拒否する。登録途中で失敗した場合は、同一スレッドで登録済みの全IDを逆順に解除する |
-| `stop()` | なし | メッセージループを停止し、登録済みの全IDを解除する |
+| `stop()`                    | なし                        | メッセージループを停止し、登録済みの全IDを解除する                                       |
 
 `WM_HOTKEY` の通知には登録IDを付与し、`tk_root.after()` を介してメインスレッドへ渡す。キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化し、`Ctrl`、`Alt`、`Shift`、`Win` と英数字の主キーを受け付ける。
 
@@ -331,11 +331,11 @@ src/core/
 
 #### 4.6.1 設定項目
 
-| 設定キー | 型 | 既定値 | 用途 |
-| :--- | :--- | :--- | :--- |
-| `global_hotkey_enabled` | `bool` | `True` | 表示/最小化キーの有効状態 |
-| `global_hotkey_combo` | `str` | `Ctrl+Shift+F` | 表示/最小化キーの正規化済み文字列 |
-| `pinned_hotkey_bindings` | `dict[str, str]` | `{}` | 履歴ID文字列からピン留めキー文字列への対応 |
+| 設定キー                 | 型               | 既定値         | 用途                                       |
+| :----------------------- | :--------------- | :------------- | :----------------------------------------- |
+| `global_hotkey_enabled`  | `bool`           | `True`         | 表示/最小化キーの有効状態                  |
+| `global_hotkey_combo`    | `str`            | `Ctrl+Shift+F` | 表示/最小化キーの正規化済み文字列          |
+| `pinned_hotkey_bindings` | `dict[str, str]` | `{}`           | 履歴ID文字列からピン留めキー文字列への対応 |
 
 #### 4.6.2 設定画面スキーマ
 
@@ -349,9 +349,9 @@ src/core/
 
 UIは `GlobalHotkeyListener` の低水準APIを直接呼び出さず、`HotkeyRegistrationManager` を経由して登録状態を変更する。
 
-| API | 用途 | 成功時 | 失敗時 |
-| :--- | :--- | :--- | :--- |
-| `reconfigure(enabled, combo)` | 表示/最小化キーの変更 | 現在のピン留め割当を維持して再構成する | 旧集合を維持し、設定を保存しない |
+| API                                                              | 用途                                     | 成功時                                                 | 失敗時                               |
+| :--------------------------------------------------------------- | :--------------------------------------- | :----------------------------------------------------- | :----------------------------------- |
+| `reconfigure(enabled, combo)`                                    | 表示/最小化キーの変更                    | 現在のピン留め割当を維持して再構成する                 | 旧集合を維持し、設定を保存しない     |
 | `reconfigure_all(global_enabled, global_combo, pinned_bindings)` | ピン留め割当の設定・変更・解除・一括解除 | 候補集合を原子的に適用し、成功後に設定と一覧を更新する | 旧集合を復元し、割当と表示を維持する |
 
 両APIはキー書式と集合内の重複を検証してから登録する。`pinned_hotkey_bindings` は履歴IDの文字列をキー、正規化済みキー文字列を値として永続化する。
@@ -389,11 +389,11 @@ sequenceDiagram
 
 #### 4.7.1 `ApplicationBuilder` への追加
 
-| ビルダー操作 | 生成物 | 配線契約 |
-| :--- | :--- | :--- |
-| `with_window_state_manager(master)` | `WindowStateManager` | メインウィンドウの状態遷移を管理する |
-| `with_global_hotkey_listener(master)` | `GlobalHotkeyListener` | `GLOBAL_HOTKEY_TRIGGERED` イベントへ登録IDを渡す |
-| `with_hotkey_registration_manager()` | `HotkeyRegistrationManager` | Listenerの集合登録と失敗時復元を管理する |
+| ビルダー操作                          | 生成物                      | 配線契約                                         |
+| :------------------------------------ | :-------------------------- | :----------------------------------------------- |
+| `with_window_state_manager(master)`   | `WindowStateManager`        | メインウィンドウの状態遷移を管理する             |
+| `with_global_hotkey_listener(master)` | `GlobalHotkeyListener`      | `GLOBAL_HOTKEY_TRIGGERED` イベントへ登録IDを渡す |
+| `with_hotkey_registration_manager()`  | `HotkeyRegistrationManager` | Listenerの集合登録と失敗時復元を管理する         |
 
 `build()` はこれらを `MainApplication` へ注入する。イベントディスパッチャが未初期化の場合、Listenerの構築は設定エラーとして失敗する。
 
@@ -406,12 +406,12 @@ sequenceDiagram
 
 ### 4.8 エラー処理・失敗契約
 
-| ケース                         | 挙動                                                                                                                                |
-| :----------------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| ケース                         | 挙動                                                                                                                                 |
+| :----------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
 | 起動時に登録集合が競合         | `reconfigure_all()` が `False` を返す。ログwarning出力とエラーダイアログ表示後、アプリは起動を継続し、ホットキー機能のみ無効にする。 |
-| Apply/Save時に新しいキーが競合 | エラーを表示してApply/Saveを中止する。候補設定は `settings.json` に保存せず、可能な限り従来の有効なホットキー登録を維持・復元する。 |
-| 不正なキー形式                 | エラーを表示してApply/Saveを中止する。既存設定・登録状態を変更しない。                                                              |
-| アプリ終了時                   | `shutdown()` で必ず `UnregisterHotKey` を実行し、他アプリが同キーを登録できる状態に戻す。                                           |
+| Apply/Save時に新しいキーが競合 | エラーを表示してApply/Saveを中止する。候補設定は `settings.json` に保存せず、可能な限り従来の有効なホットキー登録を維持・復元する。  |
+| 不正なキー形式                 | エラーを表示してApply/Saveを中止する。既存設定・登録状態を変更しない。                                                               |
+| アプリ終了時                   | `shutdown()` で必ず `UnregisterHotKey` を実行し、他アプリが同キーを登録できる状態に戻す。                                            |
 
 ---
 
@@ -427,7 +427,7 @@ sequenceDiagram
 | `reusable_gui/windows/settings_window.py`                | `_get_schema()`、`_validate_pending_values()` フック、`HOTKEY_CAPTURE` のレンダリング処理追加 |
 | `src/core/hotkey/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/hotkey/global_hotkey_listener.py`（新規）      | OSホットキーの検知、キー文字列変換                                                            |
-| `src/core/hotkey/hotkey_registration_manager.py`（新規） | 集合検証、ID採番、登録切替、失敗時の復元                                                       |
+| `src/core/hotkey/hotkey_registration_manager.py`（新規） | 集合検証、ID採番、登録切替、失敗時の復元                                                      |
 | `src/core/hotkey/paste_sender.py`（新規）                | アクティブウィンドウへの `Ctrl+V` 送信                                                        |
 | `src/core/window/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/window/window_state_manager.py`（新規）        | ウィンドウ状態遷移とStrategy管理                                                              |
@@ -498,6 +498,6 @@ sequenceDiagram
 
 ## 9. 改訂履歴
 
-| 版数 | 改訂日 | 変更者 | 変更内容・変更理由 (Why) |
-| :--- | :--- | :--- | :--- |
+| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                   |
+| :------ | :--------- | :----- | :----------------------------------------------------------------------------------------- |
 | Rev.1.0 | 2026-08-31 | 未記載 | 文書を詳細設計書として命名・分類し、テンプレート準拠のメタデータ、設計契約、改訂履歴へ整形 |
