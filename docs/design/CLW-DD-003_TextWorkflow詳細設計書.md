@@ -15,15 +15,15 @@ related_documents:
 # 詳細設計書（TextWorkflow）
 **テキスト分類、テンプレート展開、正規化、実行履歴の制御仕様**
 
-| 項目           | 内容                                |
-| :------------- | :---------------------------------- |
+| 項目           | 内容                                 |
+| :------------- | :----------------------------------- |
 | 文書番号       | CLW-DD-003                           |
 | ファイル名     | CLW-DD-003_TextWorkflow詳細設計書.md |
-| ドキュメント名 | TextWorkflow詳細設計書              |
-| 版数           | Rev.1.0                             |
-| 改訂日         | 2026-08-31                          |
-| 作成日         | 2026-08-31                          |
-| 作成者         | 未記載                              |
+| ドキュメント名 | TextWorkflow詳細設計書               |
+| 版数           | Rev.1.0                              |
+| 改訂日         | 2026-08-31                           |
+| 作成日         | 2026-08-31                           |
+| 作成者         | 未記載                               |
 
 ---
 
@@ -124,7 +124,9 @@ TextWorkflowは、分類・展開・正規化・履歴記録の順序制御と�
 
 ### 4.1 ConfigurationResolver (`src/core/text_workflow/config_resolver.py`)
 設定を以下の優先度順にディープマージする (右側優先)。
-`Built-in Defaults` → `User Config (~/.clip_watcher/workflow.json)` → `Workspace Config (.clip_watcher/workflow.json)` → `Runtime Overrides`
+`Built-in Defaults` → `User Config (アプリ設定ディレクトリ配下の workflow.json)` → `Workspace Config (.clipwatcher/workflow.json)` → `Runtime Overrides`
+
+アプリ設定ディレクトリは [CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md](CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md) §8「データ永続化 (SQLite & JSON)」の永続化方針を正本とし、Windowsでは `%USERPROFILE%\.clipWatcher\`、その他のOSでは `~/.clipwatcher/` を指す。
 
 ### 4.2 Classifier (`src/core/text_workflow/classifier.py`)
 - 分類ルールは `rules.json` の `rules` 配列で定義する。各ルールは次の項目を持つ。
@@ -209,3 +211,4 @@ src/
 | 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                           |
 | :------ | :--------- | :----- | :----------------------------------------------------------------------------------------------------------------- |
 | Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。 |
+| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。 |
