@@ -4,9 +4,11 @@ import re
 from datetime import datetime
 from typing import Any
 
+from src.core.text_workflow.errors import TextWorkflowError
 
-class TemplateError(Exception):
-    """テンプレート処理のエラー"""
+
+class TemplateError(TextWorkflowError):
+    """テンプレート処理のエラー（内部実装の詳細、非公開）"""
 
     pass
 

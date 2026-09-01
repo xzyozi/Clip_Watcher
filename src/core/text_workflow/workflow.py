@@ -5,6 +5,7 @@ from datetime import datetime
 
 from src.core.text_workflow.classifier import Classifier
 from src.core.text_workflow.config_resolver import ConfigurationResolver
+from src.core.text_workflow.errors import TextWorkflowError
 from src.core.text_workflow.history import ExecutionHistory, HistoryEntry
 from src.core.text_workflow.models import (
     ExecutionStatus,
@@ -12,7 +13,7 @@ from src.core.text_workflow.models import (
     WorkflowResult,
 )
 from src.core.text_workflow.normalizer import Normalizer
-from src.core.text_workflow.template_renderer import TemplateError, TemplateRenderer
+from src.core.text_workflow.template_renderer import TemplateRenderer
 
 
 class TextWorkflow:
@@ -82,7 +83,10 @@ class TextWorkflow:
                 variables=template_vars,
                 default_body=request.input_text,
             )
-        except TemplateError as e:
+        except TextWorkflowError as e:
+            # 内部コンポーネント (Classifier/TemplateRenderer/Normalizer 等) が
+            # 発生させる TextWorkflowError 系の例外はここで一括して捕捉し、
+            # 呼び出し側へは例外を伝播させず WorkflowResult (REJECTED) に変換する。
             return WorkflowResult(
                 request_id=request.request_id,
                 status=ExecutionStatus.REJECTED,

@@ -187,7 +187,52 @@ src/
 
 ---
 
-## 6. エラーハンドリング & セキュリティ
+## 6. 公開Interfaceと互換性ポリシー
+
+TextWorkflow は `src/core/text_workflow/__init__.py` の `__all__` に列挙するシンボルのみを公開 Interface とする。それ以外のサブモジュール（`classifier.py`, `normalizer.py`, `template_renderer.py` 等）は内部実装であり、事前告知なく変更・削除しうる。
+
+### 6.1 公開シンボル（Public API）
+
+| シンボル            | 種別     | 変更方針                                                                 |
+| :------------------ | :------- | :----------------------------------------------------------------------- |
+| `TextWorkflow`      | クラス   | `execute(request) -> WorkflowResult` のシグネチャを破壊的変更しない。    |
+| `WorkflowRequest`   | DTO      | 既存フィールドの削除・型変更をしない。追加は既定値付きの任意項目とする。 |
+| `WorkflowResult`    | DTO      | 同上。                                                                   |
+| `SourceKind`        | enum     | 既存メンバーを削除しない。                                               |
+| `ExecutionStatus`   | enum     | 同上。                                                                   |
+| `Classification`    | DTO      | 既存フィールドの削除・型変更をしない。                                   |
+| `TextWorkflowError` | 例外基底 | TextWorkflow パッケージ内で発生する例外はこれを継承する（§6.3参照）。    |
+
+呼び出し側は `from src.core.text_workflow import TextWorkflow, WorkflowRequest, WorkflowResult, ...` の形でのみ import する。サブモジュールへの直接 import（例: `from src.core.text_workflow.classifier import Classifier`）は内部実装への依存であり、互換性を保証しない。
+
+### 6.2 拡張点（Extension Points）
+
+以下は「利用可能だが互換性ポリシーは公開Interfaceより緩い」拡張点として位置づける。DI（依存性注入）や独自実装の差し替えを目的として `TextWorkflow.__init__()` の引数として利用することを想定する。
+
+| シンボル                | 配置                                        | 位置づけ                                                                                                 |
+| :---------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------- |
+| `ConfigurationResolver` | `src/core/text_workflow/config_resolver.py` | `TextWorkflow(config_resolver=...)` で注入可能。コンストラクタ引数・`resolve()` の戻り値構造は維持する。 |
+| `ExecutionHistory`      | `src/core/text_workflow/history.py`         | `TextWorkflow(history=...)` で注入可能。`record()`/`get_recent()` のシグネチャは維持する。               |
+| `HistoryEntry`          | `src/core/text_workflow/history.py`         | `ExecutionHistory` とセットで利用するDTO。                                                               |
+| `TextWorkflowService`   | `src/services/text_workflow_service.py`     | GUI/イベント駆動からの非同期呼び出し窓口。                                                               |
+
+拡張点は破壊的変更の際に改訂履歴への記載を必須とするが、公開Interfaceほどの後方互換保証（同一メジャーバージョン内での維持）は課さない。
+
+### 6.3 例外方針
+
+TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` は原則として例外を発生させず、失敗時は `WorkflowResult(status=REJECTED または FAILED, error_message=...)` を返す。
+
+- 内部コンポーネント（`Classifier`, `TemplateRenderer`, `Normalizer` 等）が発生させる例外は、`TextWorkflowError`（`src/core/text_workflow/errors.py`）を継承するものに限定する。
+- `TextWorkflow.execute()` は内部で `TextWorkflowError` を捕捉し、`WorkflowResult` へ変換して返す。呼び出し側が `TextWorkflowError` を直接捕捉する必要はない。
+- `TextWorkflowError` を継承しない例外（`sqlite3.Error` 等の外部ライブラリ例外、未分類の `Exception`）が内部コンポーネントから伝播した場合は実装上の不備であり、修正対象とする。
+
+### 6.4 非公開（内部実装）
+
+`Classifier`, `Normalizer`, `TemplateRenderer`, `TemplateError`, `NORMALIZERS`, `DEFAULT_PROFILES`, `deep_overlay`, `DEFAULT_BUILTIN_CONFIG` は実装の詳細であり、公開Interfaceの一部ではない。テストコードからの直接importは許容するが、外部呼び出し元（GUI・イベントハンドラ・将来の別配布物）からの依存は避ける。
+
+---
+
+## 7. エラーハンドリング & セキュリティ
 
 - **入力サイズ制限**: デフォルトで 1MB 以上のテキストはパース前に拒否 (`INPUT_TOO_LARGE`)。
 - **ReDoS 対策**: 分類用の正規表現パターン長・実行時間に制限を設ける。
@@ -195,7 +240,7 @@ src/
 
 ---
 
-## 7. テスト計画 (Testing Strategy)
+## 8. テスト計画 (Testing Strategy)
 
 - **単体テスト (`tests/unit/test_text_workflow.py`)**:
   - `ConfigurationResolver` の層別優先マージテスト
@@ -206,9 +251,10 @@ src/
   - リクエスト受信から分類・展開・正規化・履歴記録までのパイプライン一連動作のテスト
 
 
-## 8. 改訂履歴
+## 9. 改訂履歴
 
-| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                           |
-| :------ | :--------- | :----- | :----------------------------------------------------------------------------------------------------------------- |
-| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。 |
-| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。 |
+| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                                      |
+| :------ | :--------- | :----- | :---------------------------------------------------------------------------------------------------------------------------- |
+| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。            |
+| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。            |
+| Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。 |
