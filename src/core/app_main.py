@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager
     from src.services.history_service import HistoryService
+    from src.services.text_workflow_service import TextWorkflowService
     from src.utils.i18n import Translator
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ class MainApplication(BaseApplication):
         icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
         hotkey_registration_manager: HotkeyRegistrationManager | None = None,
+        text_workflow_service: TextWorkflowService | None = None,
     ) -> None:
         super().__init__()
         self.master = master
@@ -69,6 +71,7 @@ class MainApplication(BaseApplication):
         self.app_status = app_status
         self.window_state_manager = window_state_manager
         self.hotkey_registration_manager = hotkey_registration_manager
+        self.text_workflow_service = text_workflow_service
 
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending: bool = False
@@ -265,6 +268,8 @@ class MainApplication(BaseApplication):
         """Performs a clean shutdown of the application."""
         if self.hotkey_registration_manager:
             self.hotkey_registration_manager.stop()
+        if self.text_workflow_service:
+            self.text_workflow_service.shutdown()
         self.stop_monitor()
         self.monitor.save_history_to_file()
 

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 import unittest
 import uuid
 
@@ -14,7 +17,10 @@ from src.core.text_workflow.models import (
 from src.core.text_workflow.normalizer import Normalizer
 from src.core.text_workflow.template_renderer import TemplateRenderer
 from src.core.text_workflow.workflow import TextWorkflow
-from src.services.text_workflow_service import TextWorkflowService
+from src.services.text_workflow_service import (
+    TEXT_WORKFLOW_RESULT_EVENT,
+    TextWorkflowService,
+)
 
 
 class TestTextWorkflowUnit(unittest.TestCase):
@@ -206,6 +212,111 @@ class TestTextWorkflowUnit(unittest.TestCase):
         res = future.result(timeout=2.0)
         self.assertEqual(res.status, ExecutionStatus.COMPLETED)
         self.assertEqual(res.output_text, "テスト非同期")
+        service.shutdown()
+
+    def test_config_resolver_from_app_data_dir_loads_user_config(self) -> None:
+        """ConfigurationResolver.from_app_data_dir() が実ファイルの
+        workflow.json をユーザー設定として読み込むことを確認する。"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            config_path = os.path.join(tmp_dir, "workflow.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"workflow": {"defaultCategory": "custom"}}, f)
+
+            resolver = ConfigurationResolver.from_app_data_dir(tmp_dir)
+            resolved = resolver.resolve()
+            self.assertEqual(resolved["workflow"]["defaultCategory"], "custom")
+
+    def test_config_resolver_from_app_data_dir_missing_file_uses_defaults(
+        self,
+    ) -> None:
+        """workflow.json が存在しない場合、組み込み既定値のみが使われる。"""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            resolver = ConfigurationResolver.from_app_data_dir(tmp_dir)
+            resolved = resolver.resolve()
+            self.assertEqual(resolved["workflow"]["defaultCategory"], "general")
+
+    def test_config_resolver_resolves_workspace_root_dynamically(self) -> None:
+        """resolve() に workspace_root を渡すと、
+        {workspace_root}/.clipwatcher/workflow.json が動的に読み込まれる。"""
+        with tempfile.TemporaryDirectory() as workspace_root:
+            workspace_config_dir = os.path.join(workspace_root, ".clipwatcher")
+            os.makedirs(workspace_config_dir)
+            config_path = os.path.join(workspace_config_dir, "workflow.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"workflow": {"defaultCategory": "workspace-scoped"}}, f)
+
+            resolver = ConfigurationResolver()
+            resolved = resolver.resolve(workspace_root=workspace_root)
+            self.assertEqual(
+                resolved["workflow"]["defaultCategory"], "workspace-scoped"
+            )
+
+    def test_workflow_uses_request_workspace_root(self) -> None:
+        """TextWorkflow.execute() が WorkflowRequest.workspace_root を
+        ConfigurationResolver.resolve() に伝播させることを確認する。"""
+        with tempfile.TemporaryDirectory() as workspace_root:
+            workspace_config_dir = os.path.join(workspace_root, ".clipwatcher")
+            os.makedirs(workspace_config_dir)
+            config_path = os.path.join(workspace_config_dir, "workflow.json")
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"workflow": {"maxInputBytes": 5}}, f)
+
+            workflow = TextWorkflow(config_resolver=ConfigurationResolver())
+            request = WorkflowRequest(
+                request_id="req-workspace",
+                source_kind=SourceKind.EXPLICIT_TEXT,
+                input_text="123456789012345",  # 15 bytes > maxInputBytes=5
+                workspace_root=workspace_root,
+                save_history=False,
+            )
+            result = workflow.execute(request)
+            self.assertEqual(result.status, ExecutionStatus.REJECTED)
+            self.assertIn("exceeds limit", result.error_message or "")
+
+    def test_service_notifies_via_event_dispatcher_through_ui_thread_marshal(
+        self,
+    ) -> None:
+        """TextWorkflowService が EventDispatcher 経由で結果を通知する際、
+        通知処理が ui_thread_marshal を経由して実行されることを確認する
+        （ワーカースレッドから直接 dispatch しないことの検証、DD-003 §5.3）。"""
+        dispatched: list[object] = []
+        marshalled_calls: list[object] = []
+
+        class FakeEventDispatcher:
+            def dispatch(self, event_type: str, payload: object) -> None:
+                dispatched.append((event_type, payload))
+
+        def fake_marshal(fn: object) -> None:
+            marshalled_calls.append(fn)
+            fn()  # type: ignore[operator]
+
+        service = TextWorkflowService(
+            event_dispatcher=FakeEventDispatcher(),  # type: ignore[arg-type]
+            ui_thread_marshal=fake_marshal,
+        )
+        req = WorkflowRequest(
+            request_id="ui-marshal-req",
+            source_kind=SourceKind.EXPLICIT_TEXT,
+            input_text="通知テスト",
+            save_history=False,
+        )
+        future = service.execute_async(req)
+        future.result(timeout=2.0)
+
+        # 完了コールバックはスレッドプール内で非同期に呼ばれるため、
+        # 通知が届くまで待機する。
+        import time
+
+        for _ in range(50):
+            if dispatched:
+                break
+            time.sleep(0.02)
+
+        self.assertEqual(len(marshalled_calls), 1)
+        self.assertEqual(len(dispatched), 1)
+        event_type, result = dispatched[0]
+        self.assertEqual(event_type, TEXT_WORKFLOW_RESULT_EVENT)
+        self.assertEqual(result.status, ExecutionStatus.COMPLETED)  # type: ignore[attr-defined]
         service.shutdown()
 
 

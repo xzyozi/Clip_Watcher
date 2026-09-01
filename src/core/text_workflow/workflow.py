@@ -32,7 +32,9 @@ class TextWorkflow:
         warnings: list[str] = []
 
         # 1. 設定の解決
-        config = self._config_resolver.resolve(request.runtime_overrides)
+        config = self._config_resolver.resolve(
+            request.runtime_overrides, workspace_root=request.workspace_root
+        )
         wf_config = config.get("workflow", {})
 
         # 2. 入力制限チェック

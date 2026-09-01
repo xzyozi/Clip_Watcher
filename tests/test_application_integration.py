@@ -160,6 +160,7 @@ def test_start_app_builder_chain_includes_icon_manager_after_theme_manager() -> 
         mock_builder.with_theme_manager.return_value = mock_builder
         mock_builder.with_icon_manager.return_value = mock_builder
         mock_builder.with_history_service.return_value = mock_builder
+        mock_builder.with_text_workflow_service.return_value = mock_builder
         mock_builder.with_plugin_manager.return_value = mock_builder
         mock_builder.with_window_state_manager.return_value = mock_builder
         mock_builder.with_global_hotkey_listener.return_value = mock_builder

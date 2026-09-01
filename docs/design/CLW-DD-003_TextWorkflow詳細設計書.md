@@ -180,10 +180,22 @@ src/
 ```
 
 ### 5.2 ApplicationBuilder への登録
-`src/core/bootstrap/application_builder.py` 等で `TextWorkflowService` を初期化し、GUI / コマンドハンドラに注入する。
+`ApplicationBuilder.with_text_workflow_service(master, app_data_dir)` で `TextWorkflowService` を初期化し、`MainApplication.text_workflow_service` として GUI / コマンドハンドラに注入する（`with_event_dispatcher()` の後に呼び出す必要がある）。
+
+`ConfigurationResolver` は `ConfigurationResolver.from_app_data_dir(app_data_dir)` で構築し、`app_data_dir` 配下の `workflow.json`（ユーザー設定）を実ファイルから読み込む。ワークスペース設定は構築時ではなく、`WorkflowRequest.workspace_root` が指定された場合に `resolve()` 呼び出しごとに `{workspace_root}/.clipwatcher/workflow.json` から動的に読み込まれる。設定ファイルが存在しない、または読み込みに失敗した場合は組み込み既定値にフォールバックし、アプリ起動を止めない（§7 の安全な失敗方針）。
+
+`ExecutionHistory` は `app_data_dir` 配下の `text_workflow_history.db`（クリップボード履歴とは独立した専用SQLiteファイル）を使用する。
 
 ### 5.3 スレッド・非同期実行
-テキスト処理および履歴記録は GUI メインスレッドをブロックしないよう、`concurrent.futures.ThreadPoolExecutor` または非同期タスクとして実行し、完了後に `EventDispatcher` を介して UI スレッドに結果を通知する。
+テキスト処理および履歴記録は GUI メインスレッドをブロックしないよう、`TextWorkflowService` が `concurrent.futures.ThreadPoolExecutor` で非同期実行する。
+
+実行結果の通知は次の経路をとる。
+
+1. ワーカースレッド上で `TextWorkflow.execute()` が完了する。
+2. `TextWorkflowService` に注入された `ui_thread_marshal`（Production では `lambda fn: master.after(0, fn)`）を介して、通知処理を Tkinter メインスレッドへ引き渡す。
+3. メインスレッド上で `EventDispatcher.dispatch("TEXT_WORKFLOW_RESULT", result)` を実行し、購読側（GUI）へ `WorkflowResult` を通知する。
+
+`ui_thread_marshal` を指定しない場合（GUIを持たないテスト・CLI用途）は、通知はワーカースレッドから直接行われる。GUIと統合する場合は必ず `ui_thread_marshal` を指定し、Tkinter APIをワーカースレッドから直接呼び出さないこと。
 
 ---
 
@@ -253,8 +265,9 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 
 ## 9. 改訂履歴
 
-| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                                      |
-| :------ | :--------- | :----- | :---------------------------------------------------------------------------------------------------------------------------- |
-| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。            |
-| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。            |
-| Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。 |
+| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                                                                                                                                          |
+| :------ | :--------- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。                                                                                                                |
+| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。                                                                                                                |
+| Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。                                                                                                     |
+| Rev.1.3 | 2026-09-01 | 未記載 | §5.2/5.3を実装に合わせて更新。`ConfigurationResolver.from_app_data_dir()` による実ファイル読み込み、`ApplicationBuilder.with_text_workflow_service()` によるDI登録、`ui_thread_marshal` 経由の `EventDispatcher` 通知経路を反映。 |
