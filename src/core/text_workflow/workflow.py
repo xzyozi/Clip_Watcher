@@ -3,7 +3,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from src.core.text_workflow.classifier import Classifier
+from src.core.text_workflow.classifier import (
+    DEFAULT_REGEX_MAX_PATTERN_LENGTH,
+    DEFAULT_REGEX_TIMEOUT_SECONDS,
+    Classifier,
+)
 from src.core.text_workflow.config_resolver import ConfigurationResolver
 from src.core.text_workflow.errors import TextWorkflowError
 from src.core.text_workflow.history import ExecutionHistory, HistoryEntry
@@ -49,7 +53,17 @@ class TextWorkflow:
         # 3. 分類 (Classifier)
         rules = config.get("rules", [])
         default_category = wf_config.get("defaultCategory", "general")
-        classifier = Classifier(rules=rules, default_category=default_category)
+        classifier = Classifier(
+            rules=rules,
+            default_category=default_category,
+            regex_max_pattern_length=wf_config.get(
+                "classifierRegexMaxPatternLength",
+                DEFAULT_REGEX_MAX_PATTERN_LENGTH,
+            ),
+            regex_timeout_seconds=wf_config.get(
+                "classifierRegexTimeoutSeconds", DEFAULT_REGEX_TIMEOUT_SECONDS
+            ),
+        )
         classification = classifier.classify(
             request.input_text, category_hint=request.category_hint
         )

@@ -25,6 +25,9 @@ DEFAULT_BUILTIN_CONFIG: dict[str, Any] = {
                 "ensure-final-newline",
             ],
         },
+        # ReDoS対策（DD-003 §7）: 分類ルールの regex パターン長・実行時間の上限。
+        "classifierRegexMaxPatternLength": 200,
+        "classifierRegexTimeoutSeconds": 0.5,
     },
     "history": {
         "enabled": True,
