@@ -13,6 +13,9 @@ fixed_phrases.json
 .ruff_cache/
 htmlcov/
 
+# 依存管理の正本はpyproject.tomlのみ（docs/setup/dependency_management.md）
+uv.lock
+
 # SOURCETRAIL
 Clip_Wathcer.srctrldb_tmp
 Clip_Wathcer.srctrlprj

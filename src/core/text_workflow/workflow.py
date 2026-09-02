@@ -3,8 +3,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from src.core.text_workflow.classifier import Classifier
+from src.core.text_workflow.classifier import (
+    DEFAULT_REGEX_MAX_PATTERN_LENGTH,
+    DEFAULT_REGEX_TIMEOUT_SECONDS,
+    Classifier,
+)
 from src.core.text_workflow.config_resolver import ConfigurationResolver
+from src.core.text_workflow.errors import TextWorkflowError
 from src.core.text_workflow.history import ExecutionHistory, HistoryEntry
 from src.core.text_workflow.models import (
     ExecutionStatus,
@@ -12,7 +17,7 @@ from src.core.text_workflow.models import (
     WorkflowResult,
 )
 from src.core.text_workflow.normalizer import Normalizer
-from src.core.text_workflow.template_renderer import TemplateError, TemplateRenderer
+from src.core.text_workflow.template_renderer import TemplateRenderer
 
 
 class TextWorkflow:
@@ -31,7 +36,9 @@ class TextWorkflow:
         warnings: list[str] = []
 
         # 1. 設定の解決
-        config = self._config_resolver.resolve(request.runtime_overrides)
+        config = self._config_resolver.resolve(
+            request.runtime_overrides, workspace_root=request.workspace_root
+        )
         wf_config = config.get("workflow", {})
 
         # 2. 入力制限チェック
@@ -46,7 +53,17 @@ class TextWorkflow:
         # 3. 分類 (Classifier)
         rules = config.get("rules", [])
         default_category = wf_config.get("defaultCategory", "general")
-        classifier = Classifier(rules=rules, default_category=default_category)
+        classifier = Classifier(
+            rules=rules,
+            default_category=default_category,
+            regex_max_pattern_length=wf_config.get(
+                "classifierRegexMaxPatternLength",
+                DEFAULT_REGEX_MAX_PATTERN_LENGTH,
+            ),
+            regex_timeout_seconds=wf_config.get(
+                "classifierRegexTimeoutSeconds", DEFAULT_REGEX_TIMEOUT_SECONDS
+            ),
+        )
         classification = classifier.classify(
             request.input_text, category_hint=request.category_hint
         )
@@ -82,7 +99,10 @@ class TextWorkflow:
                 variables=template_vars,
                 default_body=request.input_text,
             )
-        except TemplateError as e:
+        except TextWorkflowError as e:
+            # 内部コンポーネント (Classifier/TemplateRenderer/Normalizer 等) が
+            # 発生させる TextWorkflowError 系の例外はここで一括して捕捉し、
+            # 呼び出し側へは例外を伝播させず WorkflowResult (REJECTED) に変換する。
             return WorkflowResult(
                 request_id=request.request_id,
                 status=ExecutionStatus.REJECTED,

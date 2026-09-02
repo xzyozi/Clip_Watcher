@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools==83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,17 +9,17 @@ description = "Clipboard watcher and text workflow automation tool"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "Pillow",
-    "pywin32",
-    "psutil",
+    "Pillow==12.3.0",
+    "pywin32==312",
+    "psutil==7.2.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy",
-    "ruff",
-    "pytest",
-    "pytest-mock",
+    "mypy==2.3.0",
+    "ruff==0.16.2",
+    "pytest==9.1.1",
+    "pytest-mock==3.15.1",
     "hypothesis==6.151.5",
 ]
 

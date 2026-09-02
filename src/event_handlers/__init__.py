@@ -87,6 +87,7 @@ def start_app() -> None:
             .with_theme_manager(root)
             .with_icon_manager()
             .with_history_service()
+            .with_text_workflow_service(root, app_data_dir)
             .with_plugin_manager()
             .with_window_state_manager(root)
             .with_global_hotkey_listener(root)

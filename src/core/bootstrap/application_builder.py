@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import tkinter as tk
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from src.core.bootstrap.dependency_checker import DependencyChecker
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
     from src.core.window.window_state_manager import WindowStateManager
     from src.db.database_manager import DatabaseManager
     from src.services.history_service import HistoryService
+    from src.services.text_workflow_service import TextWorkflowService
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,7 @@ class ApplicationBuilder:
         self.window_state_manager: WindowStateManager | None = None
         self.hotkey_listener: GlobalHotkeyListener | None = None
         self.hotkey_registration_manager: HotkeyRegistrationManager | None = None
+        self.text_workflow_service: TextWorkflowService | None = None
 
     def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
@@ -184,6 +188,54 @@ class ApplicationBuilder:
                 title="エラー", message=f"履歴サービスの初期化に失敗: {str(e)}"
             )
             raise ConfigError(f"履歴サービスの初期化に失敗しました: {str(e)}") from e
+
+    def with_text_workflow_service(
+        self, master: tk.Tk, app_data_dir: str
+    ) -> ApplicationBuilder:
+        """TextWorkflowServiceの初期化。
+
+        ConfigurationResolver は ``app_data_dir`` 配下の `workflow.json`
+        （ユーザー設定）を実ファイルから読み込む Production adapter
+        （``ConfigurationResolver.from_app_data_dir()``）で構築する。
+        ワーカースレッドからの結果通知は ``master.after(0, ...)`` で
+        Tkinter メインスレッドへ引き渡した上で ``EventDispatcher`` を介して
+        行う（DD-003 §5.3）。
+
+        Args:
+            master: GUIメインスレッドへの処理引き渡しに使用するTkinterルート。
+            app_data_dir: `.clipWatcher`/`.clipwatcher` 相当のアプリ設定ディレクトリ。
+        """
+        if not self.event_dispatcher:
+            raise ConfigError("イベントディスパッチャが初期化されていません")
+        try:
+            from src.core.text_workflow.config_resolver import ConfigurationResolver
+            from src.core.text_workflow.history import ExecutionHistory
+            from src.core.text_workflow.workflow import TextWorkflow
+            from src.services.text_workflow_service import TextWorkflowService
+
+            config_resolver = ConfigurationResolver.from_app_data_dir(app_data_dir)
+            history_db_path = os.path.join(app_data_dir, "text_workflow_history.db")
+            history = ExecutionHistory(history_db_path)
+            workflow = TextWorkflow(config_resolver=config_resolver, history=history)
+
+            def _ui_thread_marshal(fn: Callable[[], None]) -> None:
+                master.after(0, fn)
+
+            self.text_workflow_service = TextWorkflowService(
+                workflow=workflow,
+                event_dispatcher=self.event_dispatcher,
+                ui_thread_marshal=_ui_thread_marshal,
+            )
+            logger.info("TextWorkflowServiceを初期化しました")
+            return self
+        except Exception as e:
+            log_and_show_error(
+                title="エラー",
+                message=f"TextWorkflowServiceの初期化に失敗: {str(e)}",
+            )
+            raise ConfigError(
+                f"TextWorkflowServiceの初期化に失敗しました: {str(e)}"
+            ) from e
 
     def with_clipboard_monitor(
         self, master: tk.Tk, history_file_path: str
@@ -334,6 +386,7 @@ class ApplicationBuilder:
                 app_status=self.app_status,  # type: ignore
                 window_state_manager=self.window_state_manager,
                 hotkey_registration_manager=self.hotkey_registration_manager,
+                text_workflow_service=self.text_workflow_service,
             )
             logger.info("アプリケーションのビルドが完了しました")
 

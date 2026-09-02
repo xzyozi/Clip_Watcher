@@ -15,15 +15,15 @@ related_documents:
 # 詳細設計書（TextWorkflow）
 **テキスト分類、テンプレート展開、正規化、実行履歴の制御仕様**
 
-| 項目           | 内容                                |
-| :------------- | :---------------------------------- |
+| 項目           | 内容                                 |
+| :------------- | :----------------------------------- |
 | 文書番号       | CLW-DD-003                           |
 | ファイル名     | CLW-DD-003_TextWorkflow詳細設計書.md |
-| ドキュメント名 | TextWorkflow詳細設計書              |
-| 版数           | Rev.1.0                             |
-| 改訂日         | 2026-08-31                          |
-| 作成日         | 2026-08-31                          |
-| 作成者         | 未記載                              |
+| ドキュメント名 | TextWorkflow詳細設計書               |
+| 版数           | Rev.1.0                              |
+| 改訂日         | 2026-08-31                           |
+| 作成日         | 2026-08-31                           |
+| 作成者         | 未記載                               |
 
 ---
 
@@ -124,7 +124,9 @@ TextWorkflowは、分類・展開・正規化・履歴記録の順序制御と�
 
 ### 4.1 ConfigurationResolver (`src/core/text_workflow/config_resolver.py`)
 設定を以下の優先度順にディープマージする (右側優先)。
-`Built-in Defaults` → `User Config (~/.clip_watcher/workflow.json)` → `Workspace Config (.clip_watcher/workflow.json)` → `Runtime Overrides`
+`Built-in Defaults` → `User Config (アプリ設定ディレクトリ配下の workflow.json)` → `Workspace Config (.clipwatcher/workflow.json)` → `Runtime Overrides`
+
+アプリ設定ディレクトリは [CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md](CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md) §8「データ永続化 (SQLite & JSON)」の永続化方針を正本とし、Windowsでは `%USERPROFILE%\.clipWatcher\`、その他のOSでは `~/.clipwatcher/` を指す。
 
 ### 4.2 Classifier (`src/core/text_workflow/classifier.py`)
 - 分類ルールは `rules.json` の `rules` 配列で定義する。各ルールは次の項目を持つ。
@@ -178,34 +180,99 @@ src/
 ```
 
 ### 5.2 ApplicationBuilder への登録
-`src/core/bootstrap/application_builder.py` 等で `TextWorkflowService` を初期化し、GUI / コマンドハンドラに注入する。
+`ApplicationBuilder.with_text_workflow_service(master, app_data_dir)` で `TextWorkflowService` を初期化し、`MainApplication.text_workflow_service` として GUI / コマンドハンドラに注入する（`with_event_dispatcher()` の後に呼び出す必要がある）。
+
+`ConfigurationResolver` は `ConfigurationResolver.from_app_data_dir(app_data_dir)` で構築し、`app_data_dir` 配下の `workflow.json`（ユーザー設定）を実ファイルから読み込む。ワークスペース設定は構築時ではなく、`WorkflowRequest.workspace_root` が指定された場合に `resolve()` 呼び出しごとに `{workspace_root}/.clipwatcher/workflow.json` から動的に読み込まれる。設定ファイルが存在しない、または読み込みに失敗した場合は組み込み既定値にフォールバックし、アプリ起動を止めない（§7 の安全な失敗方針）。
+
+`ExecutionHistory` は `app_data_dir` 配下の `text_workflow_history.db`（クリップボード履歴とは独立した専用SQLiteファイル）を使用する。
 
 ### 5.3 スレッド・非同期実行
-テキスト処理および履歴記録は GUI メインスレッドをブロックしないよう、`concurrent.futures.ThreadPoolExecutor` または非同期タスクとして実行し、完了後に `EventDispatcher` を介して UI スレッドに結果を通知する。
+テキスト処理および履歴記録は GUI メインスレッドをブロックしないよう、`TextWorkflowService` が `concurrent.futures.ThreadPoolExecutor` で非同期実行する。
+
+実行結果の通知は次の経路をとる。
+
+1. ワーカースレッド上で `TextWorkflow.execute()` が完了する。
+2. `TextWorkflowService` に注入された `ui_thread_marshal`（Production では `lambda fn: master.after(0, fn)`）を介して、通知処理を Tkinter メインスレッドへ引き渡す。
+3. メインスレッド上で `EventDispatcher.dispatch("TEXT_WORKFLOW_RESULT", result)` を実行し、購読側（GUI）へ `WorkflowResult` を通知する。
+
+`ui_thread_marshal` を指定しない場合（GUIを持たないテスト・CLI用途）は、通知はワーカースレッドから直接行われる。GUIと統合する場合は必ず `ui_thread_marshal` を指定し、Tkinter APIをワーカースレッドから直接呼び出さないこと。
 
 ---
 
-## 6. エラーハンドリング & セキュリティ
+## 6. 公開Interfaceと互換性ポリシー
+
+TextWorkflow は `src/core/text_workflow/__init__.py` の `__all__` に列挙するシンボルのみを公開 Interface とする。それ以外のサブモジュール（`classifier.py`, `normalizer.py`, `template_renderer.py` 等）は内部実装であり、事前告知なく変更・削除しうる。
+
+### 6.1 公開シンボル（Public API）
+
+| シンボル            | 種別     | 変更方針                                                                 |
+| :------------------ | :------- | :----------------------------------------------------------------------- |
+| `TextWorkflow`      | クラス   | `execute(request) -> WorkflowResult` のシグネチャを破壊的変更しない。    |
+| `WorkflowRequest`   | DTO      | 既存フィールドの削除・型変更をしない。追加は既定値付きの任意項目とする。 |
+| `WorkflowResult`    | DTO      | 同上。                                                                   |
+| `SourceKind`        | enum     | 既存メンバーを削除しない。                                               |
+| `ExecutionStatus`   | enum     | 同上。                                                                   |
+| `Classification`    | DTO      | 既存フィールドの削除・型変更をしない。                                   |
+| `TextWorkflowError` | 例外基底 | TextWorkflow パッケージ内で発生する例外はこれを継承する（§6.3参照）。    |
+
+呼び出し側は `from src.core.text_workflow import TextWorkflow, WorkflowRequest, WorkflowResult, ...` の形でのみ import する。サブモジュールへの直接 import（例: `from src.core.text_workflow.classifier import Classifier`）は内部実装への依存であり、互換性を保証しない。
+
+### 6.2 拡張点（Extension Points）
+
+以下は「利用可能だが互換性ポリシーは公開Interfaceより緩い」拡張点として位置づける。DI（依存性注入）や独自実装の差し替えを目的として `TextWorkflow.__init__()` の引数として利用することを想定する。
+
+| シンボル                | 配置                                        | 位置づけ                                                                                                 |
+| :---------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------- |
+| `ConfigurationResolver` | `src/core/text_workflow/config_resolver.py` | `TextWorkflow(config_resolver=...)` で注入可能。コンストラクタ引数・`resolve()` の戻り値構造は維持する。 |
+| `ExecutionHistory`      | `src/core/text_workflow/history.py`         | `TextWorkflow(history=...)` で注入可能。`record()`/`get_recent()` のシグネチャは維持する。               |
+| `HistoryEntry`          | `src/core/text_workflow/history.py`         | `ExecutionHistory` とセットで利用するDTO。                                                               |
+| `TextWorkflowService`   | `src/services/text_workflow_service.py`     | GUI/イベント駆動からの非同期呼び出し窓口。                                                               |
+
+拡張点は破壊的変更の際に改訂履歴への記載を必須とするが、公開Interfaceほどの後方互換保証（同一メジャーバージョン内での維持）は課さない。
+
+### 6.3 例外方針
+
+TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` は原則として例外を発生させず、失敗時は `WorkflowResult(status=REJECTED または FAILED, error_message=...)` を返す。
+
+- 内部コンポーネント（`Classifier`, `TemplateRenderer`, `Normalizer` 等）が発生させる例外は、`TextWorkflowError`（`src/core/text_workflow/errors.py`）を継承するものに限定する。
+- `TextWorkflow.execute()` は内部で `TextWorkflowError` を捕捉し、`WorkflowResult` へ変換して返す。呼び出し側が `TextWorkflowError` を直接捕捉する必要はない。
+- `TextWorkflowError` を継承しない例外（`sqlite3.Error` 等の外部ライブラリ例外、未分類の `Exception`）が内部コンポーネントから伝播した場合は実装上の不備であり、修正対象とする。
+
+### 6.4 非公開（内部実装）
+
+`Classifier`, `Normalizer`, `TemplateRenderer`, `TemplateError`, `NORMALIZERS`, `DEFAULT_PROFILES`, `deep_overlay`, `DEFAULT_BUILTIN_CONFIG` は実装の詳細であり、公開Interfaceの一部ではない。テストコードからの直接importは許容するが、外部呼び出し元（GUI・イベントハンドラ・将来の別配布物）からの依存は避ける。
+
+---
+
+## 7. エラーハンドリング & セキュリティ
 
 - **入力サイズ制限**: デフォルトで 1MB 以上のテキストはパース前に拒否 (`INPUT_TOO_LARGE`)。
-- **ReDoS 対策**: 分類用の正規表現パターン長・実行時間に制限を設ける。
-- **安全な失敗 (Graceful Degradation)**: 履歴書き込みが失敗しても、変換されたテキスト出力自体は壊さず `COMPLETED_WITH_WARNING` として結果を返却。
+- **ReDoS 対策**: 分類用の正規表現には次の制限を適用する。
+  - パターン長は既定で200文字までとする。上限超過または構文エラーのパターンはマッチなしとして扱い、分類を継続する。
+  - 評価はWindows互換の `multiprocessing` 子プロセス（`spawn`）に隔離し、既定0.5秒以内に完了しない場合は `terminate()` で子プロセスを強制終了してマッチなしとして扱う。これにより、CPython標準 `re` のバックトラックが呼び出し元・GUIスレッドをブロックしないことを保証する。
+  - 制限値は設定の `workflow.classifierRegexMaxPatternLength` と `workflow.classifierRegexTimeoutSeconds` で上書き可能とする。プロセス生成のオーバーヘッドがあるため、`regex` ルールは必要最小限にする。
+- **安全な失敗 (Graceful Degradation)**: 履歴書き込みが失敗しても、変換されたテキスト出力自体は壊さず `COMPLETED_WITH_WARNING` として結果を返却。正規表現の拒否・タイムアウト時も、該当ルールを非マッチとして後続ルールまたは既定カテゴリで処理を継続する。
 
 ---
 
-## 7. テスト計画 (Testing Strategy)
+## 8. テスト計画 (Testing Strategy)
 
 - **単体テスト (`tests/unit/test_text_workflow.py`)**:
   - `ConfigurationResolver` の層別優先マージテスト
   - `Classifier` のルール順序・条件判定テスト
+  - ReDoS対策（パターン長超過の拒否、破滅的バックトラック時の子プロセス終了、通常パターンの回帰）
   - `TemplateRenderer` の変数置換・未定義変数テスト
   - `Normalizer` の冪等性検証
 - **統合テスト (`tests/integration/test_workflow_pipeline.py`)**:
   - リクエスト受信から分類・展開・正規化・履歴記録までのパイプライン一連動作のテスト
 
 
-## 8. 改訂履歴
+## 9. 改訂履歴
 
-| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                           |
-| :------ | :--------- | :----- | :----------------------------------------------------------------------------------------------------------------- |
-| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。 |
+| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                                                                                                                                                          |
+| :------ | :--------- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rev.1.0 | 2026-08-31 | 未記載 | Text Workflow設計書を詳細設計書として命名・分類し、DTOとルール定義を表形式へ置換、how-toへの参照と改訂履歴を整備。                                                                                                                |
+| Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。                                                                                                                |
+| Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。                                                                                                     |
+| Rev.1.3 | 2026-09-01 | 未記載 | §5.2/5.3を実装に合わせて更新。`ConfigurationResolver.from_app_data_dir()` による実ファイル読み込み、`ApplicationBuilder.with_text_workflow_service()` によるDI登録、`ui_thread_marshal` 経由の `EventDispatcher` 通知経路を反映。 |
+| Rev.1.4 | 2026-09-01 | 未記載 | §7のReDoS対策を実装に合わせて詳細化。パターン長制限と、Windows互換の子プロセス隔離・強制終了による正規表現実行時間制限を定義。                                                                                                    |
