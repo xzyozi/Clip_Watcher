@@ -70,6 +70,76 @@ class TestTextWorkflowUnit(unittest.TestCase):
         self.assertEqual(res3.category_id, "general")
         self.assertIsNone(res3.matched_rule_id)
 
+    def test_classifier_regex_rejects_overlong_pattern(self) -> None:
+        """ReDoS対策: パターン長が上限を超える regex ルールは拒否され、
+        マッチしない（例外にもならない）ことを確認する（DD-003 §7）。"""
+        overlong_pattern = "(a+)+" + "b" * 300  # 300文字超のパターン
+        rules = [
+            {
+                "id": "overlong-rule",
+                "priority": 1,
+                "categoryId": "matched",
+                "when": {"kind": "regex", "pattern": overlong_pattern},
+            }
+        ]
+        classifier = Classifier(
+            rules=rules, default_category="general", regex_max_pattern_length=200
+        )
+        result = classifier.classify("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!")
+        # パターンが拒否されるため、ルールにはマッチせず既定カテゴリになる。
+        self.assertEqual(result.category_id, "general")
+        self.assertIsNone(result.matched_rule_id)
+
+    def test_classifier_regex_times_out_on_catastrophic_backtracking(self) -> None:
+        """ReDoS対策: 破滅的バックトラックを起こすパターンでも、
+        タイムアウト時間内に処理が返り、呼び出し元をブロックしないことを
+        確認する（DD-003 §7）。"""
+        # (a+)+ は 'a' の連続 + 末尾に非マッチ文字を含む入力で
+        # 指数的バックトラックを起こす典型的なReDoSパターン。
+        catastrophic_pattern = r"(a+)+$"
+        rules = [
+            {
+                "id": "catastrophic-rule",
+                "priority": 1,
+                "categoryId": "matched",
+                "when": {"kind": "regex", "pattern": catastrophic_pattern},
+            }
+        ]
+        classifier = Classifier(
+            rules=rules,
+            default_category="general",
+            regex_timeout_seconds=0.2,
+        )
+        malicious_input = "a" * 40 + "!"
+
+        import time
+
+        start = time.monotonic()
+        result = classifier.classify(malicious_input)
+        elapsed = time.monotonic() - start
+
+        # タイムアウト（0.2秒）程度で処理が返ってくること。
+        # 素朴な実装では数秒〜数十秒かかるため、大幅なマージンを取って検証する。
+        self.assertLess(elapsed, 2.0)
+        self.assertEqual(result.category_id, "general")
+        self.assertIsNone(result.matched_rule_id)
+
+    def test_classifier_regex_normal_pattern_still_matches(self) -> None:
+        """ReDoS対策導入後も、通常のregexパターンは正しくマッチすることを
+        確認する（回帰防止）。"""
+        rules = [
+            {
+                "id": "url-rule",
+                "priority": 1,
+                "categoryId": "url",
+                "when": {"kind": "regex", "pattern": r"^https?://"},
+            }
+        ]
+        classifier = Classifier(rules=rules, default_category="general")
+        result = classifier.classify("https://example.com")
+        self.assertEqual(result.category_id, "url")
+        self.assertEqual(result.matched_rule_id, "url-rule")
+
     def test_template_renderer(self) -> None:
         templates = [
             {
