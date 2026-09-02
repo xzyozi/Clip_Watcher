@@ -247,8 +247,11 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 ## 7. エラーハンドリング & セキュリティ
 
 - **入力サイズ制限**: デフォルトで 1MB 以上のテキストはパース前に拒否 (`INPUT_TOO_LARGE`)。
-- **ReDoS 対策**: 分類用の正規表現パターン長・実行時間に制限を設ける。
-- **安全な失敗 (Graceful Degradation)**: 履歴書き込みが失敗しても、変換されたテキスト出力自体は壊さず `COMPLETED_WITH_WARNING` として結果を返却。
+- **ReDoS 対策**: 分類用の正規表現には次の制限を適用する。
+  - パターン長は既定で200文字までとする。上限超過または構文エラーのパターンはマッチなしとして扱い、分類を継続する。
+  - 評価はWindows互換の `multiprocessing` 子プロセス（`spawn`）に隔離し、既定0.5秒以内に完了しない場合は `terminate()` で子プロセスを強制終了してマッチなしとして扱う。これにより、CPython標準 `re` のバックトラックが呼び出し元・GUIスレッドをブロックしないことを保証する。
+  - 制限値は設定の `workflow.classifierRegexMaxPatternLength` と `workflow.classifierRegexTimeoutSeconds` で上書き可能とする。プロセス生成のオーバーヘッドがあるため、`regex` ルールは必要最小限にする。
+- **安全な失敗 (Graceful Degradation)**: 履歴書き込みが失敗しても、変換されたテキスト出力自体は壊さず `COMPLETED_WITH_WARNING` として結果を返却。正規表現の拒否・タイムアウト時も、該当ルールを非マッチとして後続ルールまたは既定カテゴリで処理を継続する。
 
 ---
 
@@ -257,6 +260,7 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 - **単体テスト (`tests/unit/test_text_workflow.py`)**:
   - `ConfigurationResolver` の層別優先マージテスト
   - `Classifier` のルール順序・条件判定テスト
+  - ReDoS対策（パターン長超過の拒否、破滅的バックトラック時の子プロセス終了、通常パターンの回帰）
   - `TemplateRenderer` の変数置換・未定義変数テスト
   - `Normalizer` の冪等性検証
 - **統合テスト (`tests/integration/test_workflow_pipeline.py`)**:
@@ -271,3 +275,4 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 | Rev.1.1 | 2026-09-01 | 未記載 | §4.1の設定保存先を `~/.clip_watcher/` から BD-001 §8 と実装（`.clipWatcher`/`.clipwatcher`）に一致する記述へ修正。                                                                                                                |
 | Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。                                                                                                     |
 | Rev.1.3 | 2026-09-01 | 未記載 | §5.2/5.3を実装に合わせて更新。`ConfigurationResolver.from_app_data_dir()` による実ファイル読み込み、`ApplicationBuilder.with_text_workflow_service()` によるDI登録、`ui_thread_marshal` 経由の `EventDispatcher` 通知経路を反映。 |
+| Rev.1.4 | 2026-09-01 | 未記載 | §7のReDoS対策を実装に合わせて詳細化。パターン長制限と、Windows互換の子プロセス隔離・強制終了による正規表現実行時間制限を定義。                                                                                                    |
