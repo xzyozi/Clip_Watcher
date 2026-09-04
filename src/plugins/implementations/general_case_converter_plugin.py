@@ -1,6 +1,6 @@
 import re
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
 def to_snake_case(name: str) -> str:
@@ -21,7 +21,7 @@ def to_kebab_case(name: str) -> str:
     return to_snake_case(name).replace("_", "-")
 
 
-class GeneralCaseConverterPlugin(Plugin):
+class GeneralCaseConverterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Case Converter"

@@ -1,9 +1,10 @@
-"""
-This package dynamically loads all converter plugins from the implementations subdirectory.
-"""
+"""組み込みプラグインの共通基底を提供するパッケージ。"""
 
-from .base_plugin import Plugin
+from .base_plugin import Plugin, TextPlugin
+from .gui_plugin import GuiPlugin
 
 __all__ = [
     "Plugin",
+    "TextPlugin",
+    "GuiPlugin",
 ]

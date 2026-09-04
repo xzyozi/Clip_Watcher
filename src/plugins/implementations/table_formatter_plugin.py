@@ -1,10 +1,10 @@
 import csv
 import io
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class TableFormatterPlugin(Plugin):
+class TableFormatterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Table Formatter"

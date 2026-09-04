@@ -6,7 +6,8 @@ import logging
 import pkgutil
 
 import src.plugins.implementations as plugins_package
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import Plugin, TextPlugin
+from src.plugins.gui_plugin import GuiPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class PluginManager:
         self.load_plugins()
 
     def load_plugins(self) -> None:
-        """Dynamically load all plugins from the plugins package."""
+        """実装パッケージ内で定義されたプラグインを動的に読み込む。"""
         self.plugins = []
         plugin_path = plugins_package.__path__
         plugin_prefix = plugins_package.__name__ + "."
@@ -26,25 +27,26 @@ class PluginManager:
             try:
                 module = importlib.import_module(name)
                 for class_name, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, Plugin) and obj is not Plugin:
+                    if (
+                        obj.__module__ == module.__name__
+                        and issubclass(obj, Plugin)
+                        and obj is not Plugin
+                    ):
                         self.plugins.append(obj())
-                        logger.info(f"Successfully loaded plugin: {class_name}")
-            except Exception as e:
-                logger.error(f"Failed to load plugin from {name}: {e}", exc_info=True)
+                        logger.info("Successfully loaded plugin: %s", class_name)
+            except Exception as error:
+                logger.error(
+                    "Failed to load plugin from %s: %s", name, error, exc_info=True
+                )
 
     def get_available_plugins(self) -> list[Plugin]:
-        """Return a list of all available plugin instances."""
+        """読み込み済みの全プラグインを返す。"""
         return self.plugins
 
-    def get_text_plugins(self) -> list[Plugin]:
-        """Return plugins that can process text."""
-        text_plugins: list[Plugin] = []
-        for plugin in self.plugins:
-            # A plugin is a text plugin if its `process` method is different from the base class's.
-            if plugin.process.__func__ is not Plugin.process.__func__:  # type: ignore
-                text_plugins.append(plugin)
-        return text_plugins
+    def get_text_plugins(self) -> list[TextPlugin]:
+        """テキスト変換を提供するプラグインを返す。"""
+        return [plugin for plugin in self.plugins if isinstance(plugin, TextPlugin)]
 
-    def get_gui_plugins(self) -> list[Plugin]:
-        """Return plugins that have a GUI component."""
-        return [p for p in self.plugins if p.has_gui_component()]
+    def get_gui_plugins(self) -> list[GuiPlugin]:
+        """Tk GUIコンポーネントを提供するプラグインを返す。"""
+        return [plugin for plugin in self.plugins if isinstance(plugin, GuiPlugin)]

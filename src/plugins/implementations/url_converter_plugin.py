@@ -1,9 +1,9 @@
 import urllib.parse
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class URLConverterPlugin(Plugin):
+class URLConverterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "URL Encode/Decode"

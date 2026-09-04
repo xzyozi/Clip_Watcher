@@ -1,9 +1,9 @@
 import json
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class JSONFormatterPlugin(Plugin):
+class JSONFormatterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "JSON Formatter"

@@ -1,10 +1,10 @@
 import csv
 import io
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class CSVFormatterPlugin(Plugin):
+class CSVFormatterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "CSV/TSV Formatter"
