@@ -17,6 +17,10 @@ from src.core.text_workflow.models import (
     WorkflowResult,
 )
 from src.core.text_workflow.normalizer import Normalizer
+from src.core.text_workflow.ports import (
+    ExecutionHistoryRecorder,
+    WorkflowConfiguration,
+)
 from src.core.text_workflow.template_renderer import TemplateRenderer
 
 
@@ -25,8 +29,8 @@ class TextWorkflow:
 
     def __init__(
         self,
-        config_resolver: ConfigurationResolver | None = None,
-        history: ExecutionHistory | None = None,
+        config_resolver: WorkflowConfiguration | None = None,
+        history: ExecutionHistoryRecorder | None = None,
     ) -> None:
         self._config_resolver = config_resolver or ConfigurationResolver()
         self._history = history or ExecutionHistory(":memory:")

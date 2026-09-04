@@ -17,6 +17,10 @@ from src.core.text_workflow.models import (
     WorkflowRequest,
     WorkflowResult,
 )
+from src.core.text_workflow.ports import (
+    ExecutionHistoryRecorder,
+    WorkflowConfiguration,
+)
 from src.core.text_workflow.workflow import TextWorkflow
 
 __all__ = [
@@ -25,6 +29,8 @@ __all__ = [
     "Classification",
     "WorkflowRequest",
     "WorkflowResult",
+    "WorkflowConfiguration",
+    "ExecutionHistoryRecorder",
     "TextWorkflow",
     "TextWorkflowError",
 ]
