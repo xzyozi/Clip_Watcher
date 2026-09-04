@@ -16,7 +16,7 @@ from src.gui.windows.meta_management_window import MetaManagementFrame
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
-    from src.plugins.base_plugin import Plugin
+    from src.plugins.gui_plugin import GuiPlugin
 
 
 class ClipWatcherGUI(BaseFrameGUI):
@@ -297,7 +297,7 @@ class ClipWatcherGUI(BaseFrameGUI):
     def _create_plugin_tabs(self) -> None:
         """Dynamically creates GUI tabs from plugins based on settings."""
         self._destroy_plugin_tabs()  # Clear existing plugin tabs
-        gui_plugins: list[Plugin] = self.app.plugin_manager.get_gui_plugins()  # type: ignore
+        gui_plugins: list[GuiPlugin] = self.app.plugin_manager.get_gui_plugins()  # type: ignore
         for plugin in gui_plugins:
             setting_key = f"show_{plugin.name.lower().replace(' ', '_')}_tab"
             if self.app.settings_manager.get_setting(setting_key, True):  # type: ignore
