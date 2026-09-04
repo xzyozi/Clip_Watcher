@@ -1,9 +1,9 @@
 import base64
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class Base64ConverterPlugin(Plugin):
+class Base64ConverterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Base64 Encode/Decode"

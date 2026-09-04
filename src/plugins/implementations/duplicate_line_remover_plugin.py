@@ -1,7 +1,7 @@
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class DuplicateLineRemoverPlugin(Plugin):
+class DuplicateLineRemoverPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Duplicate Line Remover"

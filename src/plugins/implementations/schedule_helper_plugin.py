@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.gui.base.base_frame_gui import BaseFrameGUI
 from src.gui.custom_widgets import CustomText
-from src.plugins.base_plugin import Plugin
+from src.plugins.gui_plugin import GuiPlugin as Plugin
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication

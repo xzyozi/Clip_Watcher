@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 from src.plugins.implementations.duplicate_line_remover_plugin import (
     DuplicateLineRemoverPlugin,
 )
@@ -107,7 +107,7 @@ def test_gui_plugins_filtering() -> None:
     ],
 )
 def test_text_plugins_conversion(
-    plugin_class: type[Plugin], input_text: str, expected_output: str
+    plugin_class: type[TextPlugin], input_text: str, expected_output: str
 ) -> None:
     """各テキスト変換プラグインが、ダミー値や極端な値に対して期待通り処理できるかを検証します。"""
     plugin = plugin_class()

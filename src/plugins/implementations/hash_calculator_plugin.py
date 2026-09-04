@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from src.core.config import defaults as config
 from src.gui.base.base_frame_gui import BaseFrameGUI
-from src.plugins.base_plugin import Plugin
+from src.plugins.gui_plugin import GuiPlugin as Plugin
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication

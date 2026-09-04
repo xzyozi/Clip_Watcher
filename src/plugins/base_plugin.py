@@ -1,50 +1,28 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from tkinter import ttk
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from src.core.bootstrap.base_application import BaseApplication
 
 
 class Plugin(ABC):
-    """
-    A base class for all plugins.
-    Plugins can either process text or provide a GUI component, or both.
-    """
+    """すべてのプラグインに共通するGUI非依存の基底クラス。"""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """A user-friendly name for the plugin, used for menus or tab titles."""
-        pass
+        """メニューや設定画面に表示するプラグイン名。"""
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def description(self) -> str:
-        """A brief description of what the plugin does."""
-        pass
-
-    def process(self, text: str) -> str:
-        """
-        Process the input text and return the modified text.
-        If the plugin cannot process the text, it should raise NotImplementedError.
-        """
+        """プラグインの簡潔な説明。"""
         raise NotImplementedError
 
-    def has_gui_component(self) -> bool:
-        """
-        Returns True if this plugin provides a GUI component.
-        Defaults to False.
-        """
-        return False
 
-    def create_gui_component(
-        self, parent: ttk.Notebook, app_instance: BaseApplication
-    ) -> ttk.Frame | None:
-        """
-        Creates and returns the GUI component for this plugin.
-        This method should be overridden by plugins that provide a GUI.
-        """
-        return None
+class TextPlugin(Plugin):
+    """テキストを変換するGUI非依存プラグインの基底クラス。"""
+
+    @abstractmethod
+    def process(self, text: str) -> str:
+        """入力テキストを変換して返す。"""
+        raise NotImplementedError
