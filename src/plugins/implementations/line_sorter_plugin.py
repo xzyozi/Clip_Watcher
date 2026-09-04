@@ -1,7 +1,7 @@
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class LineSorterPlugin(Plugin):
+class LineSorterPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Line Sorter"

@@ -1,7 +1,7 @@
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class WhitespaceNormalizerPlugin(Plugin):
+class WhitespaceNormalizerPlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "Whitespace Normalizer"

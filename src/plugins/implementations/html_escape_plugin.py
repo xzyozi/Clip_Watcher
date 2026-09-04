@@ -1,9 +1,9 @@
 import html
 
-from src.plugins.base_plugin import Plugin
+from src.plugins.base_plugin import TextPlugin
 
 
-class HTMLEscapePlugin(Plugin):
+class HTMLEscapePlugin(TextPlugin):
     @property
     def name(self) -> str:
         return "HTML Escape/Unescape"
