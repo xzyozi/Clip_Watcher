@@ -88,17 +88,17 @@ graph TD
 
     subgraph NEW["【新アーキテクチャ】 関心の分離とクリーンな階層化"]
         GUI["src/gui/ UI層"] --> MAIN["src/core/app_main"]
-        
+
         subgraph core["core サブモジュール"]
             MAIN --> BOOT["core.bootstrap"]
             MAIN --> EV["core.events"]
             MAIN --> CLIP["core.clipboard"]
         end
-        
+
         subgraph services["services サービス層 (ドメイン)"]
             MAIN --> SERV["src/services/history_service"]
         end
-        
+
         subgraph plugins["plugins プラグイン層 (拡張)"]
             MAIN --> PLUG["src/plugins/manager"]
             PLUG --> PLUG_IMPL["src/plugins/implementations"]
