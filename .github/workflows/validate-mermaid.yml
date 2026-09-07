@@ -32,6 +32,9 @@ jobs:
           path: ~/.npm
           key: ${{ runner.os }}-mermaid-cli-11.4.2
 
+      - name: Install Chrome Headless Shell for Mermaid CLI
+        run: npx --yes --package @mermaid-js/mermaid-cli@11.4.2 --package puppeteer@23.10.4 puppeteer browsers install chrome-headless-shell
+
       - name: Validate changed Mermaid diagrams
         shell: bash
         run: |
