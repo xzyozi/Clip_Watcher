@@ -54,13 +54,7 @@ CI runs the equivalent lint, format, type-check, and test steps through `uv` on 
 
 ## Documentation
 
-- [System architecture basic design (CLW-BD-001)](docs/design/CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md)
-- [Feature basic design (CLW-BD-002)](docs/design/CLW-BD-002_ClipWatcher機能基本設計書.md)
-- [Settings and global hotkeys detailed design (CLW-DD-001)](docs/design/CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
-- [Core startup, monitoring, and event control detailed design (CLW-DD-002)](docs/design/CLW-DD-002_コア層起動監視イベント制御詳細設計書.md)
-- [TextWorkflow detailed design (CLW-DD-003)](docs/design/CLW-DD-003_TextWorkflow詳細設計書.md)
-- [Development environment setup](docs/setup/toml_project_setup.md)
-- [Text Workflow rule guide](docs/how-to/HOWTO_TEXT_WORKFLOW_RULES.md)
+See the [documentation guide](docs/README.md) for current design documents, development setup, how-to guides, reviews, and historical records.
 
 ## Privacy and Security
 

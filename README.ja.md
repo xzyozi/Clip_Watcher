@@ -54,13 +54,7 @@ GitHub ActionsのCIでは、`uv` を通じて同等のlint、フォーマット�
 
 ## ドキュメント
 
-- [全体アーキテクチャ基本設計書（CLW-BD-001）](docs/design/CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md)
-- [機能基本設計書（CLW-BD-002）](docs/design/CLW-BD-002_ClipWatcher機能基本設計書.md)
-- [設定画面・グローバルホットキー詳細設計書（CLW-DD-001）](docs/design/CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md)
-- [コア層起動監視イベント制御詳細設計書（CLW-DD-002）](docs/design/CLW-DD-002_コア層起動監視イベント制御詳細設計書.md)
-- [TextWorkflow詳細設計書（CLW-DD-003）](docs/design/CLW-DD-003_TextWorkflow詳細設計書.md)
-- [開発環境セットアップ](docs/setup/toml_project_setup.md)
-- [Text Workflow 分類ルールガイド](docs/how-to/HOWTO_TEXT_WORKFLOW_RULES.md)
+設計書、開発環境、利用手順、レビュー、過去資料は[ドキュメント案内](docs/README.md)から参照してください。
 
 ## プライバシーとセキュリティ
 
