@@ -20,6 +20,7 @@ updated_at: 2026-09-07
 | 過去レビュー             | [review/archive/](review/archive/)                                         | 過去の評価・判断経緯の参照                             |
 | 過去の設計検討・提案     | [archive/](archive/)                                                       | 非現行資料の参照。再採用時は現行コードとの整合を再確認 |
 | 設計書テンプレート       | [design/TEMPLATE/](design/TEMPLATE/)                                       | 新規設計書の作成                                       |
+| 将来の機能提案           | [features/](features/)                                                     | 未実装の機能・運用改善案の保存                         |
 
 ## 正本と互換案内
 
