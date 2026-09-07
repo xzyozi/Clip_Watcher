@@ -3,10 +3,16 @@ name: Validate Mermaid diagrams
 on:
   push:
     branches: [main, develop]
-    paths: ["docs/**/*.md"]
+    paths:
+      - "docs/**/*.md"
+      - ".github/workflows/validate-mermaid.yml"
+      - ".github/scripts/validateMermaidMarkdown.mjs"
   pull_request:
     branches: [main, develop]
-    paths: ["docs/**/*.md"]
+    paths:
+      - "docs/**/*.md"
+      - ".github/workflows/validate-mermaid.yml"
+      - ".github/scripts/validateMermaidMarkdown.mjs"
   workflow_dispatch:
 
 permissions:
