@@ -141,7 +141,8 @@ def test_start_app_builder_chain_includes_icon_manager_after_theme_manager() -> 
     from src.event_handlers import start_app
 
     with (
-        patch("socket.socket"),
+        patch("src.event_handlers._acquire_windows_mutex", return_value=(None, False)),
+        patch("src.event_handlers._release_windows_mutex"),
         patch("src.event_handlers.setup_logging"),
         patch("scripts.migrate_json_to_sqlite.main"),
         patch("src.event_handlers.tk.Tk") as mock_tk_cls,

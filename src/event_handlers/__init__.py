@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import ctypes
 import os
-import socket
 import sys
 import tkinter as tk
 import traceback
@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
 
 
+_MUTEX_NAME = "Local\\ClipWatcher_SingleInstance_Mutex"
+_ERROR_ALREADY_EXISTS = 183
+
+
 def register_class_based_handlers(app_instance: BaseApplication) -> None:
     """
     Initializes and registers all class-based event handlers for the application.
@@ -36,16 +40,42 @@ def register_class_based_handlers(app_instance: BaseApplication) -> None:
     )  # type: ignore
 
 
+def _acquire_windows_mutex() -> tuple[int | None, bool]:
+    """Windows の名前付きミューテックスを取得し、重複起動かを返す。"""
+    if sys.platform != "win32":
+        return None, False
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_mutex = kernel32.CreateMutexW
+    create_mutex.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
+    create_mutex.restype = ctypes.c_void_p
+
+    mutex_handle = create_mutex(None, False, _MUTEX_NAME)
+    if not mutex_handle:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
+        kernel32.CloseHandle(ctypes.c_void_p(mutex_handle))
+        return None, True
+
+    return int(mutex_handle), False
+
+
+def _release_windows_mutex(mutex_handle: int | None) -> None:
+    """取得済みの Windows 名前付きミューテックスのハンドルを閉じる。"""
+    if sys.platform == "win32" and mutex_handle is not None:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CloseHandle(ctypes.c_void_p(mutex_handle))
+
+
 def start_app() -> None:
-    lock_socket = None
+    mutex_handle: int | None = None
     try:
         # --- Single Instance Check ---
-        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            lock_socket.bind(("127.0.0.1", 61957))
-        except OSError:
+        mutex_handle, already_running = _acquire_windows_mutex()
+        if already_running:
             messagebox.showinfo("Already Running", "Clip Watcher is already running.")
-            sys.exit(0)
+            return
 
         # --- Path Definitions ---
         if sys.platform == "win32":
@@ -109,5 +139,4 @@ def start_app() -> None:
             print(f"アプリケーション起動エラー: {str(e)}")
         traceback.print_exc()
     finally:
-        if lock_socket:
-            lock_socket.close()
+        _release_windows_mutex(mutex_handle)
