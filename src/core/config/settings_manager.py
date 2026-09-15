@@ -157,6 +157,14 @@ class SettingsManager(BaseSettingsManager):
                 increment=d.HISTORY_LIMIT_INCREMENT,
                 width=10,
             ),
+            SettingField(
+                key="copy_warning_enabled",
+                label="Enable Copy Safety Warnings",
+                widget_type=WidgetType.CHECKBUTTON,
+                tab="History",
+                group="History Options",
+                default=d.DEFAULT_USER_SETTINGS["copy_warning_enabled"],
+            ),
             # ── Notifications / Behavior ───────────────────────────────
             SettingField(
                 key="notifications_enabled",

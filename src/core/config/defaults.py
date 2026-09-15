@@ -38,6 +38,7 @@ DEFAULT_USER_SETTINGS = {
     "show_excluded_apps_settings_tab": True,
     "show_modules_settings_tab": True,
     "quick_task_delete_on_copy": True,
+    "copy_warning_enabled": False,
     "global_hotkey_enabled": True,
     "global_hotkey_combo": "Ctrl+Shift+F",
     "pinned_hotkey_bindings": {},
