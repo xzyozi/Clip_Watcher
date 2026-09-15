@@ -10,14 +10,18 @@ from src.gui.theme_manager import ThemeManager
 class HeadlessStyle:
     """Tkの表示サーバーなしでテーマ適用を検証するための最小限のStyle代替。"""
 
+    last_instance: HeadlessStyle | None = None
+
     def __init__(self, root: Tk) -> None:
         self.root = root
+        self.configurations: list[tuple[str, dict[str, object]]] = []
+        HeadlessStyle.last_instance = self
 
     def theme_use(self, theme_name: str) -> None:
         pass
 
-    def configure(self, style_name: str, **options: str) -> None:
-        pass
+    def configure(self, style_name: str, **options: object) -> None:
+        self.configurations.append((style_name, options))
 
     def map(self, style_name: str, **options: object) -> None:
         pass
@@ -69,3 +73,21 @@ def test_apply_theme_keeps_existing_behavior_without_registered_icon_manager(
     theme_manager.apply_theme("dark")
 
     assert theme_manager.current_theme == "dark"
+
+
+def test_apply_theme_keeps_default_treeview_row_height_for_16px_icons(
+    monkeypatch: object,
+) -> None:
+    """16pxアイコンでは既存行レイアウトを維持するため行高を上書きしない。"""
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    theme_manager.apply_theme("light")
+
+    assert HeadlessStyle.last_instance is not None
+    treeview_options = next(
+        options
+        for style_name, options in HeadlessStyle.last_instance.configurations
+        if style_name == "Treeview"
+    )
+    assert "rowheight" not in treeview_options
