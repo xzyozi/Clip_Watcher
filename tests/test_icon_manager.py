@@ -146,13 +146,14 @@ def test_get_icon_reuses_loaded_source_when_requesting_another_theme(
 
 
 @pytest.mark.parametrize("theme_name", ["light", "dark"])
-def test_get_icon_uses_the_theme_listbox_foreground_color(
+def test_get_icon_preserves_source_colors_and_alpha(
     tmp_path, theme_name, monkeypatch
 ) -> None:
-    """要件3.1: PhotoImage生成時のRGBA画像がテーマ前景色で着色される。"""
+    """立体調アイコンはテーマに関係なく元画像の色と透明度を保持する。"""
     icons_dir = tmp_path / "icons"
     icons_dir.mkdir()
-    Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / "pin.png")
+    expected_pixel = (214, 45, 55, 128)
+    Image.new("RGBA", (1, 1), expected_pixel).save(icons_dir / "pin.png")
     photo_image_inputs: list[Image.Image] = []
 
     def capture_photo_image(image: Image.Image) -> object:
@@ -163,38 +164,11 @@ def test_get_icon_uses_the_theme_listbox_foreground_color(
 
     manager = IconManager(icons_dir=str(icons_dir))
     icon = manager.get_icon("pin", theme_name)
-    color = THEMES[theme_name]["listbox_fg"]
-    expected_rgb = tuple(int(color[index : index + 2], 16) for index in (1, 3, 5))
 
     assert len(photo_image_inputs) == 1
     assert photo_image_inputs[0].mode == "RGBA"
-    assert photo_image_inputs[0].getpixel((0, 0)) == (*expected_rgb, 255)
+    assert photo_image_inputs[0].getpixel((0, 0)) == expected_pixel
     assert icon is manager.get_icon("pin", theme_name)
-
-
-def test_apply_theme_color_replaces_rgb_and_preserves_alpha() -> None:
-    """要件3.1・3.3: 色変換後も各ピクセルのアルファ値を維持する。"""
-    source = Image.new("RGBA", (2, 2))
-    source.putdata(
-        [
-            (255, 0, 0, 0),
-            (0, 255, 0, 64),
-            (0, 0, 255, 128),
-            (255, 255, 255, 255),
-        ]
-    )
-    manager = IconManager()
-
-    colored_image = manager._apply_theme_color(source, "#123456")
-
-    assert colored_image.mode == "RGBA"
-    assert colored_image.size == source.size
-    assert list(colored_image.get_flattened_data()) == [
-        (18, 52, 86, 0),
-        (18, 52, 86, 64),
-        (18, 52, 86, 128),
-        (18, 52, 86, 255),
-    ]
 
 
 @given(
@@ -268,3 +242,10 @@ def test_get_icon_regenerates_photo_image_and_reuses_source_after_invalidation_p
     assert manager._source_images[icon_name] is source_image
     assert image_open.call_count == 1
     assert photo_image.call_count == 2
+
+
+def test_pinned_icon_asset_is_16px_rgba() -> None:
+    """実行用ピンアイコンは既存の行レイアウトに収まる16px RGBA画像である。"""
+    with Image.open("assets/icons/pin.png") as image:
+        assert image.size == (16, 16)
+        assert image.mode == "RGBA"

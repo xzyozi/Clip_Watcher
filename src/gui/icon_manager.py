@@ -4,8 +4,6 @@ import os
 
 from PIL import Image, ImageTk
 
-from src.core.config.defaults import THEMES
-
 
 class IconManager:
     """アイコン画像の元データとテーマ別表示画像のキャッシュを保持する。"""
@@ -25,16 +23,8 @@ class IconManager:
         """アイコン名とテーマ名からテーマ別キャッシュキーを生成する。"""
         return f"{icon_name}:{theme_name}"
 
-    def _apply_theme_color(
-        self, source: Image.Image, target_color_hex: str
-    ) -> Image.Image:
-        """RGBA画像のアルファを維持し、RGBを指定のテーマ色に置き換える。"""
-        colored_image = Image.new("RGBA", source.size, target_color_hex)
-        colored_image.putalpha(source.getchannel("A"))
-        return colored_image
-
     def get_icon(self, icon_name: str, theme_name: str) -> ImageTk.PhotoImage:
-        """アイコンを取得し、テーマ前景色で変換した表示画像をキャッシュする。"""
+        """アイコン本来のRGBA色を保持した表示画像をキャッシュする。"""
         key = self._cache_key(icon_name, theme_name)
         if key in self._icon_cache:
             return self._icon_cache[key]
@@ -44,10 +34,7 @@ class IconManager:
             with Image.open(icon_path) as image:
                 self._source_images[icon_name] = image.convert("RGBA")
 
-        colored_image = self._apply_theme_color(
-            self._source_images[icon_name], THEMES[theme_name]["listbox_fg"]
-        )
-        photo_image = ImageTk.PhotoImage(colored_image)
+        photo_image = ImageTk.PhotoImage(self._source_images[icon_name].copy())
         self._icon_cache[key] = photo_image
         return photo_image
 

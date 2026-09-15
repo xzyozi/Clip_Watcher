@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.core.events.commands import UpdateHistoryCommand
 from src.core.events.event_dispatcher import EventDispatcher
+from src.utils.copy_safety import RISK_MESSAGES, analyze_copy_risks
 from src.utils.error_handler import log_and_show_error
 from src.utils.undo_manager import UndoManager
 
@@ -47,6 +48,30 @@ class HistoryEventHandlers(BaseEventHandler):
         self.subscribe("HISTORY_ITEM_EDITED", self.handle_history_item_edited)
         self.subscribe("REQUEST_UNDO_LAST_ACTION", self.undo_manager.undo)
         self.subscribe("REQUEST_REDO_LAST_ACTION", self.undo_manager.redo)
+
+    def _copy_warning_enabled(self) -> bool:
+        settings_manager = getattr(self.app, "settings_manager", None)
+        if settings_manager is None:
+            return False
+        return bool(settings_manager.get_setting("copy_warning_enabled", False))
+
+    def _confirm_copy_if_risky(self, content: str) -> bool:
+        if not self._copy_warning_enabled():
+            return True
+
+        risks = analyze_copy_risks(content)
+        if not risks:
+            return True
+
+        reasons = "\n".join(f"・{RISK_MESSAGES[risk]}" for risk in risks)
+        preview = content[:500]
+        if len(content) > 500:
+            preview += "..."
+        return messagebox.askyesno(
+            "Copy Warning",
+            f"危険性のある内容をコピーしようとしています。\n\n{reasons}\n\n内容:\n{preview}\n\nコピーしますか？",
+            parent=self.app.master,  # type: ignore
+        )
 
     def handle_history_item_edited(self, data: dict[str, Any]) -> None:
         try:
@@ -111,6 +136,9 @@ class HistoryEventHandlers(BaseEventHandler):
                     break
 
             if selected_item_content is not None:
+                if not self._confirm_copy_if_risky(selected_item_content):
+                    logger.info("危険性警告で履歴コピーをキャンセルしました。")
+                    return
                 self.app.master.clipboard_clear()  # type: ignore
                 self.app.master.clipboard_append(selected_item_content)  # type: ignore
                 logger.info(f"Copied from history: {selected_item_content[:50]}...")
@@ -216,6 +244,9 @@ class HistoryEventHandlers(BaseEventHandler):
 
             if merged_content_parts:
                 merged_content = "\n".join(merged_content_parts)
+                if not self._confirm_copy_if_risky(merged_content):
+                    logger.info("危険性警告で結合履歴コピーをキャンセルしました。")
+                    return
                 self.app.master.clipboard_clear()  # type: ignore
                 self.app.master.clipboard_append(merged_content)  # type: ignore
                 logger.info(f"Copied merged content: {merged_content[:50]}...")

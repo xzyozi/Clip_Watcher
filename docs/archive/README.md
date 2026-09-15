@@ -26,5 +26,6 @@ reason: "過去の設計検討・移行案・将来提案への索引を保存�
 | `INVESTIGATION_QUICK_TASK_AND_MULTI_INSTANCE.md`               | クイックタスク・多重起動の機能提案調査 |
 | `EXTENSIBILITY_PROPOSAL_STD_LIB.md` / `PLUGIN_ARCHITECTURE.md` | 拡張機能・プラグインに関する未実装提案 |
 | `NETWORK_API_IMPLEMENTATION.md`                                | Network APIの未採用実装提案            |
+| `PINNED_HOTKEY_INTEGRATION_DESIGN.md`                          | ピン留めホットキー設計の前身検討資料   |
 
 アーカイブ内の提案を実装・再採用する場合は、現行コードとの整合性、セキュリティ、必要な要件を改めて確認してください。

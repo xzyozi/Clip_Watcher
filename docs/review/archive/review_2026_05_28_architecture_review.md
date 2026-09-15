@@ -87,7 +87,7 @@ classDiagram
     ClipboardMonitor --> DatabaseManager : 直接依存してデータ書き出し・読み込み
     MainGUI --> ClipboardMonitor : update_callbackによる密な状態同期
 ```
-* **課題点**: 
+* **課題点**:
   - `ClipboardMonitor` が `DatabaseManager` に直接依存しており、OS監視とデータ永続化が一体化しています。
   - `MainGUI` が `ClipboardMonitor` の `update_callback` と直接繋がっており、GUIと監視ロジックの相互依存度が高いです。
 
@@ -117,7 +117,7 @@ classDiagram
     class MainGUI {
         -event_dispatcher: EventDispatcher
     }
-    
+
     MainApplication --> ClipboardMonitor : 保持
     MainApplication --> HistoryService : 保持
     MainApplication --> MainGUI : 保持

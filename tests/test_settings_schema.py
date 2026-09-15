@@ -44,3 +44,16 @@ def test_settings_manager_get_settings_schema() -> None:
     hotkey_combo_field = next(f for f in schema if f.key == "global_hotkey_combo")
     assert hotkey_combo_field.widget_type == WidgetType.HOTKEY_CAPTURE
     assert hotkey_combo_field.tab == "General"
+
+
+def test_copy_warning_setting_is_disabled_by_default() -> None:
+    dispatcher = EventDispatcher()
+    manager = SettingsManager(dispatcher)
+
+    assert manager.get_setting("copy_warning_enabled") is False
+
+    schema = manager.get_settings_schema()
+    field = next(item for item in schema if item.key == "copy_warning_enabled")
+    assert field.widget_type == WidgetType.CHECKBUTTON
+    assert field.tab == "History"
+    assert field.default is False
