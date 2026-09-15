@@ -242,9 +242,10 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         if selected_indices:
             index: int = selected_indices[0]
+            displayed_history = self.history_component.displayed_history
 
-            if 0 <= index < len(self.history_data):
-                original_text, _, item_id = self.history_data[index]
+            if 0 <= index < len(displayed_history):
+                original_text, _, item_id = displayed_history[index]
 
                 if edited_text != original_text:
                     from src.core.events.commands import UpdateHistoryCommand
@@ -340,8 +341,9 @@ class ClipWatcherGUI(BaseFrameGUI):
         if selected_indices:
             self.format_button.config(state=tk.NORMAL)
             index: int = selected_indices[0]
-            if 0 <= index < len(self.history_data):
-                content, _, _ = self.history_data[index]
+            displayed_history = self.history_component.displayed_history
+            if 0 <= index < len(displayed_history):
+                content, _, _ = displayed_history[index]
                 self.clipboard_text_widget.insert(tk.END, content)
         else:
             self.format_button.config(state=tk.DISABLED)
@@ -380,7 +382,6 @@ class ClipWatcherGUI(BaseFrameGUI):
             unpinned.reverse()
             history = pinned + unpinned
 
-        self.history_data = history
         search_query: str = (
             self.search_entry.get() if hasattr(self, "search_entry") else ""
         )
@@ -388,14 +389,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         theme = THEMES.get(theme_name, THEMES["light"])
         hotkey_bindings: Mapping[int, str] = self.app.get_pinned_hotkey_bindings()
         if search_query:
-            filtered_history: list[tuple[str, bool, float]] = (
+            displayed_history: list[tuple[str, bool, float]] = (
                 self.app.monitor.get_filtered_history(search_query)
             )  # type: ignore
-            self.history_component.update_history(
-                filtered_history, theme, hotkey_bindings
-            )
         else:
-            self.history_component.update_history(history, theme, hotkey_bindings)
+            displayed_history = history
+
+        self.history_data = displayed_history
+        self.history_component.update_history(displayed_history, theme, hotkey_bindings)
 
         # テキストエリアの上書き防止（差分チェックおよび選択操作状態の保護）
         selected_indices: tuple[int, ...] = (
@@ -406,8 +407,8 @@ class ClipWatcherGUI(BaseFrameGUI):
         new_insert_content = ""
         if selected_indices:
             index: int = selected_indices[0]
-            if 0 <= index < len(self.history_data):
-                new_insert_content, _, _ = self.history_data[index]
+            if 0 <= index < len(displayed_history):
+                new_insert_content, _, _ = displayed_history[index]
         else:
             new_insert_content = current_content
 
