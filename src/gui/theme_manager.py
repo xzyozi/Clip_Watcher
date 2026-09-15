@@ -119,7 +119,6 @@ class ThemeManager:
             background=theme["listbox_bg"],
             foreground=theme["listbox_fg"],
             fieldbackground=theme["listbox_bg"],
-            rowheight=28,
         )
         if theme_name == "dark":
             # 既知の不具合ワークアラウンド（Requirements 7.4）:

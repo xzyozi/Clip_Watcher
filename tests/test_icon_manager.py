@@ -242,3 +242,10 @@ def test_get_icon_regenerates_photo_image_and_reuses_source_after_invalidation_p
     assert manager._source_images[icon_name] is source_image
     assert image_open.call_count == 1
     assert photo_image.call_count == 2
+
+
+def test_pinned_icon_asset_is_16px_rgba() -> None:
+    """実行用ピンアイコンは既存の行レイアウトに収まる16px RGBA画像である。"""
+    with Image.open("assets/icons/pin.png") as image:
+        assert image.size == (16, 16)
+        assert image.mode == "RGBA"

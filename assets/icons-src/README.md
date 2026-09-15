@@ -4,7 +4,7 @@
 
 Export it as `../icons/pin.png` with these settings before updating the runtime asset:
 
-- Canvas: 24 × 24 px
+- Canvas: 16 × 16 px
 - Format: PNG with RGBA transparency
 - Keep the red gradients, highlight, shadow, and metallic needle
 - Do not add a solid background
