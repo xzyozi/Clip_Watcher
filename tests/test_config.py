@@ -151,9 +151,7 @@ def test_clipboard_monitor_exclusion_is_case_insensitive(
     )
 
     # 1. 登録は小文字、取得は実体ケース（KeePass.exe）→ 除外されるべき
-    mocker.patch.object(
-        monitor, "get_active_process_name", return_value="KeePass.exe"
-    )
+    mocker.patch.object(monitor, "get_active_process_name", return_value="KeePass.exe")
     monitor._update_history_with_new_entry("Master Password")
     assert len(history_service.history) == 0
 
@@ -165,9 +163,7 @@ def test_clipboard_monitor_exclusion_is_case_insensitive(
     assert len(history_service.history) == 0
 
     # 3. 除外対象外の通常アプリは従来どおり履歴へ追加される
-    mocker.patch.object(
-        monitor, "get_active_process_name", return_value="notepad.exe"
-    )
+    mocker.patch.object(monitor, "get_active_process_name", return_value="notepad.exe")
     monitor._update_history_with_new_entry("Normal Text")
     assert len(history_service.history) == 1
     assert history_service.history[0][0] == "Normal Text"
