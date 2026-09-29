@@ -30,6 +30,29 @@ _MODIFIER_MAP = {
 }
 
 
+# GetMessageW の戻り値を分類した結果。
+# - "error"    : -1（API エラー）。ループを抜ける必要がある。
+# - "quit"     : 0（WM_QUIT）。正常にループを抜ける。
+# - "dispatch" : 正の値。メッセージを処理してループを継続する。
+GET_MESSAGE_ERROR = "error"
+GET_MESSAGE_QUIT = "quit"
+GET_MESSAGE_DISPATCH = "dispatch"
+
+
+def classify_get_message_result(ret: int) -> str:
+    """GetMessageW の戻り値を分類する純粋関数。
+
+    Windows API の GetMessageW は成功時に正の値、WM_QUIT で 0、エラー時に -1 を返す。
+    従来の "!= 0" 判定では -1（エラー）でループを抜けられず、無限ループに陥り
+    CPU を枯渇させていた（#112）。この関数で戻り値の意味を一元的に判定する。
+    """
+    if ret == -1:
+        return GET_MESSAGE_ERROR
+    if ret == 0:
+        return GET_MESSAGE_QUIT
+    return GET_MESSAGE_DISPATCH
+
+
 @dataclass(frozen=True)
 class HotkeyRegistration:
     """Windows に登録するホットキーの不変な定義。"""
@@ -138,11 +161,9 @@ class GlobalHotkeyListener:
                 ready_event.set()
                 message = ctypes.wintypes.MSG()
                 while True:
-                    # GetMessageW は成功時に正の値、WM_QUIT で 0、エラー時に -1 を返す。
-                    # 従来の "!= 0" 判定では -1（エラー）でループを抜けられず、
-                    # message が未更新のまま無限ループに陥り CPU を枯渇させる。
                     ret = user32.GetMessageW(ctypes.byref(message), None, 0, 0)
-                    if ret == -1:
+                    result = classify_get_message_result(ret)
+                    if result == GET_MESSAGE_ERROR:
                         last_error = ctypes.windll.kernel32.GetLastError()
                         logger.error(
                             "GetMessageW がエラー (-1) を返しました "
@@ -150,7 +171,7 @@ class GlobalHotkeyListener:
                             last_error,
                         )
                         break
-                    if ret == 0:  # WM_QUIT（正常終了）
+                    if result == GET_MESSAGE_QUIT:  # WM_QUIT（正常終了）
                         break
                     if message.message == WM_HOTKEY:
                         self.tk_root.after(0, self.on_triggered, int(message.wParam))
