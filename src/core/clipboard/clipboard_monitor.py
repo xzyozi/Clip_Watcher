@@ -238,7 +238,13 @@ class ClipboardMonitor:
         active_process = self.get_active_process_name()
         logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
 
-        if active_process in self.excluded_apps:
+        # Windows の GetModuleBaseNameA は実行ファイルの実体ケース（例: KeePass.exe）を
+        # 返す一方、excluded_apps には小文字（keepass.exe）で登録されることがある。
+        # Windows のファイルシステムは大文字小文字を区別しないため、比較時のみ両側を
+        # 小文字化して確実に除外する（ログ表示は視認性のため実体ケースを維持する）。
+        if active_process is not None and active_process.lower() in {
+            app.lower() for app in self.excluded_apps
+        }:
             logging.info(f"除外アプリからのコピーのため無視: {active_process}")
             return
 

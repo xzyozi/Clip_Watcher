@@ -129,13 +129,22 @@ class ScheduleHelperComponent(BaseFrameGUI):
 
         hour_values = [f"{h:02d}" for h in range(24)]
         minute_values = ["00", "15", "30", "45"]
+        # state="readonly" により手動での不正値入力を防止する（一覧からの選択のみ許可）。
         hour_combo = ttk.Combobox(
-            time_frame, textvariable=self.hour_var, values=hour_values, width=4
+            time_frame,
+            textvariable=self.hour_var,
+            values=hour_values,
+            width=4,
+            state="readonly",
         )
         hour_combo.pack(side=tk.LEFT, padx=5, pady=5)
         ttk.Label(time_frame, text=":").pack(side=tk.LEFT)
         minute_combo = ttk.Combobox(
-            time_frame, textvariable=self.minute_var, values=minute_values, width=4
+            time_frame,
+            textvariable=self.minute_var,
+            values=minute_values,
+            width=4,
+            state="readonly",
         )
         minute_combo.pack(side=tk.LEFT, padx=5, pady=5)
 
@@ -250,6 +259,20 @@ class ScheduleHelperComponent(BaseFrameGUI):
             minute = int(self.minute_var.get())
         except ValueError:
             hour, minute = self.today.hour, self.today.minute
+
+        # state="readonly" でも、設定復元や将来の変更で範囲外値が入り得るため、
+        # 実行時にも範囲を検証する多層防御を行う。範囲外は既定値（0）へフォールバックし、
+        # 後続の datetime.replace が ValueError を送出しないことを保証する。
+        if not (0 <= hour <= 23):
+            self.logger.warning(
+                "時刻(hour=%s)が範囲外のため 0 にフォールバックします。", hour
+            )
+            hour = 0
+        if not (0 <= minute <= 59):
+            self.logger.warning(
+                "時刻(minute=%s)が範囲外のため 0 にフォールバックします。", minute
+            )
+            minute = 0
 
         new_date_for_check = datetime(self.current_year, self.current_month, day)
 
