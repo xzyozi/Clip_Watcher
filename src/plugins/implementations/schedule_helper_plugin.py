@@ -264,10 +264,14 @@ class ScheduleHelperComponent(BaseFrameGUI):
         # 実行時にも範囲を検証する多層防御を行う。範囲外は既定値（0）へフォールバックし、
         # 後続の datetime.replace が ValueError を送出しないことを保証する。
         if not (0 <= hour <= 23):
-            self.logger.warning("時刻(hour=%s)が範囲外のため 0 にフォールバックします。", hour)
+            self.logger.warning(
+                "時刻(hour=%s)が範囲外のため 0 にフォールバックします。", hour
+            )
             hour = 0
         if not (0 <= minute <= 59):
-            self.logger.warning("時刻(minute=%s)が範囲外のため 0 にフォールバックします。", minute)
+            self.logger.warning(
+                "時刻(minute=%s)が範囲外のため 0 にフォールバックします。", minute
+            )
             minute = 0
 
         new_date_for_check = datetime(self.current_year, self.current_month, day)
