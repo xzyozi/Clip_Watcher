@@ -137,7 +137,21 @@ class GlobalHotkeyListener:
                 result_holder["ok"] = True
                 ready_event.set()
                 message = ctypes.wintypes.MSG()
-                while user32.GetMessageW(ctypes.byref(message), None, 0, 0) != 0:
+                while True:
+                    # GetMessageW は成功時に正の値、WM_QUIT で 0、エラー時に -1 を返す。
+                    # 従来の "!= 0" 判定では -1（エラー）でループを抜けられず、
+                    # message が未更新のまま無限ループに陥り CPU を枯渇させる。
+                    ret = user32.GetMessageW(ctypes.byref(message), None, 0, 0)
+                    if ret == -1:
+                        last_error = ctypes.windll.kernel32.GetLastError()
+                        logger.error(
+                            "GetMessageW がエラー (-1) を返しました "
+                            "(GetLastError=%s)。ホットキー用メッセージループを終了します。",
+                            last_error,
+                        )
+                        break
+                    if ret == 0:  # WM_QUIT（正常終了）
+                        break
                     if message.message == WM_HOTKEY:
                         self.tk_root.after(0, self.on_triggered, int(message.wParam))
             finally:
