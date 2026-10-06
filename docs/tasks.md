@@ -37,7 +37,7 @@
 - [ ] [CW-0035] [feat] URLをページ概要付きMarkdownリンクへ手動変換する <!-- priority:medium issue:#101 theme:security stage:ideation added:2026-10-01 -->
 - [x] [CW-0036] [bug] 二重起動防止のTCP固定ポートがWindows動的除外ポートと競合し「Already Running」と誤判定されて起動できない <!-- priority:medium issue:#102 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0037] [feat] 複数行・危険コマンドのコピー前に警告する <!-- priority:medium issue:#103 theme:security stage:ideation completed:2026-10-01 -->
-- [ ] [CW-0038] [security] clipboard_monitor におけるプロセス名比較の大文字小文字不一致によるパスワードマネージャー除外バイパス <!-- priority:medium issue:#109 theme:security stage:ready added:2026-10-01 -->
+- [x] [CW-0038] [security] clipboard_monitor におけるプロセス名比較の大文字小文字不一致によるパスワードマネージャー除外バイパス <!-- priority:medium issue:#109 theme:security stage:ready added:2026-10-01 completed:2026-10-07 -->
 - [ ] [CW-0039] [security] app_main におけるスタートアップバッチ生成時のパスエスケープ不足とPATHハイジャックリスク <!-- priority:medium issue:#110 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0040] [security] config_resolver における workspace_root の未検証パス解決によるNTLM漏洩および設定改変リスク <!-- priority:medium issue:#111 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0041] [edge_cases] global_hotkey_listener における GetMessageW 戻り値 -1（エラー値）の未判定による無限ループとCPU枯渇リスク <!-- priority:medium issue:#112 theme:edge_cases stage:ideation added:2026-10-01 -->
