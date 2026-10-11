@@ -31,6 +31,14 @@ class ThemeManager:
         # apply_theme() 全体の適用を取り消す「ロールバック」ではない。ここで捕捉されない
         # 例外が発生した場合は、既存の例外伝播に委ね、ピン留め表示行を含む状態は
         # 失敗時点のままとする。
+        if sys.platform == "darwin":
+            # macOS (Aqua) では Cocoa のシステムアピアランスと矛盾するテーマ色を
+            # 強制すると、親フレームと子ウィジェットの明暗が反転して文字消失や
+            # 白塗り潰し（キメラ描画）が発生するため、OS の外観モードと自動同期する。
+            from src.utils.platform_utils import is_macos_dark_mode
+
+            theme_name = "dark" if is_macos_dark_mode() else "light"
+
         if theme_name not in THEMES:
             print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
             theme_name = "light"

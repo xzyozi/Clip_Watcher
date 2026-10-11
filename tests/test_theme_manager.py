@@ -4,7 +4,7 @@ import sys
 import tkinter as tk
 from tkinter import Tk
 from typing import cast
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -143,3 +143,23 @@ def test_apply_theme_to_widget_tree_styles_entry_and_panedwindow() -> None:
     theme_manager.apply_theme_to_widget_tree(mock_paned, theme)
 
     mock_paned.config.assert_called_once_with(bg=theme["frame_bg"])
+
+
+def test_apply_theme_on_macos_syncs_with_os_appearance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """macOS では OS のダークモード設定に連動してテーマが決定される。"""
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(HeadlessStyle, "_available_themes", ("aqua", "clam", "default"))
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    # OS がダークモードの場合 -> アプリ設定が light でも dark に連動
+    with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=True):
+        theme_manager.apply_theme("light")
+        assert theme_manager.current_theme == "dark"
+
+    # OS がライトモードの場合 -> light に連動
+    with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=False):
+        theme_manager.apply_theme("dark")
+        assert theme_manager.current_theme == "light"
