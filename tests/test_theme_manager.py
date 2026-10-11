@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import sys
+import tkinter as tk
 from tkinter import Tk
 from typing import cast
+from unittest.mock import MagicMock
 
+import pytest
+
+from src.core.config.defaults import THEMES
 from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
 
@@ -11,14 +17,21 @@ class HeadlessStyle:
     """Tkの表示サーバーなしでテーマ適用を検証するための最小限のStyle代替。"""
 
     last_instance: HeadlessStyle | None = None
+    _available_themes: tuple[str, ...] = ("default", "clam", "alt", "classic")
 
     def __init__(self, root: Tk) -> None:
         self.root = root
         self.configurations: list[tuple[str, dict[str, object]]] = []
+        self.used_themes: list[str] = []
         HeadlessStyle.last_instance = self
 
-    def theme_use(self, theme_name: str) -> None:
-        pass
+    def theme_names(self) -> tuple[str, ...]:
+        return self._available_themes
+
+    def theme_use(self, theme_name: str | None = None) -> str | None:
+        if theme_name is not None:
+            self.used_themes.append(theme_name)
+        return self.used_themes[-1] if self.used_themes else "default"
 
     def configure(self, style_name: str, **options: object) -> None:
         self.configurations.append((style_name, options))
@@ -91,3 +104,44 @@ def test_apply_theme_keeps_default_treeview_row_height_for_16px_icons(
         if style_name == "Treeview"
     )
     assert "rowheight" not in treeview_options
+
+
+def test_apply_theme_on_macos_preserves_aqua_theme(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """macOS (darwin) 環境では aqua テーマが利用可能な場合に aqua を維持する。"""
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(
+        HeadlessStyle, "_available_themes", ("aqua", "clam", "default")
+    )
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    theme_manager.apply_theme("dark")
+
+    assert HeadlessStyle.last_instance is not None
+    assert HeadlessStyle.last_instance.used_themes == ["aqua"]
+
+
+def test_apply_theme_to_widget_tree_styles_entry_and_panedwindow() -> None:
+    """apply_theme_to_widget_tree が tk.Entry および tk.PanedWindow に期待する色を設定する。"""
+    theme_manager = ThemeManager(cast(Tk, object()))
+    theme = THEMES["dark"]
+
+    mock_entry = MagicMock(spec=tk.Entry)
+    mock_entry.winfo_children.return_value = []
+    theme_manager.apply_theme_to_widget_tree(mock_entry, theme)
+
+    mock_entry.config.assert_called_once_with(
+        bg=theme["entry_bg"],
+        fg=theme["entry_fg"],
+        selectbackground=theme["select_bg"],
+        selectforeground=theme["select_fg"],
+        insertbackground=theme["fg"],
+    )
+
+    mock_paned = MagicMock(spec=tk.PanedWindow)
+    mock_paned.winfo_children.return_value = []
+    theme_manager.apply_theme_to_widget_tree(mock_paned, theme)
+
+    mock_paned.config.assert_called_once_with(bg=theme["frame_bg"])
