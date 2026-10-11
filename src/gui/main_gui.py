@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master: tk.Tk, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
-        logger.info("[DIAG-GUI] ClipWatcherGUI の初期化を開始します (master=%s)", master)
+        logger.info(
+            "[DIAG-GUI] ClipWatcherGUI の初期化を開始します (master=%s)", master
+        )
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
 
         self.history_data: list[tuple[str, bool, float]] = []
@@ -210,7 +212,9 @@ class ClipWatcherGUI(BaseFrameGUI):
             master.update_idletasks()
 
         tabs = self.notebook.tabs() if hasattr(self.notebook, "tabs") else ()
-        children_count = len(master.winfo_children()) if hasattr(master, "winfo_children") else 0
+        children_count = (
+            len(master.winfo_children()) if hasattr(master, "winfo_children") else 0
+        )
         logger.info(
             "[DIAG-GUI] ClipWatcherGUI 初期化完了: タブ数=%d, root子ウィジェット数=%d",
             len(tabs),

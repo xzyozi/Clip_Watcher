@@ -200,7 +200,9 @@ class ThemeManager:
         )
 
         # 2. Recursively apply theme to non-ttk widgets
-        logger.info("[DIAG-THEME] ウィジェットツリーへの色適用を開始: root=%s", self.root)
+        logger.info(
+            "[DIAG-THEME] ウィジェットツリーへの色適用を開始: root=%s", self.root
+        )
         self.apply_theme_to_widget_tree(self.root, theme)
         logger.info("[DIAG-THEME] ウィジェットツリーへの色適用完了")
 

@@ -121,7 +121,11 @@ def start_app() -> None:
             tcl_ver,
         )
 
-        if sys.platform == "darwin" and isinstance(tk_ver, (int, float)) and tk_ver < 8.6:
+        if (
+            sys.platform == "darwin"
+            and isinstance(tk_ver, (int, float))
+            and tk_ver < 8.6
+        ):
             logger.warning(
                 "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
                 "macOS の Dark Mode では Tk 8.6 以上が必要です（Tk 8.5 ではウィンドウが黒画面になる既知の不具合があります）。"
