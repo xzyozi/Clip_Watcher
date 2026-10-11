@@ -111,9 +111,7 @@ def test_apply_theme_on_macos_preserves_aqua_theme(
 ) -> None:
     """macOS (darwin) 環境では aqua テーマが利用可能な場合に aqua を維持する。"""
     monkeypatch.setattr(sys, "platform", "darwin")
-    monkeypatch.setattr(
-        HeadlessStyle, "_available_themes", ("aqua", "clam", "default")
-    )
+    monkeypatch.setattr(HeadlessStyle, "_available_themes", ("aqua", "clam", "default"))
     theme_manager = ThemeManager(cast(Tk, object()))
     configure_headless_theme_application(monkeypatch, theme_manager)
 
