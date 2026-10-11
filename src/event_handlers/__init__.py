@@ -128,7 +128,7 @@ def start_app() -> None:
                 "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
                 tk_ver,
             )
-        if sys.version_info < (3, 10):
+        if sys.version_info < (3, 10):  # noqa: UP036
             logger.warning(
                 "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"
                 "本アプリケーションは Python >= 3.10 を前提としています。",
