@@ -84,7 +84,20 @@ def start_app() -> None:
 
         # --- Logging ---
         logger = setup_logging()
-        logger.info("アプリケーションを開始します")
+        logger.info("=== ClipWatcher アプリケーションを開始します ===")
+        logger.info(
+            "[DIAG] 実行環境: Python %s (%s), Platform: %s",
+            sys.version.split()[0],
+            sys.executable,
+            sys.platform,
+        )
+        if sys.platform == "darwin":
+            from src.utils.platform_utils import is_macos_dark_mode
+
+            logger.info(
+                "[DIAG] macOS 外観判定: is_macos_dark_mode=%s",
+                is_macos_dark_mode(),
+            )
 
         # --- Migration ---
         try:
@@ -100,6 +113,11 @@ def start_app() -> None:
 
         # --- Application Setup ---
         root = tk.Tk()
+        logger.info(
+            "[DIAG] Tkinter 初期化完了: TkVersion=%s, TclVersion=%s",
+            getattr(tk, "TkVersion", "unknown"),
+            getattr(tk, "TclVersion", "unknown"),
+        )
 
         builder = ApplicationBuilder()
         app = (

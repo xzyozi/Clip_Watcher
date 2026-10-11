@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 import tkinter as tk
 from tkinter import Tk, Toplevel, ttk
@@ -7,6 +8,8 @@ from typing import Any
 
 from src.core.config.defaults import THEMES
 from src.gui.icon_manager import IconManager
+
+logger = logging.getLogger(__name__)
 
 
 class ThemeManager:
@@ -31,26 +34,47 @@ class ThemeManager:
         # apply_theme() 全体の適用を取り消す「ロールバック」ではない。ここで捕捉されない
         # 例外が発生した場合は、既存の例外伝播に委ね、ピン留め表示行を含む状態は
         # 失敗時点のままとする。
+        logger.info(
+            "[DIAG-THEME] apply_theme 呼び出し: 指定=%s, platform=%s",
+            theme_name,
+            sys.platform,
+        )
         if sys.platform == "darwin":
             # macOS (Aqua) では Cocoa のシステムアピアランスと矛盾するテーマ色を
             # 強制すると、親フレームと子ウィジェットの明暗が反転して文字消失や
             # 白塗り潰し（キメラ描画）が発生するため、OS の外観モードと自動同期する。
             from src.utils.platform_utils import is_macos_dark_mode
 
-            theme_name = "dark" if is_macos_dark_mode() else "light"
+            dark_mode = is_macos_dark_mode()
+            theme_name = "dark" if dark_mode else "light"
+            logger.info(
+                "[DIAG-THEME] macOS システム外観判定結果: is_dark=%s -> 選択テーマ=%s",
+                dark_mode,
+                theme_name,
+            )
 
         if theme_name not in THEMES:
-            print(f"Theme '{theme_name}' not found. Falling back to 'light'.")
+            logger.warning(
+                "[DIAG-THEME] Theme '%s' not found. Falling back to 'light'.",
+                theme_name,
+            )
             theme_name = "light"
         self.current_theme = theme_name
         theme = THEMES[theme_name]
+        logger.info(
+            "[DIAG-THEME] 最終テーマ決定: %s (bg=%s, fg=%s)",
+            self.current_theme,
+            theme.get("bg"),
+            theme.get("fg"),
+        )
 
         if self.icon_manager is not None:
             self.icon_manager.invalidate_theme(theme_name)
 
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
-        if sys.platform == "darwin" and "aqua" in style.theme_names():
+        available_ttk = getattr(style, "theme_names", lambda: ())()
+        if sys.platform == "darwin" and "aqua" in available_ttk:
             # macOS (Aqua) 環境では X11 向けの 'clam'/'default' テーマへ切り替えると
             # Cocoa レンダリングパイプラインと競合してウィジェットが描画されないため、
             # 'aqua' テーマを維持する。
@@ -69,6 +93,13 @@ class ThemeManager:
                 theme_name = "default"
         else:
             style.theme_use("default")
+
+        active_ttk = getattr(style, "theme_use", lambda: "unknown")()
+        logger.info(
+            "[DIAG-THEME] ttk スタイル適用結果: active=%s, available=%s",
+            active_ttk,
+            available_ttk,
+        )
 
         style.configure(".", background=theme["bg"], foreground=theme["fg"])
         style.configure("TFrame", background=theme["frame_bg"])
@@ -169,7 +200,9 @@ class ThemeManager:
         )
 
         # 2. Recursively apply theme to non-ttk widgets
+        logger.info("[DIAG-THEME] ウィジェットツリーへの色適用を開始: root=%s", self.root)
         self.apply_theme_to_widget_tree(self.root, theme)
+        logger.info("[DIAG-THEME] ウィジェットツリーへの色適用完了")
 
         # 3. Apply theme to menubar
         if self.menubar:

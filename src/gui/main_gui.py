@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import tkinter as tk
 from collections.abc import Mapping
 from tkinter import font, ttk
@@ -18,10 +19,13 @@ if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
     from src.plugins.gui_plugin import GuiPlugin
 
+logger = logging.getLogger(__name__)
+
 
 class ClipWatcherGUI(BaseFrameGUI):
     def __init__(self, master: tk.Tk, app_instance: BaseApplication) -> None:
         super().__init__(master, app_instance)
+        logger.info("[DIAG-GUI] ClipWatcherGUI の初期化を開始します (master=%s)", master)
         master.geometry(config.MAIN_WINDOW_GEOMETRY)
 
         self.history_data: list[tuple[str, bool, float]] = []
@@ -34,6 +38,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             fill=tk.BOTH,
             expand=True,
         )
+        logger.info("[DIAG-GUI] Notebook を配置しました")
 
         self.clipboard_tab_frame = ttk.Frame(
             self.notebook, padding=config.FRAME_PADDING
@@ -200,6 +205,17 @@ class ClipWatcherGUI(BaseFrameGUI):
         self._create_plugin_tabs()
         self._update_widget_text()  # Initial text setup
         self.notebook.bind("<Button-1>", self.handle_global_click, add="+")
+
+        if hasattr(master, "update_idletasks"):
+            master.update_idletasks()
+
+        tabs = self.notebook.tabs() if hasattr(self.notebook, "tabs") else ()
+        children_count = len(master.winfo_children()) if hasattr(master, "winfo_children") else 0
+        logger.info(
+            "[DIAG-GUI] ClipWatcherGUI 初期化完了: タブ数=%d, root子ウィジェット数=%d",
+            len(tabs),
+            children_count,
+        )
 
     def handle_global_click(self, event: tk.Event) -> None:
         """
