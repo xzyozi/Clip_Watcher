@@ -38,7 +38,7 @@ related_documents:
 - **対象ランタイム**: Python 3.10 以降
 - **GUI**: Tkinter / ttk（Python標準ライブラリ）
 - **永続化**: SQLite
-- **追加依存**: `Pillow`、`pywin32`、`psutil`
+- **追加依存**: `pywin32`、`psutil`
 
 インストール、仮想環境、検証コマンドは [../setup/toml_project_setup.md](../setup/toml_project_setup.md) を正本とします。
 
