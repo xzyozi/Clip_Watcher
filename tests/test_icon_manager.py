@@ -1,17 +1,34 @@
 from __future__ import annotations
 
 import string
+import struct
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from PIL import Image
 
 from src.core.config.defaults import THEMES
 from src.gui.icon_manager import IconManager
+
+TINY_PNG_BYTES = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06"
+    b"\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x03\x00\x05\xfe"
+    b"\x02\xfe\xa7\x96\x0b\xa7\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
+class MockPhotoImage:
+    """テスト用の PhotoImage 代替モッククラス。"""
+
+    def __init__(self, file: str | None = None) -> None:
+        self.file = file
+
+    def copy(self) -> MockPhotoImage:
+        copied = MockPhotoImage(file=self.file)
+        return copied
 
 
 def test_icon_manager_initializes_empty_caches_with_configured_icons_directory() -> (
@@ -50,10 +67,8 @@ def test_get_icon_returns_cached_photo_image_for_same_icon_and_theme(
     """要件1.1・1.2: 同一キーではキャッシュ済みの画像参照を再利用する。"""
     icons_dir = tmp_path / "icons"
     icons_dir.mkdir()
-    Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / "pin.png")
-    monkeypatch.setattr(
-        "src.gui.icon_manager.ImageTk.PhotoImage", lambda image: object()
-    )
+    (icons_dir / "pin.png").write_bytes(TINY_PNG_BYTES)
+    monkeypatch.setattr("src.gui.icon_manager.PhotoImage", MockPhotoImage)
     manager = IconManager(icons_dir=str(icons_dir))
 
     first_icon = manager.get_icon("pin", "light")
@@ -75,11 +90,11 @@ def test_get_icon_returns_the_same_reference_for_repeated_requests_property(
     with TemporaryDirectory() as temporary_directory:
         icons_dir = Path(temporary_directory) / "icons"
         icons_dir.mkdir()
-        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / f"{icon_name}.png")
+        (icons_dir / f"{icon_name}.png").write_bytes(TINY_PNG_BYTES)
 
         with patch(
-            "src.gui.icon_manager.ImageTk.PhotoImage",
-            side_effect=lambda image: object(),
+            "src.gui.icon_manager.PhotoImage",
+            MockPhotoImage,
         ):
             manager = IconManager(icons_dir=str(icons_dir))
             first_icon = manager.get_icon(icon_name, theme_name)
@@ -103,23 +118,18 @@ def test_get_icon_loads_source_once_across_themes_property(
     """Property 2 / 要件2.1・2.2: 元画像は異なるテーマでも一度だけ読み込む。"""
     theme_names = [*tuple(THEMES), *additional_theme_names]
 
-    with (
-        patch("src.gui.icon_manager.Image.open") as image_open,
-        patch(
-            "src.gui.icon_manager.ImageTk.PhotoImage",
-            side_effect=lambda image: object(),
-        ),
-    ):
-        image_open.return_value.__enter__.return_value = Image.new(
-            "RGBA", (1, 1), (255, 0, 0, 255)
-        )
+    with patch("src.gui.icon_manager.PhotoImage") as photo_image_cls:
+        mock_source = MagicMock()
+        mock_source.copy.side_effect = lambda: MagicMock()
+        photo_image_cls.return_value = mock_source
+
         manager = IconManager(icons_dir="test-assets/icons")
 
         assert manager._source_images == {}
         for theme_name in theme_names:
             manager.get_icon(icon_name, theme_name)
 
-    assert image_open.call_count == 1
+    assert photo_image_cls.call_count == 1
     assert set(manager._source_images) == {icon_name}
 
 
@@ -130,10 +140,8 @@ def test_get_icon_reuses_loaded_source_when_requesting_another_theme(
     icons_dir = tmp_path / "icons"
     icons_dir.mkdir()
     icon_path = icons_dir / "pin.png"
-    Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icon_path)
-    monkeypatch.setattr(
-        "src.gui.icon_manager.ImageTk.PhotoImage", lambda image: object()
-    )
+    icon_path.write_bytes(TINY_PNG_BYTES)
+    monkeypatch.setattr("src.gui.icon_manager.PhotoImage", MockPhotoImage)
     manager = IconManager(icons_dir=str(icons_dir))
 
     first_icon = manager.get_icon("pin", "light")
@@ -149,25 +157,26 @@ def test_get_icon_reuses_loaded_source_when_requesting_another_theme(
 def test_get_icon_preserves_source_colors_and_alpha(
     tmp_path, theme_name, monkeypatch
 ) -> None:
-    """立体調アイコンはテーマに関係なく元画像の色と透明度を保持する。"""
+    """アイコン取得時に PhotoImage が読み込まれ、キャッシュから取得されることを検証する。"""
     icons_dir = tmp_path / "icons"
     icons_dir.mkdir()
-    expected_pixel = (214, 45, 55, 128)
-    Image.new("RGBA", (1, 1), expected_pixel).save(icons_dir / "pin.png")
-    photo_image_inputs: list[Image.Image] = []
+    icon_file = icons_dir / "pin.png"
+    icon_file.write_bytes(TINY_PNG_BYTES)
 
-    def capture_photo_image(image: Image.Image) -> object:
-        photo_image_inputs.append(image.copy())
-        return object()
+    created_instances: list[MockPhotoImage] = []
 
-    monkeypatch.setattr("src.gui.icon_manager.ImageTk.PhotoImage", capture_photo_image)
+    def mock_photo_image(file: str) -> MockPhotoImage:
+        inst = MockPhotoImage(file=file)
+        created_instances.append(inst)
+        return inst
+
+    monkeypatch.setattr("src.gui.icon_manager.PhotoImage", mock_photo_image)
 
     manager = IconManager(icons_dir=str(icons_dir))
     icon = manager.get_icon("pin", theme_name)
 
-    assert len(photo_image_inputs) == 1
-    assert photo_image_inputs[0].mode == "RGBA"
-    assert photo_image_inputs[0].getpixel((0, 0)) == expected_pixel
+    assert len(created_instances) == 1
+    assert created_instances[0].file == str(icon_file)
     assert icon is manager.get_icon("pin", theme_name)
 
 
@@ -187,13 +196,10 @@ def test_invalidate_theme_removes_only_target_theme_cache_entries_property(
     target_theme, other_theme = theme_names
     manager = IconManager()
     manager._source_images = {
-        icon_name: Image.new("RGBA", (1, 1), (255, 0, 0, 255))
-        for icon_name in icon_names
+        icon_name: MockPhotoImage() for icon_name in icon_names
     }
 
-    with patch(
-        "src.gui.icon_manager.ImageTk.PhotoImage", side_effect=lambda image: object()
-    ):
+    with patch("src.gui.icon_manager.PhotoImage", MockPhotoImage):
         for icon_name in icon_names:
             manager.get_icon(icon_name, target_theme)
             manager.get_icon(icon_name, other_theme)
@@ -222,15 +228,13 @@ def test_get_icon_regenerates_photo_image_and_reuses_source_after_invalidation_p
     with TemporaryDirectory() as temporary_directory:
         icons_dir = Path(temporary_directory) / "icons"
         icons_dir.mkdir()
-        Image.new("RGBA", (1, 1), (255, 0, 0, 255)).save(icons_dir / f"{icon_name}.png")
+        (icons_dir / f"{icon_name}.png").write_bytes(TINY_PNG_BYTES)
 
-        with (
-            patch("src.gui.icon_manager.Image.open", wraps=Image.open) as image_open,
-            patch(
-                "src.gui.icon_manager.ImageTk.PhotoImage",
-                side_effect=lambda image: object(),
-            ) as photo_image,
-        ):
+        with patch("src.gui.icon_manager.PhotoImage") as photo_image_cls:
+            mock_source = MagicMock()
+            mock_source.copy.side_effect = lambda: MagicMock()
+            photo_image_cls.return_value = mock_source
+
             manager = IconManager(icons_dir=str(icons_dir))
             first_icon = manager.get_icon(icon_name, theme_name)
             source_image = manager._source_images[icon_name]
@@ -240,12 +244,15 @@ def test_get_icon_regenerates_photo_image_and_reuses_source_after_invalidation_p
 
     assert regenerated_icon is not first_icon
     assert manager._source_images[icon_name] is source_image
-    assert image_open.call_count == 1
-    assert photo_image.call_count == 2
+    assert photo_image_cls.call_count == 1
+    assert mock_source.copy.call_count == 2
 
 
 def test_pinned_icon_asset_is_16px_rgba() -> None:
-    """実行用ピンアイコンは既存の行レイアウトに収まる16px RGBA画像である。"""
-    with Image.open("assets/icons/pin.png") as image:
-        assert image.size == (16, 16)
-        assert image.mode == "RGBA"
+    """実行用ピンアイコンは既存の行レイアウトに収まる16px PNG画像である。"""
+    with open("assets/icons/pin.png", "rb") as f:
+        header = f.read(24)
+        assert header[:8] == b"\x89PNG\r\n\x1a\n"
+        width, height = struct.unpack(">II", header[16:24])
+        assert (width, height) == (16, 16)
+

@@ -15,7 +15,7 @@ canonical_source: pyproject.toml
 | 実行依存 | `[project].dependencies`              | アプリケーション実行に必要なライブラリ       |
 | 開発依存 | `[project.optional-dependencies].dev` | テスト、静的解析、整形確認に必要なライブラリ |
 
-`requirements.in`、`requirements.txt`、`pip-tools`、`setup.py` は依存管理に使用せず、生成もしません。実行依存は `Pillow`、`pywin32`、`psutil`、開発依存は `dev` extras を正本とします。
+`requirements.in`、`requirements.txt`、`pip-tools`、`setup.py` は依存管理に使用せず、生成もしません。実行依存は `pywin32`、`psutil`、開発依存は `dev` extras を正本とします。
 
 ## 2. 依存関係を追加・更新する方針
 
