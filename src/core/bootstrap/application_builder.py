@@ -14,9 +14,9 @@ from src.core.config.app_status import AppStatus
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.protocols import ProcessInspector, SoundPlayer
 from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
-from src.core.platform.protocols import ProcessInspector, SoundPlayer
 from src.plugins.manager import PluginManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator

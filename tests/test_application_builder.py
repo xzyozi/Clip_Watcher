@@ -77,9 +77,12 @@ def test_with_platform_adapters_sets_adapters() -> None:
     assert builder.sound_player is mock_sound
 
 
-def test_with_global_hotkey_listener_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_with_global_hotkey_listener_non_windows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """非 Windows 環境で with_global_hotkey_listener が NullHotkeyListener を設定することを検証する。"""
     import sys
+
     from src.core.platform.null import NullHotkeyListener
 
     monkeypatch.setattr(sys, "platform", "darwin")

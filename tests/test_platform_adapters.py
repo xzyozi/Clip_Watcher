@@ -92,14 +92,18 @@ class TestWindowsAdapters:
     def test_windows_process_inspector_exception_fallback(self) -> None:
         inspector = WindowsProcessInspector()
         with patch("ctypes.windll", create=True) as mock_windll:
-            mock_windll.user32.GetForegroundWindow.side_effect = RuntimeError("Mock error")
+            mock_windll.user32.GetForegroundWindow.side_effect = RuntimeError(
+                "Mock error"
+            )
             assert inspector.get_active_process_name() is None
 
 
 class TestPlatformFactory:
     """get_platform_adapters() ファクトリの検証。"""
 
-    def test_get_platform_adapters_non_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_platform_adapters_non_windows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(sys, "platform", "darwin")
         adapters = get_platform_adapters()
 
@@ -108,7 +112,9 @@ class TestPlatformFactory:
         assert isinstance(adapters["sound_player"], NullSoundPlayer)
         assert isinstance(adapters["paste_sender"], NullPasteSender)
 
-    def test_get_platform_adapters_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_platform_adapters_windows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(sys, "platform", "win32")
         adapters = get_platform_adapters()
 
