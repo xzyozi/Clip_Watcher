@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from tkinter import Tk, Toplevel, ttk
 from typing import Any
@@ -41,7 +42,15 @@ class ThemeManager:
 
         # 1. Configure ttk styles
         style = ttk.Style(self.root)
-        if theme_name == "dark":
+        if sys.platform == "darwin" and "aqua" in style.theme_names():
+            # macOS (Aqua) 環境では X11 向けの 'clam'/'default' テーマへ切り替えると
+            # Cocoa レンダリングパイプラインと競合してウィジェットが描画されないため、
+            # 'aqua' テーマを維持する。
+            try:
+                style.theme_use("aqua")
+            except tk.TclError:
+                style.theme_use("default")
+        elif theme_name == "dark":
             try:
                 style.theme_use("clam")
             except tk.TclError:
@@ -190,6 +199,16 @@ class ThemeManager:
         try:
             if isinstance(widget, (tk.Tk, tk.Toplevel, tk.Frame, tk.LabelFrame)):
                 widget.config(bg=theme["bg"])
+            elif isinstance(widget, tk.PanedWindow):
+                widget.config(bg=theme["frame_bg"])
+            elif isinstance(widget, tk.Entry):
+                widget.config(
+                    bg=theme["entry_bg"],
+                    fg=theme["entry_fg"],
+                    selectbackground=theme["select_bg"],
+                    selectforeground=theme["select_fg"],
+                    insertbackground=theme["fg"],
+                )
             elif isinstance(widget, (tk.Text, tk.Listbox)):
                 widget.config(
                     bg=theme["listbox_bg"],
