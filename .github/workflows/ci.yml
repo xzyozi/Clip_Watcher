@@ -34,6 +34,12 @@ jobs:
         run: |
           uv pip install --system -e ".[dev]"
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
       - name: Run Ruff (Linter)
         run: |
           uv run ruff check .
@@ -47,5 +53,10 @@ jobs:
           uv run mypy .
 
       - name: Run Pytest
+        shell: bash
         run: |
-          uv run pytest
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a uv run pytest
+          else
+            uv run pytest
+          fi

@@ -3,6 +3,7 @@
 ApplicationBuilder と MainApplication へのホットキー・ウィンドウ状態組み込み検証。
 """
 
+import sys
 from unittest.mock import MagicMock, patch
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
@@ -39,7 +40,12 @@ def test_application_builder_component_injection() -> None:
         )
 
         assert builder.window_state_manager is mock_wsm
-        assert builder.hotkey_listener is mock_hkl
+        if sys.platform == "win32":
+            assert builder.hotkey_listener is mock_hkl
+        else:
+            from src.core.platform.null import NullHotkeyListener
+
+            assert isinstance(builder.hotkey_listener, NullHotkeyListener)
         assert builder.hotkey_registration_manager is mock_hrm
 
 

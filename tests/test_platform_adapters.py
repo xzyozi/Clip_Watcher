@@ -75,7 +75,10 @@ class TestWindowsAdapters:
         assert isinstance(WindowsSoundPlayer(), SoundPlayer)
         assert isinstance(WindowsPasteSender(), PasteSender)
 
-    def test_windows_sound_player_with_winsound(self) -> None:
+    def test_windows_sound_player_with_winsound(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", "win32")
         player = WindowsSoundPlayer()
         mock_winsound = MagicMock()
         with patch.dict("sys.modules", {"winsound": mock_winsound}):
@@ -83,7 +86,10 @@ class TestWindowsAdapters:
             assert result is True
             mock_winsound.Beep.assert_called_once_with(800, 150)
 
-    def test_windows_sound_player_without_winsound(self) -> None:
+    def test_windows_sound_player_without_winsound(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", "win32")
         player = WindowsSoundPlayer()
         with patch.dict("sys.modules", {"winsound": None}):
             result = player.play_notification_beep(800, 150)
