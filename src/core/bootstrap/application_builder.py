@@ -15,6 +15,7 @@ from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
 from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
+from src.core.platform.protocols import ProcessInspector, SoundPlayer
 from src.plugins.manager import PluginManager
 from src.utils.error_handler import log_and_show_error
 from src.utils.i18n import Translator
@@ -51,6 +52,18 @@ class ApplicationBuilder:
         self.hotkey_listener: GlobalHotkeyListener | None = None
         self.hotkey_registration_manager: HotkeyRegistrationManager | None = None
         self.text_workflow_service: TextWorkflowService | None = None
+        self.process_inspector: ProcessInspector | None = None
+        self.sound_player: SoundPlayer | None = None
+
+    def with_platform_adapters(
+        self,
+        process_inspector: ProcessInspector | None = None,
+        sound_player: SoundPlayer | None = None,
+    ) -> ApplicationBuilder:
+        """プラットフォーム固有のアダプター（プロセス検査、通知音等）を設定"""
+        self.process_inspector = process_inspector
+        self.sound_player = sound_player
+        return self
 
     def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
@@ -260,7 +273,12 @@ class ApplicationBuilder:
                 win32_available,
                 self.db_manager,
                 self.history_service,
+                process_inspector=self.process_inspector,
             )
+            if self.sound_player is not None and hasattr(
+                self.monitor, "notification_manager"
+            ):
+                self.monitor.notification_manager.sound_player = self.sound_player
             logger.info("クリップボードモニターを初期化しました")
             return self
         except Exception as e:
