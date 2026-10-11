@@ -195,9 +195,7 @@ def test_invalidate_theme_removes_only_target_theme_cache_entries_property(
     """Property 3 / 要件3.1・3.2: 対象テーマのキャッシュだけを破棄する。"""
     target_theme, other_theme = theme_names
     manager = IconManager()
-    manager._source_images = {
-        icon_name: MockPhotoImage() for icon_name in icon_names
-    }
+    manager._source_images = {icon_name: MockPhotoImage() for icon_name in icon_names}
 
     with patch("src.gui.icon_manager.PhotoImage", MockPhotoImage):
         for icon_name in icon_names:
@@ -255,4 +253,3 @@ def test_pinned_icon_asset_is_16px_rgba() -> None:
         assert header[:8] == b"\x89PNG\r\n\x1a\n"
         width, height = struct.unpack(">II", header[16:24])
         assert (width, height) == (16, 16)
-

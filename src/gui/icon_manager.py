@@ -46,4 +46,3 @@ class IconManager:
     def has_icon_source(self, icon_name: str) -> bool:
         """指定アイコンのPNG元画像が存在するかを読み込まずに確認する。"""
         return os.path.isfile(os.path.join(self._icons_dir, f"{icon_name}.png"))
-
