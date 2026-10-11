@@ -59,3 +59,35 @@ def test_build_passes_icon_manager_to_main_application() -> None:
         main_application_class.call_args.kwargs["icon_manager"] is builder.icon_manager
     )
     built_app.on_ready.assert_called_once_with()
+
+
+def test_with_platform_adapters_sets_adapters() -> None:
+    """プラットフォームアダプターが正しくBuilderに登録されることを検証する。"""
+    builder = ApplicationBuilder()
+    mock_inspector = MagicMock()
+    mock_sound = MagicMock()
+
+    result = builder.with_platform_adapters(
+        process_inspector=mock_inspector,
+        sound_player=mock_sound,
+    )
+
+    assert result is builder
+    assert builder.process_inspector is mock_inspector
+    assert builder.sound_player is mock_sound
+
+
+def test_with_global_hotkey_listener_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """非 Windows 環境で with_global_hotkey_listener が NullHotkeyListener を設定することを検証する。"""
+    import sys
+    from src.core.platform.null import NullHotkeyListener
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+
+    builder = ApplicationBuilder()
+    builder.event_dispatcher = MagicMock()
+    mock_handler = MagicMock()
+
+    result = builder.with_global_hotkey_listener(mock_handler)
+    assert result is builder
+    assert isinstance(builder.hotkey_listener, NullHotkeyListener)
