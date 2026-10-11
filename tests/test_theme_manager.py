@@ -148,9 +148,10 @@ def test_apply_theme_to_widget_tree_styles_entry_and_panedwindow() -> None:
 def test_apply_theme_on_macos_syncs_with_os_appearance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """macOS では OS のダークモード設定に連動してテーマが決定される。"""
+    """macOS かつ Tk 8.6+ では OS のダークモード設定に連動してテーマが決定される。"""
     monkeypatch.setattr(sys, "platform", "darwin")
     monkeypatch.setattr(HeadlessStyle, "_available_themes", ("aqua", "clam", "default"))
+    monkeypatch.setattr(tk, "TkVersion", 8.6)
     theme_manager = ThemeManager(cast(Tk, object()))
     configure_headless_theme_application(monkeypatch, theme_manager)
 
@@ -161,5 +162,20 @@ def test_apply_theme_on_macos_syncs_with_os_appearance(
 
     # OS がライトモードの場合 -> light に連動
     with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=False):
+        theme_manager.apply_theme("dark")
+        assert theme_manager.current_theme == "light"
+
+
+def test_apply_theme_on_macos_tk85_forces_light_theme(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """macOS かつ TkVersion < 8.6 (レガシー環境) の場合、OSがダークモードでも light テーマを強制適用する。"""
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(HeadlessStyle, "_available_themes", ("aqua", "clam", "default"))
+    monkeypatch.setattr(tk, "TkVersion", 8.5)
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=True):
         theme_manager.apply_theme("dark")
         assert theme_manager.current_theme == "light"

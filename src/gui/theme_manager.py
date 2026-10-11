@@ -43,15 +43,25 @@ class ThemeManager:
             # macOS (Aqua) では Cocoa のシステムアピアランスと矛盾するテーマ色を
             # 強制すると、親フレームと子ウィジェットの明暗が反転して文字消失や
             # 白塗り潰し（キメラ描画）が発生するため、OS の外観モードと自動同期する。
-            from src.utils.platform_utils import is_macos_dark_mode
+            # ただし、Tk 8.5 (macOS システム標準 Python 3.9) は Dark Mode をサポートしておらず、
+            # 白・シルバーのクラシック Aqua のみであるため、Tk 8.6 未満では常に "light" テーマを適用する。
+            tk_ver = getattr(tk, "TkVersion", 0.0)
+            if isinstance(tk_ver, (int, float)) and tk_ver < 8.6:
+                theme_name = "light"
+                logger.info(
+                    "[DIAG-THEME] Tk %.1f が検出されました。Dark Mode 非対応のレガシー環境のため light テーマを強制適用します",
+                    tk_ver,
+                )
+            else:
+                from src.utils.platform_utils import is_macos_dark_mode
 
-            dark_mode = is_macos_dark_mode()
-            theme_name = "dark" if dark_mode else "light"
-            logger.info(
-                "[DIAG-THEME] macOS システム外観判定結果: is_dark=%s -> 選択テーマ=%s",
-                dark_mode,
-                theme_name,
-            )
+                dark_mode = is_macos_dark_mode()
+                theme_name = "dark" if dark_mode else "light"
+                logger.info(
+                    "[DIAG-THEME] macOS システム外観判定結果: is_dark=%s -> 選択テーマ=%s",
+                    dark_mode,
+                    theme_name,
+                )
 
         if theme_name not in THEMES:
             logger.warning(
