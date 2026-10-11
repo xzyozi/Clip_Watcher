@@ -328,14 +328,21 @@ class ApplicationBuilder:
         if event_dispatcher is None:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
-            from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
+            if sys.platform == "win32":
+                from src.core.hotkey.global_hotkey_listener import (
+                    GlobalHotkeyListener,
+                )
 
-            self.hotkey_listener = GlobalHotkeyListener(
-                master,
-                on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
-                    "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
-                ),
-            )
+                self.hotkey_listener = GlobalHotkeyListener(
+                    master,
+                    on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
+                        "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
+                    ),
+                )
+            else:
+                from src.core.platform.null import NullHotkeyListener
+
+                self.hotkey_listener = NullHotkeyListener()  # type: ignore[assignment]
             logger.info("グローバルホットキーリスナーを初期化しました")
             return self
         except Exception as e:
