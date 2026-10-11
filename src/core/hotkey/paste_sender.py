@@ -3,9 +3,12 @@ from __future__ import annotations
 import ctypes
 import logging
 import sys
-from typing import Protocol
+
+from src.core.platform.protocols import PasteSender
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["PasteSender", "WindowsPasteSender"]
 
 _VK_SHIFT = 0x10
 _VK_CONTROL = 0x11
@@ -15,12 +18,6 @@ _VK_RWIN = 0x5C
 _VK_V = 0x56
 _KEYEVENTF_KEYUP = 0x0002
 _MODIFIER_KEYS = (_VK_SHIFT, _VK_CONTROL, _VK_MENU, _VK_LWIN, _VK_RWIN)
-
-
-class PasteSender(Protocol):
-    """アクティブウィンドウへ貼り付け操作を送る Interface。"""
-
-    def paste_active_window(self) -> bool: ...
 
 
 class WindowsPasteSender:

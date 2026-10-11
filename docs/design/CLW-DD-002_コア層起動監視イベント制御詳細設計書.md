@@ -41,6 +41,7 @@ related_documents:
 | `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                 |
 | `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                         |
 | `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                       |
+| `platform/`    | **OS抽象化・アダプター**<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`等）。<br>・`windows/`: Windows具象アダプター。<br>・`null/`: 非Windows/テスト用Nullアダプター。                                 |
 | `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                               |
 
 ---
@@ -156,3 +157,4 @@ sequenceDiagram
 | 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                               |
 | :------ | :--------- | :----- | :----------------------------------------------------------------------------------------------------- |
 | Rev.1.0 | 2026-08-31 | 未記載 | コア層プログラム仕様書を詳細設計書として命名・分類し、SSOT境界、メタデータ、検証要件、改訂履歴を整備。 |
+| Rev.1.1 | 2026-10-11 | Antigravity | OSプラットフォーム抽象レイヤー (`src/core/platform`) の追加に伴うモジュール構成の更新 (#148)。 |

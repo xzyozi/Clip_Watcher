@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import ctypes
 import os
 import sys
 import tkinter as tk
 import traceback
 from tkinter import messagebox
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
+from src.core.platform.protocols import SingleInstanceController
 from src.utils.logging_config import setup_logging
 
 # Import standalone handlers so they can be accessed via the package
@@ -21,8 +21,17 @@ if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
 
 
-_MUTEX_NAME = "Local\\ClipWatcher_SingleInstance_Mutex"
-_ERROR_ALREADY_EXISTS = 183
+def _create_single_instance_controller() -> SingleInstanceController | None:
+    if sys.platform == "win32":
+        try:
+            from src.core.platform.windows.single_instance import (
+                WindowsSingleInstanceController,
+            )
+
+            return WindowsSingleInstanceController()
+        except ImportError:
+            return None
+    return None
 
 
 def register_class_based_handlers(app_instance: BaseApplication) -> None:
@@ -40,43 +49,28 @@ def register_class_based_handlers(app_instance: BaseApplication) -> None:
     )  # type: ignore
 
 
-def _acquire_windows_mutex() -> tuple[int | None, bool]:
-    """Windows の名前付きミューテックスを取得し、重複起動かを返す。"""
-    if sys.platform != "win32":
+def _acquire_windows_mutex() -> tuple[SingleInstanceController | None, bool]:
+    """SingleInstanceController を取得してロックを試み、互換タプルを返す。"""
+    controller = _create_single_instance_controller()
+    if controller is None:
         return None, False
-
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    create_mutex = kernel32.CreateMutexW
-    create_mutex.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
-    create_mutex.restype = ctypes.c_void_p
-
-    mutex_handle = create_mutex(None, False, _MUTEX_NAME)
-    if not mutex_handle:
-        raise ctypes.WinError(ctypes.get_last_error())
-
-    if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
-        kernel32.CloseHandle(ctypes.c_void_p(mutex_handle))
+    if not controller.acquire():
         return None, True
+    return controller, False
 
-    return int(mutex_handle), False
 
-
-def _release_windows_mutex(mutex_handle: int | None) -> None:
-    """取得済みの Windows 名前付きミューテックスのハンドルを閉じる。"""
-    if sys.platform == "win32" and mutex_handle is not None:
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.CloseHandle(ctypes.c_void_p(mutex_handle))
+def _release_windows_mutex(controller: SingleInstanceController | Any | None) -> None:
+    """保持している SingleInstanceController の排他ロックを解放する。"""
+    if controller is not None and hasattr(controller, "release"):
+        controller.release()
 
 
 def start_app() -> None:
-    mutex_handle: int | None = None
+    controller, already_running = _acquire_windows_mutex()
+    if already_running:
+        messagebox.showinfo("Already Running", "Clip Watcher is already running.")
+        return
     try:
-        # --- Single Instance Check ---
-        mutex_handle, already_running = _acquire_windows_mutex()
-        if already_running:
-            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
-            return
-
         # --- Path Definitions ---
         if sys.platform == "win32":
             app_data_dir = os.path.join(os.environ["USERPROFILE"], ".clipWatcher")
@@ -139,4 +133,4 @@ def start_app() -> None:
             print(f"アプリケーション起動エラー: {str(e)}")
         traceback.print_exc()
     finally:
-        _release_windows_mutex(mutex_handle)
+        _release_windows_mutex(controller)

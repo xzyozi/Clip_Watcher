@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes
 import logging
+import sys
 import threading
 import time
 import tkinter as tk
@@ -18,6 +17,7 @@ except ImportError:
 
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.protocols import ProcessInspector
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
 
@@ -36,6 +36,19 @@ logging.basicConfig(
 )
 
 
+def _create_default_process_inspector() -> ProcessInspector | None:
+    if sys.platform == "win32":
+        try:
+            from src.core.platform.windows.process_inspector import (
+                WindowsProcessInspector,
+            )
+
+            return WindowsProcessInspector()
+        except ImportError:
+            return None
+    return None
+
+
 class ClipboardMonitor:
     def __init__(
         self,
@@ -47,10 +60,16 @@ class ClipboardMonitor:
         history_service: HistoryService,
         history_limit: int = _DEFAULT_HISTORY_LIMIT,
         excluded_apps: list[str] | None = None,
+        process_inspector: ProcessInspector | None = None,
     ) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
+        self.process_inspector = (
+            process_inspector
+            if process_inspector is not None
+            else _create_default_process_inspector()
+        )
         self.notification_manager = NotificationManager(
             None
         )  # 設定はイベント経由で渡されます
@@ -96,26 +115,9 @@ class ClipboardMonitor:
         self.error_callback = callback
 
     def get_active_process_name(self) -> str | None:
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
-        psapi = ctypes.windll.psapi
-
-        hwnd = user32.GetForegroundWindow()
-        if not hwnd:
-            return None
-
-        pid = ctypes.wintypes.DWORD()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-
-        process_handle = kernel32.OpenProcess(0x0410, False, pid.value)
-        if not process_handle:
-            return None
-
-        exe_name = (ctypes.c_char * 260)()
-        psapi.GetModuleBaseNameA(process_handle, None, exe_name, 260)
-        kernel32.CloseHandle(process_handle)
-
-        return exe_name.value.decode(errors="ignore")
+        if self.process_inspector is not None:
+            return self.process_inspector.get_active_process_name()
+        return None
 
     def update_clipboard(self, text: str) -> None:
         """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
