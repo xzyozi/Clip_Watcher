@@ -112,6 +112,20 @@ def start_app() -> None:
             )
 
         # --- Application Setup ---
+        # Tk 9.0 + Python < 3.13 互換性パッチ（空メニュー index が空文字を返し TclError になる問題の安全回避）
+        try:
+
+            def _compat_menu_index(self: tk.Menu, index: Any) -> int | None:
+                w = getattr(self, "_w", "")
+                i = self.tk.call(w, "index", index)
+                if i in ("none", ""):
+                    return None
+                return self.tk.getint(i)
+
+            tk.Menu.index = _compat_menu_index  # type: ignore[assignment]
+        except Exception:
+            pass
+
         root = tk.Tk()
         tk_ver = getattr(tk, "TkVersion", 0.0)
         tcl_ver = getattr(tk, "TclVersion", 0.0)
@@ -121,17 +135,44 @@ def start_app() -> None:
             tcl_ver,
         )
 
-        if (
-            sys.platform == "darwin"
-            and isinstance(tk_ver, (int, float))
-            and tk_ver < 8.6
-        ):
-            logger.warning(
-                "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
-                "macOS の Dark Mode では Tk 8.6 以上が必要です（Tk 8.5 ではウィンドウが黒画面になる既知の不具合があります）。"
-                "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
-                tk_ver,
+        if sys.platform == "darwin":
+            from src.utils.platform_utils import (
+                apply_macos_aqua_appearance,
+                is_legacy_macos_tk,
             )
+
+            if is_legacy_macos_tk():
+                # Tk 8.5 レガシー環境向け: Cocoa の Aqua 外観を強制適用
+                applied = apply_macos_aqua_appearance(root)
+                logger.info(
+                    "[DIAG] macOS Aqua 外観強制設定: result=%s",
+                    applied,
+                )
+                error_msg = (
+                    f"macOS システム標準の Tk {tk_ver} は、OS の描画アーキテクチャ (CoreAnimation) に"
+                    "対応しておらず、ウィンドウ内容が描画されません。\n\n"
+                    "本アプリケーションの動作には Tk 8.6 以上 (Python 3.10+) が必要です。"
+                )
+                logger.error("[ERROR-RUNTIME] %s", error_msg)
+
+                # 白画面で放置されるのを防ぐため、ネイティブアラートで案内して安全に終了
+                try:
+                    import subprocess
+
+                    subprocess.run(
+                        [
+                            "osascript",
+                            "-e",
+                            f'display alert "Clip Watcher 起動エラー" message "{error_msg}" as critical',
+                        ],
+                        check=False,
+                        timeout=10,
+                    )
+                except Exception:
+                    pass
+
+                root.destroy()
+                return
         if sys.version_info < (3, 10):  # noqa: UP036
             logger.warning(
                 "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"

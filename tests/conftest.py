@@ -11,6 +11,20 @@ from src.db.database_manager import DatabaseManager
 from src.services.history_service import HistoryService
 from src.utils.undo_manager import UndoManager
 
+# Tk 9.0 + Python < 3.13 互換性パッチ
+# Tk 9.0 では空の Menu に対して index が空文字列 "" を返すため、Python < 3.13 の getint("") が TclError になる問題を防止
+_orig_menu_index = tk.Menu.index
+
+
+def _compat_menu_index(self: tk.Menu, index: Any) -> int | None:
+    i = self.tk.call(self._w, "index", index)
+    if i in ("none", ""):
+        return None
+    return self.tk.getint(i)
+
+
+tk.Menu.index = _compat_menu_index  # type: ignore[assignment]
+
 
 @pytest.fixture
 def event_dispatcher() -> EventDispatcher:
