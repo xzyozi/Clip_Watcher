@@ -84,7 +84,20 @@ def start_app() -> None:
 
         # --- Logging ---
         logger = setup_logging()
-        logger.info("アプリケーションを開始します")
+        logger.info("=== ClipWatcher アプリケーションを開始します ===")
+        logger.info(
+            "[DIAG] 実行環境: Python %s (%s), Platform: %s",
+            sys.version.split()[0],
+            sys.executable,
+            sys.platform,
+        )
+        if sys.platform == "darwin":
+            from src.utils.platform_utils import is_macos_dark_mode
+
+            logger.info(
+                "[DIAG] macOS 外観判定: is_macos_dark_mode=%s",
+                is_macos_dark_mode(),
+            )
 
         # --- Migration ---
         try:
@@ -100,6 +113,31 @@ def start_app() -> None:
 
         # --- Application Setup ---
         root = tk.Tk()
+        tk_ver = getattr(tk, "TkVersion", 0.0)
+        tcl_ver = getattr(tk, "TclVersion", 0.0)
+        logger.info(
+            "[DIAG] Tkinter 初期化完了: TkVersion=%s, TclVersion=%s",
+            tk_ver,
+            tcl_ver,
+        )
+
+        if (
+            sys.platform == "darwin"
+            and isinstance(tk_ver, (int, float))
+            and tk_ver < 8.6
+        ):
+            logger.warning(
+                "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
+                "macOS の Dark Mode では Tk 8.6 以上が必要です（Tk 8.5 ではウィンドウが黒画面になる既知の不具合があります）。"
+                "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
+                tk_ver,
+            )
+        if sys.version_info < (3, 10):  # noqa: UP036
+            logger.warning(
+                "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"
+                "本アプリケーションは Python >= 3.10 を前提としています。",
+                sys.version.split()[0],
+            )
 
         builder = ApplicationBuilder()
         app = (

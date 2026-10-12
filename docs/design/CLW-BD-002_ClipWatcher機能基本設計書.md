@@ -10,6 +10,7 @@ purpose: "ClipWatcherが提供する機能範囲、利用技術、将来拡張�
 related_documents:
   - "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
   - "CLW-DD-002_コア層起動監視イベント制御詳細設計書.md"
+  - "CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md"
 ---
 
 # 基本設計書（ClipWatcher機能）
@@ -35,11 +36,11 @@ related_documents:
 
 ## 2. 動作前提とシステム境界
 
-- **対象ランタイム**: Python 3.10 以降
-- **GUI**: Tkinter / ttk（Python標準ライブラリ）
-- **永続化**: SQLite
+- **対象ランタイム**: Python 3.10 以降（macOS レガシー環境 Python 3.9 / Tk 8.5 での起動もフォールバックにより許容）
+- **GUI方針（標準モジュール縛り）**: Python標準ライブラリ（`tkinter` / `ttk`）のみを用い、外部GUIパッケージに依存しないゼロインストール・高ポータビリティを保証。
+- **永続化**: SQLite（標準モジュール `sqlite3`）
 - **追加依存**: `pywin32` (Windows環境のみ)、`psutil`
-- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離。非Windows環境では機能縮退（Nullアダプター）により安全に起動・テスト可能。
+- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離。非Windows環境では機能縮退（Nullアダプター）により安全に起動・テスト可能。GUI描画・テーマ制御の詳細は [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とします。
 
 インストール、仮想環境、検証コマンドは [../setup/toml_project_setup.md](../setup/toml_project_setup.md) を正本とします。
 
