@@ -72,3 +72,6 @@
 - [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
 - [ ] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 -->
 - [ ] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0073] [bug] macOS環境において起動時にウィンドウが黒画面になりGUIウィジェットが正常に描画されない <!-- priority:high issue:#153 theme:platform stage:done added:2026-10-12 completed:2026-10-12 -->
+- [ ] [CW-0074] [feat] macOS環境におけるログイン時自動起動（スタートアップ）登録機能の実装とプラットフォーム抽象化 <!-- priority:medium issue:#155 theme:platform stage:ideation added:2026-10-12 -->
+
