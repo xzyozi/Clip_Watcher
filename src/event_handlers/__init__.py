@@ -148,12 +148,31 @@ def start_app() -> None:
                     "[DIAG] macOS Aqua 外観強制設定: result=%s",
                     applied,
                 )
-                logger.warning(
-                    "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
-                    "macOS では Tk 8.6 以上が必要です（Tk 8.5 では CoreAnimation 合成の不整合により正常に描画されない既知の不具合があります）。"
-                    "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
-                    tk_ver,
+                error_msg = (
+                    f"macOS システム標準の Tk {tk_ver} は、OS の描画アーキテクチャ (CoreAnimation) に"
+                    "対応しておらず、ウィンドウ内容が描画されません。\n\n"
+                    "本アプリケーションの動作には Tk 8.6 以上 (Python 3.10+) が必要です。"
                 )
+                logger.error("[ERROR-RUNTIME] %s", error_msg)
+
+                # 白画面で放置されるのを防ぐため、ネイティブアラートで案内して安全に終了
+                try:
+                    import subprocess
+
+                    subprocess.run(
+                        [
+                            "osascript",
+                            "-e",
+                            f'display alert "Clip Watcher 起動エラー" message "{error_msg}" as critical',
+                        ],
+                        check=False,
+                        timeout=10,
+                    )
+                except Exception:
+                    pass
+
+                root.destroy()
+                return
         if sys.version_info < (3, 10):  # noqa: UP036
             logger.warning(
                 "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"
