@@ -61,9 +61,10 @@ def test_set_icon_manager_keeps_the_registered_instance() -> None:
 
 
 def test_apply_theme_invalidates_registered_icon_cache_with_fallback_theme(
-    monkeypatch: object,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """要件3.2: 登録済みIconManagerへ有効な切替先テーマを通知する。"""
+    monkeypatch.setattr(sys, "platform", "linux")
     theme_manager = ThemeManager(cast(Tk, object()))
     icon_manager = IconManager()
     icon_manager._icon_cache["pin:light"] = object()
@@ -77,9 +78,10 @@ def test_apply_theme_invalidates_registered_icon_cache_with_fallback_theme(
 
 
 def test_apply_theme_keeps_existing_behavior_without_registered_icon_manager(
-    monkeypatch: object,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """要件3.2: IconManager未登録でもテーマ適用を完了できる。"""
+    monkeypatch.setattr(sys, "platform", "linux")
     theme_manager = ThemeManager(cast(Tk, object()))
     configure_headless_theme_application(monkeypatch, theme_manager)
 
@@ -89,9 +91,10 @@ def test_apply_theme_keeps_existing_behavior_without_registered_icon_manager(
 
 
 def test_apply_theme_keeps_default_treeview_row_height_for_16px_icons(
-    monkeypatch: object,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """16pxアイコンでは既存行レイアウトを維持するため行高を上書きしない。"""
+    monkeypatch.setattr(sys, "platform", "linux")
     theme_manager = ThemeManager(cast(Tk, object()))
     configure_headless_theme_application(monkeypatch, theme_manager)
 

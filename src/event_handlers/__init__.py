@@ -112,6 +112,20 @@ def start_app() -> None:
             )
 
         # --- Application Setup ---
+        # Tk 9.0 + Python < 3.13 互換性パッチ（空メニュー index が空文字を返し TclError になる問題の安全回避）
+        try:
+
+            def _compat_menu_index(self: tk.Menu, index: Any) -> int | None:
+                w = getattr(self, "_w", "")
+                i = self.tk.call(w, "index", index)
+                if i in ("none", ""):
+                    return None
+                return self.tk.getint(i)
+
+            tk.Menu.index = _compat_menu_index  # type: ignore[assignment]
+        except Exception:
+            pass
+
         root = tk.Tk()
         tk_ver = getattr(tk, "TkVersion", 0.0)
         tcl_ver = getattr(tk, "TclVersion", 0.0)
@@ -121,17 +135,25 @@ def start_app() -> None:
             tcl_ver,
         )
 
-        if (
-            sys.platform == "darwin"
-            and isinstance(tk_ver, (int, float))
-            and tk_ver < 8.6
-        ):
-            logger.warning(
-                "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
-                "macOS の Dark Mode では Tk 8.6 以上が必要です（Tk 8.5 ではウィンドウが黒画面になる既知の不具合があります）。"
-                "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
-                tk_ver,
+        if sys.platform == "darwin":
+            from src.utils.platform_utils import (
+                apply_macos_aqua_appearance,
+                is_legacy_macos_tk,
             )
+
+            if is_legacy_macos_tk():
+                # Tk 8.5 レガシー環境向け: Cocoa の Aqua 外観を強制適用
+                applied = apply_macos_aqua_appearance(root)
+                logger.info(
+                    "[DIAG] macOS Aqua 外観強制設定: result=%s",
+                    applied,
+                )
+                logger.warning(
+                    "[WARN-RUNTIME] 非推奨の Tk バージョン (Tk %s) が検出されました。"
+                    "macOS では Tk 8.6 以上が必要です（Tk 8.5 では CoreAnimation 合成の不整合により正常に描画されない既知の不具合があります）。"
+                    "`uv run python clip_watcher.py` または Homebrew 等の Tk 8.6+ 対応 Python をご使用ください。",
+                    tk_ver,
+                )
         if sys.version_info < (3, 10):  # noqa: UP036
             logger.warning(
                 "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"
