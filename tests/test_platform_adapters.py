@@ -1,6 +1,8 @@
 """tests/test_platform_adapters.py
 
-OSプラットフォーム具象アダプター（Windows / Null）およびファクトリの単体テスト。
+OSプラットフォーム具象アダプター（Windows / ホットキー用 Null）の単体テスト。
+
+PlatformServices の振る舞いは tests/test_platform_services.py を参照。
 """
 
 from __future__ import annotations
@@ -10,14 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.platform import get_platform_adapters
-from src.core.platform.null import (
-    NullHotkeyListener,
-    NullPasteSender,
-    NullProcessInspector,
-    NullSingleInstanceController,
-    NullSoundPlayer,
-)
+from src.core.platform.null import NullHotkeyListener
 from src.core.platform.protocols import (
     HotkeyListener,
     PasteSender,
@@ -33,30 +28,8 @@ from src.core.platform.windows import (
 )
 
 
-class TestNullAdapters:
-    """非 Windows / ヘッドレス環境向け Null アダプターの検証。"""
-
-    def test_null_process_inspector(self) -> None:
-        inspector = NullProcessInspector()
-        assert isinstance(inspector, ProcessInspector)
-        assert inspector.get_active_process_name() is None
-
-    def test_null_single_instance_controller(self) -> None:
-        controller = NullSingleInstanceController()
-        assert isinstance(controller, SingleInstanceController)
-        assert controller.acquire() is True
-        controller.release()  # 例外が発生しないこと
-
-    def test_null_sound_player(self) -> None:
-        player = NullSoundPlayer()
-        assert isinstance(player, SoundPlayer)
-        assert player.play_notification_beep(1000, 200) is True
-
-    def test_null_paste_sender(self) -> None:
-        sender = NullPasteSender()
-        assert isinstance(sender, PasteSender)
-        assert sender.are_modifiers_released() is True
-        assert sender.paste_active_window() is False
+class TestNullHotkeyListener:
+    """ホットキー用の暫定 Null アダプターの検証（#150 で廃止予定）。"""
 
     def test_null_hotkey_listener(self) -> None:
         listener = NullHotkeyListener()
@@ -102,29 +75,3 @@ class TestWindowsAdapters:
                 "Mock error"
             )
             assert inspector.get_active_process_name() is None
-
-
-class TestPlatformFactory:
-    """get_platform_adapters() ファクトリの検証。"""
-
-    def test_get_platform_adapters_non_windows(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(sys, "platform", "darwin")
-        adapters = get_platform_adapters()
-
-        assert isinstance(adapters["process_inspector"], NullProcessInspector)
-        assert isinstance(adapters["single_instance"], NullSingleInstanceController)
-        assert isinstance(adapters["sound_player"], NullSoundPlayer)
-        assert isinstance(adapters["paste_sender"], NullPasteSender)
-
-    def test_get_platform_adapters_windows(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(sys, "platform", "win32")
-        adapters = get_platform_adapters()
-
-        assert isinstance(adapters["process_inspector"], WindowsProcessInspector)
-        assert isinstance(adapters["single_instance"], WindowsSingleInstanceController)
-        assert isinstance(adapters["sound_player"], WindowsSoundPlayer)
-        assert isinstance(adapters["paste_sender"], WindowsPasteSender)
