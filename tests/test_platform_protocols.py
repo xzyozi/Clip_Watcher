@@ -6,7 +6,6 @@ OSプラットフォーム抽象インターフェース（Protocol）の整合�
 from collections.abc import Iterable
 from typing import Any
 
-from src.core.hotkey.paste_sender import WindowsPasteSender
 from src.core.platform.protocols import (
     HotkeyListener,
     PasteSender,
@@ -14,6 +13,7 @@ from src.core.platform.protocols import (
     SingleInstanceController,
     SoundPlayer,
 )
+from src.core.platform.windows.paste_sender import WindowsPasteSender
 
 
 class DummyProcessInspector:

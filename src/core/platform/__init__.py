@@ -1,13 +1,18 @@
 """src/core/platform/__init__.py
 
 OSプラットフォーム抽象レイヤー。
+
+どの OS でどの実装を使うかの選択は ``PlatformServices`` に集約する。
+非対応の機能を取得しようとすると ``UnsupportedFeatureError`` を送出する。
 """
 
 from __future__ import annotations
 
-import sys
-from typing import Any
-
+from src.core.platform.errors import (
+    PlatformError,
+    SingleInstanceError,
+    UnsupportedFeatureError,
+)
 from src.core.platform.protocols import (
     HotkeyListener,
     PasteSender,
@@ -15,45 +20,16 @@ from src.core.platform.protocols import (
     SingleInstanceController,
     SoundPlayer,
 )
-
-
-def get_platform_adapters() -> dict[str, Any]:
-    """現在のOSに応じた具象またはNullプラットフォームアダプターを返す。"""
-    if sys.platform == "win32":
-        from src.core.platform.windows import (
-            WindowsPasteSender,
-            WindowsProcessInspector,
-            WindowsSingleInstanceController,
-            WindowsSoundPlayer,
-        )
-
-        return {
-            "process_inspector": WindowsProcessInspector(),
-            "single_instance": WindowsSingleInstanceController(),
-            "sound_player": WindowsSoundPlayer(),
-            "paste_sender": WindowsPasteSender(),
-        }
-    else:
-        from src.core.platform.null import (
-            NullPasteSender,
-            NullProcessInspector,
-            NullSingleInstanceController,
-            NullSoundPlayer,
-        )
-
-        return {
-            "process_inspector": NullProcessInspector(),
-            "single_instance": NullSingleInstanceController(),
-            "sound_player": NullSoundPlayer(),
-            "paste_sender": NullPasteSender(),
-        }
-
+from src.core.platform.services import PlatformServices
 
 __all__ = [
+    "HotkeyListener",
+    "PasteSender",
+    "PlatformError",
+    "PlatformServices",
     "ProcessInspector",
     "SingleInstanceController",
+    "SingleInstanceError",
     "SoundPlayer",
-    "PasteSender",
-    "HotkeyListener",
-    "get_platform_adapters",
+    "UnsupportedFeatureError",
 ]
