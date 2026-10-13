@@ -9,6 +9,8 @@ import ctypes
 import logging
 import sys
 
+from src.core.platform.errors import SingleInstanceError, UnsupportedFeatureError
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MUTEX_NAME = "Local\\ClipWatcher_SingleInstance_Mutex"
@@ -23,9 +25,18 @@ class WindowsSingleInstanceController:
         self._mutex_handle: int | None = None
 
     def acquire(self) -> bool:
-        """排他ミューテックスを取得する。すでに起動中の場合は False を返す。"""
+        """排他ミューテックスを取得する。
+
+        Returns:
+            True: ロックを取得した。
+            False: 他のインスタンスが起動中。
+
+        Raises:
+            SingleInstanceError: ロック取得 API の失敗（重複起動とは区別する）。
+            UnsupportedFeatureError: Windows 以外で呼び出された。
+        """
         if sys.platform != "win32":
-            return True
+            raise UnsupportedFeatureError("single_instance", sys.platform)
 
         try:
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -34,26 +45,26 @@ class WindowsSingleInstanceController:
             create_mutex.restype = ctypes.c_void_p
 
             handle = create_mutex(None, False, self.mutex_name)
-            if not handle:
-                error_code = ctypes.get_last_error()
-                logger.error(
-                    "CreateMutexW の呼び出しに失敗しました (エラーコード: %s)",
-                    error_code,
-                )
-                return False
-
-            if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
-                kernel32.CloseHandle(ctypes.c_void_p(handle))
-                return False
-
-            self._mutex_handle = int(handle)
-            return True
+            error_code = ctypes.get_last_error()
         except Exception as e:
-            logger.error("Windows ミューテックスの取得中に例外が発生しました: %s", e)
+            raise SingleInstanceError(
+                f"ミューテックスの取得中に例外が発生しました: {e}"
+            ) from e
+
+        if not handle:
+            raise SingleInstanceError(
+                f"CreateMutexW の呼び出しに失敗しました (エラーコード: {error_code})"
+            )
+
+        if error_code == _ERROR_ALREADY_EXISTS:
+            kernel32.CloseHandle(ctypes.c_void_p(handle))
             return False
 
+        self._mutex_handle = int(handle)
+        return True
+
     def release(self) -> None:
-        """保持しているミューテックスのハンドルを閉じる。"""
+        """保持しているミューテックスのハンドルを閉じる。未取得なら何もしない。"""
         if sys.platform == "win32" and self._mutex_handle is not None:
             try:
                 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)

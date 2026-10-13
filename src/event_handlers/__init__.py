@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import tkinter as tk
@@ -8,7 +9,9 @@ from tkinter import messagebox
 from typing import TYPE_CHECKING, Any
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
+from src.core.platform.errors import SingleInstanceError, UnsupportedFeatureError
 from src.core.platform.protocols import SingleInstanceController
+from src.core.platform.services import PlatformServices
 from src.utils.logging_config import setup_logging
 
 # Import standalone handlers so they can be accessed via the package
@@ -19,19 +22,6 @@ from .settings_handlers import SettingsEventHandlers
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
-
-
-def _create_single_instance_controller() -> SingleInstanceController | None:
-    if sys.platform == "win32":
-        try:
-            from src.core.platform.windows.single_instance import (
-                WindowsSingleInstanceController,
-            )
-
-            return WindowsSingleInstanceController()
-        except ImportError:
-            return None
-    return None
 
 
 def register_class_based_handlers(app_instance: BaseApplication) -> None:
@@ -49,28 +39,42 @@ def register_class_based_handlers(app_instance: BaseApplication) -> None:
     )  # type: ignore
 
 
-def _acquire_windows_mutex() -> tuple[SingleInstanceController | None, bool]:
-    """SingleInstanceController を取得してロックを試み、互換タプルを返す。"""
-    controller = _create_single_instance_controller()
-    if controller is None:
+def _acquire_single_instance(
+    platform_services: PlatformServices,
+) -> tuple[SingleInstanceController | None, bool]:
+    """多重起動防止のロックを取得し、(保持するコントローラー, 重複起動か) を返す。
+
+    - 取得成功: (controller, False)
+    - 他のインスタンスが起動中: (None, True)
+    - 非対応環境: (None, False)。呼び出し側で警告し、多重起動を許したまま起動する。
+
+    Raises:
+        SingleInstanceError: ロック取得 API の失敗（重複起動とは区別する）。
+    """
+    try:
+        controller = platform_services.single_instance()
+    except UnsupportedFeatureError:
         return None, False
     if not controller.acquire():
         return None, True
     return controller, False
 
 
-def _release_windows_mutex(controller: SingleInstanceController | Any | None) -> None:
+def _release_single_instance(controller: SingleInstanceController | None) -> None:
     """保持している SingleInstanceController の排他ロックを解放する。"""
-    if controller is not None and hasattr(controller, "release"):
+    if controller is not None:
         controller.release()
 
 
 def start_app() -> None:
-    controller, already_running = _acquire_windows_mutex()
-    if already_running:
-        messagebox.showinfo("Already Running", "Clip Watcher is already running.")
-        return
+    platform_services = PlatformServices.for_current_platform()
+    controller: SingleInstanceController | None = None
     try:
+        controller, already_running = _acquire_single_instance(platform_services)
+        if already_running:
+            messagebox.showinfo("Already Running", "Clip Watcher is already running.")
+            return
+
         # --- Path Definitions ---
         if sys.platform == "win32":
             app_data_dir = os.path.join(os.environ["USERPROFILE"], ".clipWatcher")
@@ -97,6 +101,11 @@ def start_app() -> None:
             logger.info(
                 "[DIAG] macOS 外観判定: is_macos_dark_mode=%s",
                 is_macos_dark_mode(),
+            )
+        if controller is None:
+            logger.warning(
+                "single_instance が非対応のため、多重起動を防止できません。"
+                "複数のインスタンスが同時に起動すると、履歴DBが競合する可能性があります。"
             )
 
         # --- Migration ---
@@ -180,7 +189,7 @@ def start_app() -> None:
                 sys.version.split()[0],
             )
 
-        builder = ApplicationBuilder()
+        builder = ApplicationBuilder(platform_services)
         app = (
             builder.with_event_dispatcher()
             .with_dependency_check()
@@ -203,6 +212,14 @@ def start_app() -> None:
 
         root.mainloop()
 
+    except SingleInstanceError as e:
+        # 排他ロック取得 API の失敗。重複起動（Already Running）とは区別して通知する。
+        local_logger = locals().get("logger") or logging.getLogger(__name__)
+        local_logger.error("多重起動の確認に失敗しました: %s", e, exc_info=True)
+        messagebox.showerror(
+            "Clip Watcher",
+            f"多重起動の確認に失敗したため、起動を中止しました。\n\n{e}",
+        )
     except Exception as e:
         # Use a local logger variable to avoid UnboundLocalError
         local_logger = locals().get("logger")
@@ -212,4 +229,4 @@ def start_app() -> None:
             print(f"アプリケーション起動エラー: {str(e)}")
         traceback.print_exc()
     finally:
-        _release_windows_mutex(controller)
+        _release_single_instance(controller)

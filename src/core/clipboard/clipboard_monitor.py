@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import threading
 import time
 import tkinter as tk
@@ -17,7 +16,8 @@ except ImportError:
 
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
-from src.core.platform.protocols import ProcessInspector
+from src.core.platform.errors import UnsupportedFeatureError
+from src.core.platform.services import PlatformServices
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
 
@@ -36,19 +36,6 @@ logging.basicConfig(
 )
 
 
-def _create_default_process_inspector() -> ProcessInspector | None:
-    if sys.platform == "win32":
-        try:
-            from src.core.platform.windows.process_inspector import (
-                WindowsProcessInspector,
-            )
-
-            return WindowsProcessInspector()
-        except ImportError:
-            return None
-    return None
-
-
 class ClipboardMonitor:
     def __init__(
         self,
@@ -58,21 +45,17 @@ class ClipboardMonitor:
         win32_available: bool,
         db_manager: DatabaseManager,
         history_service: HistoryService,
+        platform_services: PlatformServices,
         history_limit: int = _DEFAULT_HISTORY_LIMIT,
         excluded_apps: list[str] | None = None,
-        process_inspector: ProcessInspector | None = None,
     ) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
-        self.process_inspector = (
-            process_inspector
-            if process_inspector is not None
-            else _create_default_process_inspector()
-        )
-        self.notification_manager = NotificationManager(
-            None
-        )  # 設定はイベント経由で渡されます
+        self.platform_services = platform_services
+        self._process_inspector_support_reported: bool = False
+        # 設定はイベント経由で渡されます
+        self.notification_manager = NotificationManager(platform_services)
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
@@ -115,9 +98,40 @@ class ClipboardMonitor:
         self.error_callback = callback
 
     def get_active_process_name(self) -> str | None:
-        if self.process_inspector is not None:
-            return self.process_inspector.get_active_process_name()
-        return None
+        """アクティブなプロセス名を返す。非対応環境では None（除外判定は行われない）。
+
+        非対応であることは start() で一度だけ警告する。ここでは繰り返しログを出さない。
+        """
+        try:
+            inspector = self.platform_services.process_inspector()
+        except UnsupportedFeatureError:
+            return None
+        return inspector.get_active_process_name()
+
+    def _report_process_inspector_support(self) -> None:
+        """ProcessInspector が非対応の場合に、起動時に一度だけ明示的に警告する。
+
+        除外アプリ判定ができない状態で履歴保存を継続するため、excluded_apps が
+        設定されている（設定があるのに効かない）場合は ERROR に格上げする。
+        """
+        if self._process_inspector_support_reported:
+            return
+        self._process_inspector_support_reported = True
+
+        try:
+            self.platform_services.process_inspector()
+        except UnsupportedFeatureError as e:
+            if self.excluded_apps:
+                logging.error(
+                    "process_inspector が非対応のため、excluded_apps の設定は無視されます。"
+                    "除外対象のアプリからのコピーも履歴に保存されます: %s",
+                    e,
+                )
+            else:
+                logging.warning(
+                    "process_inspector が非対応のため、除外アプリの判定は行われません: %s",
+                    e,
+                )
 
     def update_clipboard(self, text: str) -> None:
         """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
@@ -288,6 +302,7 @@ class ClipboardMonitor:
 
     def start(self) -> None:
         if not self._running:
+            self._report_process_inspector_support()
             self._running = True
             self.monitor_thread = threading.Thread(
                 target=self._monitor_clipboard, daemon=True

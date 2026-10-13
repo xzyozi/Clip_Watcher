@@ -8,6 +8,7 @@ import pytest
 from src.core.clipboard.clipboard_monitor import ClipboardMonitor
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.services import PlatformServices
 from src.services.history_service import HistoryService
 
 # ==========================================
@@ -91,7 +92,10 @@ def test_settings_manager_event_trigger(
 
 
 def test_clipboard_monitor_exclusion(
-    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
 ) -> None:
     """除外プロセスが合致した場合に、クリップボードデータ更新がスキップされることを検証します。"""
     # 依存オブジェクトのモック化
@@ -105,6 +109,7 @@ def test_clipboard_monitor_exclusion(
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
+        platform_services=platform_services,
         history_limit=5,
         excluded_apps=["KeePass.exe", "PasswordManager.exe"],
     )
@@ -127,7 +132,10 @@ def test_clipboard_monitor_exclusion(
 
 
 def test_clipboard_monitor_exclusion_is_case_insensitive(
-    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
 ) -> None:
     """除外アプリ判定が大文字小文字を区別せずに行われることを検証します（#109）。
 
@@ -145,6 +153,7 @@ def test_clipboard_monitor_exclusion_is_case_insensitive(
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
+        platform_services=platform_services,
         history_limit=5,
         # 小文字で登録（defaults.py の DEFAULT_USER_SETTINGS を模したケース）
         excluded_apps=["keepass.exe", "bitwarden.exe"],
@@ -170,7 +179,10 @@ def test_clipboard_monitor_exclusion_is_case_insensitive(
 
 
 def test_clipboard_monitor_update_clipboard(
-    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
 ) -> None:
     """update_clipboard 命令時に、OSクリップボードへの書き込みと履歴登録が連動することを検証します。"""
     mock_tk_root = mocker.Mock()
@@ -183,6 +195,7 @@ def test_clipboard_monitor_update_clipboard(
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
+        platform_services=platform_services,
         history_limit=5,
     )
 

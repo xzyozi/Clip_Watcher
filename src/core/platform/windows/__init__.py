@@ -6,7 +6,7 @@ Windows 具象プラットフォームアダプター群。
 from src.core.hotkey.global_hotkey_listener import (
     GlobalHotkeyListener as WindowsHotkeyListener,
 )
-from src.core.hotkey.paste_sender import WindowsPasteSender
+from src.core.platform.windows.paste_sender import WindowsPasteSender
 from src.core.platform.windows.process_inspector import WindowsProcessInspector
 from src.core.platform.windows.single_instance import WindowsSingleInstanceController
 from src.core.platform.windows.sound_player import WindowsSoundPlayer
