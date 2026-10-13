@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.services import PlatformServices
 from src.db.database_manager import DatabaseManager
 from src.services.history_service import HistoryService
 from src.utils.undo_manager import UndoManager
@@ -70,6 +71,15 @@ def history_service(
 def undo_manager(event_dispatcher: EventDispatcher) -> UndoManager:
     """テスト用のクリーンな UndoManager インスタンスを提供します。"""
     return UndoManager(event_dispatcher)
+
+
+@pytest.fixture
+def platform_services() -> PlatformServices:
+    """アダプターを持たない（全機能が非対応の）PlatformServices を提供します。
+
+    個別のアダプターが必要なテストは、PlatformServices(...) へモックを直接渡してください。
+    """
+    return PlatformServices(platform_name="test")
 
 
 @pytest.fixture

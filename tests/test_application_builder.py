@@ -6,9 +6,12 @@ import pytest
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
 from src.core.bootstrap.exceptions import ConfigError
+from src.core.platform.services import PlatformServices
 
 
-def test_with_icon_manager_creates_and_registers_icon_manager() -> None:
+def test_with_icon_manager_creates_and_registers_icon_manager(
+    platform_services: PlatformServices,
+) -> None:
     """要件5.4: IconManagerを生成し、ThemeManagerへ登録する。"""
     root = MagicMock()
 
@@ -16,7 +19,7 @@ def test_with_icon_manager_creates_and_registers_icon_manager() -> None:
         "src.core.bootstrap.application_builder.ThemeManager"
     ) as theme_manager_class:
         theme_manager = theme_manager_class.return_value
-        builder = ApplicationBuilder().with_theme_manager(root)
+        builder = ApplicationBuilder(platform_services).with_theme_manager(root)
 
         result = builder.with_icon_manager("test-assets/icons")
 
@@ -26,17 +29,21 @@ def test_with_icon_manager_creates_and_registers_icon_manager() -> None:
     theme_manager.set_icon_manager.assert_called_once_with(builder.icon_manager)
 
 
-def test_with_icon_manager_requires_theme_manager_to_be_initialized_first() -> None:
+def test_with_icon_manager_requires_theme_manager_to_be_initialized_first(
+    platform_services: PlatformServices,
+) -> None:
     """要件5.4: ThemeManager未初期化なら呼出順を示すエラーにする。"""
-    builder = ApplicationBuilder()
+    builder = ApplicationBuilder(platform_services)
 
     with pytest.raises(ConfigError, match=r"with_theme_manager\(\)"):
         builder.with_icon_manager()
 
 
-def test_build_passes_icon_manager_to_main_application() -> None:
+def test_build_passes_icon_manager_to_main_application(
+    platform_services: PlatformServices,
+) -> None:
     """要件5.4: Builderは初期化済みIconManagerをMainApplicationへ渡す。"""
-    builder = ApplicationBuilder()
+    builder = ApplicationBuilder(platform_services)
     builder.settings_manager = MagicMock()
     builder.db_manager = MagicMock()
     builder.history_service = MagicMock()
@@ -61,24 +68,51 @@ def test_build_passes_icon_manager_to_main_application() -> None:
     built_app.on_ready.assert_called_once_with()
 
 
-def test_with_platform_adapters_sets_adapters() -> None:
-    """プラットフォームアダプターが正しくBuilderに登録されることを検証する。"""
-    builder = ApplicationBuilder()
-    mock_inspector = MagicMock()
-    mock_sound = MagicMock()
+def test_build_passes_platform_services_to_main_application(
+    platform_services: PlatformServices,
+) -> None:
+    """BuilderはPlatformServicesをMainApplicationへそのまま渡す。"""
+    builder = ApplicationBuilder(platform_services)
+    builder.settings_manager = MagicMock()
+    builder.db_manager = MagicMock()
+    builder.history_service = MagicMock()
+    builder.monitor = MagicMock()
+    builder.plugin_manager = MagicMock()
+    builder.event_dispatcher = MagicMock()
+    builder.theme_manager = MagicMock()
+    builder.translator = MagicMock()
+    builder.app_status = MagicMock()
 
-    result = builder.with_platform_adapters(
-        process_inspector=mock_inspector,
-        sound_player=mock_sound,
+    with patch("src.core.app_main.MainApplication") as main_application_class:
+        builder.build(MagicMock())
+
+    assert (
+        main_application_class.call_args.kwargs["platform_services"]
+        is platform_services
     )
 
-    assert result is builder
-    assert builder.process_inspector is mock_inspector
-    assert builder.sound_player is mock_sound
+
+def test_with_clipboard_monitor_passes_platform_services(
+    platform_services: PlatformServices,
+) -> None:
+    """BuilderはPlatformServicesをClipboardMonitorへそのまま渡す。"""
+    builder = ApplicationBuilder(platform_services)
+    builder.event_dispatcher = MagicMock()
+    builder.app_status = MagicMock()
+    builder.db_manager = MagicMock()
+    builder.history_service = MagicMock()
+
+    with patch(
+        "src.core.bootstrap.application_builder.ClipboardMonitor"
+    ) as monitor_class:
+        builder.with_clipboard_monitor(MagicMock(), "history.json")
+
+    assert monitor_class.call_args.args[-1] is platform_services
 
 
 def test_with_global_hotkey_listener_non_windows(
     monkeypatch: pytest.MonkeyPatch,
+    platform_services: PlatformServices,
 ) -> None:
     """非 Windows 環境で with_global_hotkey_listener が NullHotkeyListener を設定することを検証する。"""
     import sys
@@ -87,7 +121,7 @@ def test_with_global_hotkey_listener_non_windows(
 
     monkeypatch.setattr(sys, "platform", "darwin")
 
-    builder = ApplicationBuilder()
+    builder = ApplicationBuilder(platform_services)
     builder.event_dispatcher = MagicMock()
     mock_handler = MagicMock()
 
