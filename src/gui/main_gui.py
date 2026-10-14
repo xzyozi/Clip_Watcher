@@ -32,6 +32,8 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.history_data: list[tuple[str, bool, float]] = []
         self.is_user_editing: bool = False  # Flag to prevent UI updates during editing
+        self.editing_item_id: float | None = None
+        self.editing_original_text: str | None = None
 
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(
@@ -237,48 +239,78 @@ class ClipWatcherGUI(BaseFrameGUI):
         ):
             self.finish_editing(event)
 
-    def start_editing(self, event: tk.Event) -> None:
-        """User starts editing the text area."""
+    def start_editing(self, event: tk.Event | None = None) -> None:
+        """User starts editing the text area. Binds the currently selected item ID and original text."""
         self.is_user_editing = True
+        selected_indices: tuple[int, ...] = (
+            self.history_component.get_selected_indices()
+            if hasattr(self, "history_component")
+            else ()
+        )
+        if selected_indices:
+            index: int = selected_indices[0]
+            displayed_history = self.history_component.displayed_history
+            if 0 <= index < len(displayed_history):
+                original_text, _, item_id = displayed_history[index]
+                self.editing_item_id = item_id
+                self.editing_original_text = original_text
+                return
 
-    def finish_editing(self, event: tk.Event) -> None:
+        self.editing_item_id = None
+        if hasattr(self, "clipboard_text_widget"):
+            self.editing_original_text = self.clipboard_text_widget.get("1.0", "end-1c")
+        else:
+            self.editing_original_text = None
+
+    def finish_editing(self, event: tk.Event | None = None) -> None:
         """
         Handles the end of a user's editing session in the text widget.
-        If a history item was selected, it performs an undoable in-place update.
-        Otherwise, it treats the edit as a new clipboard entry.
+        If a history item was being edited, it performs an undoable in-place update.
+        Otherwise, it treats the edit as a new clipboard entry if content changed.
         """
         if not self.is_user_editing:
             return
 
         self.is_user_editing = False
+        target_item_id = getattr(self, "editing_item_id", None)
+        target_original_text = getattr(self, "editing_original_text", None)
+        self.editing_item_id = None
+        self.editing_original_text = None
+
         edited_text: str = self.clipboard_text_widget.get("1.0", "end-1c")
 
         if not edited_text:
             return
 
-        selected_indices: tuple[int, ...] = (
-            self.history_component.get_selected_indices()
-        )
+        # Fallback for callers/tests that manually set is_user_editing without start_editing()
+        if target_item_id is None and target_original_text is None:
+            selected_indices: tuple[int, ...] = (
+                self.history_component.get_selected_indices()
+                if hasattr(self, "history_component")
+                else ()
+            )
+            if selected_indices:
+                index: int = selected_indices[0]
+                displayed_history = self.history_component.displayed_history
+                if 0 <= index < len(displayed_history):
+                    target_original_text, _, target_item_id = displayed_history[index]
 
-        if selected_indices:
-            index: int = selected_indices[0]
-            displayed_history = self.history_component.displayed_history
+        if target_item_id is not None:
+            if edited_text != target_original_text:
+                from src.core.events.commands import UpdateHistoryCommand
 
-            if 0 <= index < len(displayed_history):
-                original_text, _, item_id = displayed_history[index]
-
-                if edited_text != original_text:
-                    from src.core.events.commands import UpdateHistoryCommand
-
-                    command = UpdateHistoryCommand(
-                        monitor=self.app.monitor,  # type: ignore
-                        item_id=item_id,
-                        original_text=original_text,
-                        new_text=edited_text,
-                    )
-                    self.app.undo_manager.execute_command(command)  # type: ignore
+                command = UpdateHistoryCommand(
+                    monitor=self.app.monitor,  # type: ignore
+                    item_id=target_item_id,
+                    original_text=(
+                        target_original_text if target_original_text is not None else ""
+                    ),
+                    new_text=edited_text,
+                )
+                self.app.undo_manager.execute_command(command)  # type: ignore
         else:
-            self.app.monitor.update_clipboard(edited_text)  # type: ignore
+            if target_original_text is None or edited_text != target_original_text:
+                self.app.monitor.update_clipboard(edited_text)  # type: ignore
 
     def _update_widget_text(self) -> None:
         """Updates all translatable text widgets."""
@@ -354,6 +386,9 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.redo_button.config(state=tk.NORMAL if data["can_redo"] else tk.DISABLED)
 
     def _on_history_selection_changed(self, data: dict[str, Any]) -> None:
+        if self.is_user_editing:
+            self.finish_editing()
+
         selected_indices: tuple[int, ...] = data["selected_indices"]
         self.clipboard_text_widget.config(state=tk.NORMAL)
         self.clipboard_text_widget.delete(1.0, tk.END)
