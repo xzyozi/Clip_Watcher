@@ -60,7 +60,7 @@ class ApplicationBuilder:
     def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
         try:
-            self.event_dispatcher = EventDispatcher()
+            self.event_dispatcher = EventDispatcher(error_reporter=log_and_show_error)
             logger.info("イベントディスパッチャを初期化しました")
             return self
         except Exception as e:

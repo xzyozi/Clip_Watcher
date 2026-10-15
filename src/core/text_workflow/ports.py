@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from src.core.text_workflow.history import HistoryEntry
+from src.core.text_workflow.models import HistoryEntry
 
 
 class WorkflowConfiguration(Protocol):

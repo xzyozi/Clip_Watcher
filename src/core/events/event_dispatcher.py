@@ -2,11 +2,20 @@ import logging
 import traceback
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Literal, overload
-
-from src.utils.error_handler import log_and_show_error
+from typing import Any, Literal, Protocol, overload
 
 logger = logging.getLogger(__name__)
+
+
+class ErrorReporter(Protocol):
+    """リスナー例外をユーザーへ通知するための関数インターフェース。"""
+
+    def __call__(self, title: str, message: str, exc_info: bool = False) -> None: ...
+
+
+def _log_only_reporter(title: str, message: str, exc_info: bool = False) -> None:
+    """既定のレポーター。GUI に依存せずログ出力のみ行う。"""
+    logger.error("%s: %s", title, message, exc_info=exc_info)
 
 
 def _get_listener_name(listener: Callable[..., Any]) -> str:
@@ -24,8 +33,14 @@ class EventDispatcher:
     イベントの購読と発行を管理します。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, error_reporter: ErrorReporter | None = None) -> None:
+        """
+        Args:
+            error_reporter: リスナー例外の通知先。省略時はログ出力のみ。
+                GUI 通知が必要な場合は composition root から注入する。
+        """
         self._listeners: dict[str, list[Callable[..., Any]]] = defaultdict(list)
+        self._report_error: ErrorReporter = error_reporter or _log_only_reporter
 
     # ── Overloads for subscribe ─────────────────────────────────────────────
     @overload
@@ -166,7 +181,7 @@ class EventDispatcher:
                 listener(*args, **kwargs)
             except Exception:
                 listener_name = _get_listener_name(listener)
-                log_and_show_error(
+                self._report_error(
                     "エラー",
                     f"Error dispatching event {event_type} to listener {listener_name}: {traceback.format_exc()}",
                     exc_info=True,

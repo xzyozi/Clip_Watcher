@@ -78,22 +78,16 @@ def test_event_dispatcher_variadic_listeners(event_dispatcher: EventDispatcher) 
     assert kw_arg_result == "clip_watcher"
 
 
-def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object(
-    event_dispatcher: EventDispatcher, monkeypatch: Any
-) -> None:
+def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object() -> None:
     """functools.partialやcallableオブジェクトの例外発生時も安全にエラーログ出力が行われることを検証します。"""
     import functools
 
     logged_errors: list[str] = []
 
-    def mock_log_and_show_error(
-        title: str, message: str, exc_info: bool = False
-    ) -> None:
+    def mock_reporter(title: str, message: str, exc_info: bool = False) -> None:
         logged_errors.append(message)
 
-    monkeypatch.setattr(
-        "src.core.events.event_dispatcher.log_and_show_error", mock_log_and_show_error
-    )
+    event_dispatcher = EventDispatcher(error_reporter=mock_reporter)
 
     # 1. functools.partial の例
     def failing_target(arg: str) -> None:

@@ -1,20 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
 from datetime import datetime
 
-
-@dataclass
-class HistoryEntry:
-    record_id: str
-    request_id: str
-    category_id: str
-    rule_id: str | None
-    template_id: str | None
-    input_text: str
-    output_text: str
-    created_at: str
+from src.core.text_workflow.models import HistoryEntry
 
 
 class ExecutionHistory:
