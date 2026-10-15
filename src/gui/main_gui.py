@@ -32,8 +32,15 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         self.history_data: list[tuple[str, bool, float]] = []
         self.is_user_editing: bool = False  # Flag to prevent UI updates during editing
+        # 編集セッションの保存先（start_editing で確定し、finish_editing で消費する）
         self.editing_item_id: float | None = None
         self.editing_original_text: str | None = None
+        # テキストエリアに表示している内容の由来。編集の保存先は「現在の選択行」ではなく
+        # この由来で決める（選択変更とFocusOutの処理順に依存して別項目を上書きしないため）。
+        # _text_source_item_id: 履歴行由来ならその履歴ID、現在のクリップボード由来なら None
+        # _text_source_text: 表示時点の内容（未編集判定の基準。不明なら None）
+        self._text_source_item_id: float | None = None
+        self._text_source_text: str | None = None
 
         self.notebook = ttk.Notebook(master)
         self.notebook.pack(
@@ -242,6 +249,15 @@ class ClipWatcherGUI(BaseFrameGUI):
     def start_editing(self, event: tk.Event | None = None) -> None:
         """User starts editing the text area. Binds the currently selected item ID and original text."""
         self.is_user_editing = True
+
+        # テキストエリアの由来が分かる場合はそれを保存先にする。フォーカス取得の時点で
+        # 選択だけが先に別行へ移っていても、表示中の内容と異なる行を保存先にしないため。
+        source_text = getattr(self, "_text_source_text", None)
+        if source_text is not None:
+            self.editing_item_id = getattr(self, "_text_source_item_id", None)
+            self.editing_original_text = source_text
+            return
+
         selected_indices: tuple[int, ...] = (
             self.history_component.get_selected_indices()
             if hasattr(self, "history_component")
@@ -282,7 +298,13 @@ class ClipWatcherGUI(BaseFrameGUI):
         if not edited_text:
             return
 
-        # Fallback for callers/tests that manually set is_user_editing without start_editing()
+        # start_editing() を経由していない場合は、テキストエリアの由来を保存先にする。
+        # 現在の選択行は使わない（選択だけが先に別行へ移っていても上書きしないため）。
+        if target_item_id is None and target_original_text is None:
+            target_item_id = getattr(self, "_text_source_item_id", None)
+            target_original_text = getattr(self, "_text_source_text", None)
+
+        # Fallback for callers/tests that manually set is_user_editing without a known source
         if target_item_id is None and target_original_text is None:
             selected_indices: tuple[int, ...] = (
                 self.history_component.get_selected_indices()
@@ -308,9 +330,19 @@ class ClipWatcherGUI(BaseFrameGUI):
                     new_text=edited_text,
                 )
                 self.app.undo_manager.execute_command(command)  # type: ignore
+                self._text_source_text = edited_text
         else:
             if target_original_text is None or edited_text != target_original_text:
                 self.app.monitor.update_clipboard(edited_text)  # type: ignore
+                self._text_source_text = edited_text
+
+    def _set_text_area(self, content: str, item_id: float | None) -> None:
+        """テキストエリアを置き換え、その内容の由来（履歴ID・基準テキスト）を記録する。"""
+        self.clipboard_text_widget.config(state=tk.NORMAL)
+        self.clipboard_text_widget.delete(1.0, tk.END)
+        self.clipboard_text_widget.insert(tk.END, content)
+        self._text_source_item_id = item_id
+        self._text_source_text = content
 
     def _update_widget_text(self) -> None:
         """Updates all translatable text widgets."""
@@ -322,9 +354,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         )
 
         if not self.clipboard_text_widget.get("1.0", "end-1c"):
-            self.clipboard_text_widget.insert(
-                tk.END, translator("waiting_for_clipboard_content")
-            )
+            waiting_text = translator("waiting_for_clipboard_content")
+            self.clipboard_text_widget.insert(tk.END, waiting_text)
+            # 案内文は履歴由来ではないため、未編集のまま履歴へ保存されないよう基準に記録する
+            self._text_source_item_id = None
+            self._text_source_text = waiting_text
 
         self.search_label.config(text=translator("search_label"))
         self.history_container_frame.config(text=translator("clipboard_history_label"))
@@ -386,26 +420,28 @@ class ClipWatcherGUI(BaseFrameGUI):
         self.redo_button.config(state=tk.NORMAL if data["can_redo"] else tk.DISABLED)
 
     def _on_history_selection_changed(self, data: dict[str, Any]) -> None:
+        # Issue #163: テキストエリアを置換する前に、編集中の内容を元の項目へ確定する。
+        # 先に置換すると編集内容が失われ、FocusOut 側で別行へ誤保存される原因になる。
         if self.is_user_editing:
             self.finish_editing()
 
         selected_indices: tuple[int, ...] = data["selected_indices"]
-        self.clipboard_text_widget.config(state=tk.NORMAL)
-        self.clipboard_text_widget.delete(1.0, tk.END)
 
         if selected_indices:
             self.format_button.config(state=tk.NORMAL)
             index: int = selected_indices[0]
             displayed_history = self.history_component.displayed_history
             if 0 <= index < len(displayed_history):
-                content, _, _ = displayed_history[index]
-                self.clipboard_text_widget.insert(tk.END, content)
+                content, _, item_id = displayed_history[index]
+                self._set_text_area(content, item_id)
+            else:
+                self._set_text_area("", None)
         else:
             self.format_button.config(state=tk.DISABLED)
-            self.clipboard_text_widget.insert(
-                tk.END, self.app.monitor.last_clipboard_data
-            )  # type: ignore
-            self.clipboard_text_widget.config(state=tk.NORMAL)
+            self._set_text_area(
+                self.app.monitor.last_clipboard_data,  # type: ignore
+                None,
+            )
 
     def apply_font_settings(
         self,
@@ -460,10 +496,11 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         # 挿入すべき新しい文字列を決定
         new_insert_content = ""
+        new_source_item_id: float | None = None
         if selected_indices:
             index: int = selected_indices[0]
             if 0 <= index < len(displayed_history):
-                new_insert_content, _, _ = displayed_history[index]
+                new_insert_content, _, new_source_item_id = displayed_history[index]
         else:
             new_insert_content = current_content
 
@@ -474,9 +511,7 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         # ② テキストに差分がある、かつユーザーが選択操作中でない場合のみ上書きする
         if current_area_text != new_insert_content and not is_text_selected:
-            self.clipboard_text_widget.config(state=tk.NORMAL)
-            self.clipboard_text_widget.delete(1.0, tk.END)
-            self.clipboard_text_widget.insert(tk.END, new_insert_content)
+            self._set_text_area(new_insert_content, new_source_item_id)
 
     def select_tool_tab(self, plugin_name: str) -> None:
         """Selects a notebook tab corresponding to the given plugin name."""
