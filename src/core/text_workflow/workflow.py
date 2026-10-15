@@ -10,9 +10,10 @@ from src.core.text_workflow.classifier import (
 )
 from src.core.text_workflow.config_resolver import ConfigurationResolver
 from src.core.text_workflow.errors import TextWorkflowError
-from src.core.text_workflow.history import ExecutionHistory, HistoryEntry
+from src.core.text_workflow.history import ExecutionHistory
 from src.core.text_workflow.models import (
     ExecutionStatus,
+    HistoryEntry,
     WorkflowRequest,
     WorkflowResult,
 )

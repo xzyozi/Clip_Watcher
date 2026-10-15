@@ -46,6 +46,20 @@ class WorkflowRequest:
     runtime_overrides: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class HistoryEntry:
+    """Workflow 実行履歴の 1 レコード（永続化方式に依存しないデータモデル）"""
+
+    record_id: str
+    request_id: str
+    category_id: str
+    rule_id: str | None
+    template_id: str | None
+    input_text: str
+    output_text: str
+    created_at: str
+
+
 @dataclass(frozen=True)
 class WorkflowResult:
     """Workflow 実行結果"""
