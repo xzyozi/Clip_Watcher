@@ -11,6 +11,7 @@ related_documents:
   - "CLW-BD-002_ClipWatcher機能基本設計書.md"
   - "CLW-DD-002_コア層起動監視イベント制御詳細設計書.md"
   - "CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md"
+  - "CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md"
 ---
 
 # 基本設計書（ClipWatcher全体アーキテクチャ）

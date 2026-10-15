@@ -12,6 +12,7 @@ from src.core.bootstrap.base_application import ApplicationState, BaseApplicatio
 from src.core.config.defaults import THEMES
 from src.core.hotkey.global_hotkey_listener import GLOBAL_HOTKEY_ID
 from src.core.hotkey.hotkey_registration_manager import normalize_pinned_hotkey_bindings
+from src.core.platform.errors import UnsupportedFeatureError
 from src.gui import menu_bar
 from src.gui.main_gui import ClipWatcherGUI
 from src.gui.windows.settings_window import SettingsWindow
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from src.core.config.settings_manager import SettingsManager
     from src.core.events.event_dispatcher import EventDispatcher
     from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
+    from src.core.platform.services import PlatformServices
     from src.db.database_manager import DatabaseManager
     from src.gui.icon_manager import IconManager
     from src.gui.theme_manager import ThemeManager
@@ -50,6 +52,7 @@ class MainApplication(BaseApplication):
         theme_manager: ThemeManager,
         translator: Translator,
         app_status: Any,
+        platform_services: PlatformServices,
         icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
         hotkey_registration_manager: HotkeyRegistrationManager | None = None,
@@ -69,6 +72,7 @@ class MainApplication(BaseApplication):
         self.icon_manager = icon_manager
         self.translator = translator
         self.app_status = app_status
+        self.platform_services = platform_services
         self.window_state_manager = window_state_manager
         self.hotkey_registration_manager = hotkey_registration_manager
         self.text_workflow_service = text_workflow_service
@@ -206,9 +210,16 @@ class MainApplication(BaseApplication):
         self.remove_pinned_hotkey_binding(history_id)
 
     def _paste_into_active_window(self, waited_ms: int = 0) -> None:
-        from src.core.hotkey.paste_sender import WindowsPasteSender
+        try:
+            paste_sender = self.platform_services.paste_sender()
+        except UnsupportedFeatureError as e:
+            # 非対応環境では貼り付けを送れない。クリップボードへの設定は済んでいるため継続する。
+            logger.warning(
+                "自動貼り付けは非対応です。クリップボードには内容が設定されています: %s",
+                e,
+            )
+            return
 
-        paste_sender = WindowsPasteSender()
         if not paste_sender.are_modifiers_released():
             if waited_ms >= _PASTE_RELEASE_TIMEOUT_MS:
                 logger.warning(

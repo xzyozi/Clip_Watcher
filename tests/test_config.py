@@ -8,6 +8,7 @@ import pytest
 from src.core.clipboard.clipboard_monitor import ClipboardMonitor
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.services import PlatformServices
 from src.services.history_service import HistoryService
 
 # ==========================================
@@ -91,7 +92,10 @@ def test_settings_manager_event_trigger(
 
 
 def test_clipboard_monitor_exclusion(
-    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
 ) -> None:
     """除外プロセスが合致した場合に、クリップボードデータ更新がスキップされることを検証します。"""
     # 依存オブジェクトのモック化
@@ -105,6 +109,7 @@ def test_clipboard_monitor_exclusion(
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
+        platform_services=platform_services,
         history_limit=5,
         excluded_apps=["KeePass.exe", "PasswordManager.exe"],
     )
@@ -126,8 +131,58 @@ def test_clipboard_monitor_exclusion(
     assert history_service.history[0][0] != "Secret Password 123"
 
 
+def test_clipboard_monitor_exclusion_is_case_insensitive(
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
+) -> None:
+    """除外アプリ判定が大文字小文字を区別せずに行われることを検証します（#109）。
+
+    excluded_apps に小文字で登録されていても、Windows が実体ケース
+    （例: KeePass.exe）でプロセス名を返すケースで確実に除外されること、
+    また逆に登録側が大文字・取得側が小文字のケースでも除外されることを確認する。
+    """
+    mock_tk_root = mocker.Mock()
+    mock_db_manager = mocker.Mock()
+
+    monitor = ClipboardMonitor(
+        tk_root=mock_tk_root,
+        event_dispatcher=event_dispatcher,
+        history_file_path="dummy.json",
+        win32_available=False,
+        db_manager=mock_db_manager,
+        history_service=history_service,
+        platform_services=platform_services,
+        history_limit=5,
+        # 小文字で登録（defaults.py の DEFAULT_USER_SETTINGS を模したケース）
+        excluded_apps=["keepass.exe", "bitwarden.exe"],
+    )
+
+    # 1. 登録は小文字、取得は実体ケース（KeePass.exe）→ 除外されるべき
+    mocker.patch.object(monitor, "get_active_process_name", return_value="KeePass.exe")
+    monitor._update_history_with_new_entry("Master Password")
+    assert len(history_service.history) == 0
+
+    # 2. 取得が大文字混在（BitWarden.EXE）でも除外されるべき
+    mocker.patch.object(
+        monitor, "get_active_process_name", return_value="BitWarden.EXE"
+    )
+    monitor._update_history_with_new_entry("Secret Token")
+    assert len(history_service.history) == 0
+
+    # 3. 除外対象外の通常アプリは従来どおり履歴へ追加される
+    mocker.patch.object(monitor, "get_active_process_name", return_value="notepad.exe")
+    monitor._update_history_with_new_entry("Normal Text")
+    assert len(history_service.history) == 1
+    assert history_service.history[0][0] == "Normal Text"
+
+
 def test_clipboard_monitor_update_clipboard(
-    mocker: Any, event_dispatcher: EventDispatcher, history_service: HistoryService
+    mocker: Any,
+    event_dispatcher: EventDispatcher,
+    history_service: HistoryService,
+    platform_services: PlatformServices,
 ) -> None:
     """update_clipboard 命令時に、OSクリップボードへの書き込みと履歴登録が連動することを検証します。"""
     mock_tk_root = mocker.Mock()
@@ -140,6 +195,7 @@ def test_clipboard_monitor_update_clipboard(
         win32_available=False,
         db_manager=mock_db_manager,
         history_service=history_service,
+        platform_services=platform_services,
         history_limit=5,
     )
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import tkinter as tk
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from src.core.config.app_status import AppStatus
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.services import PlatformServices
 from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
 from src.plugins.manager import PluginManager
@@ -34,7 +36,10 @@ logger = logging.getLogger(__name__)
 class ApplicationBuilder:
     """アプリケーションの構築を担当するクラス"""
 
-    def __init__(self) -> None:
+    def __init__(self, platform_services: PlatformServices) -> None:
+        # OS 依存アダプターの選択は PlatformServices に集約されている。
+        # Builder は生成せず、受け取ったものを各コンポーネントへ渡すだけにする。
+        self.platform_services = platform_services
         self.settings_manager: SettingsManager | None = None
         self.db_manager: DatabaseManager | None = None
         self.history_service: HistoryService | None = None
@@ -260,6 +265,7 @@ class ApplicationBuilder:
                 win32_available,
                 self.db_manager,
                 self.history_service,
+                self.platform_services,
             )
             logger.info("クリップボードモニターを初期化しました")
             return self
@@ -310,14 +316,22 @@ class ApplicationBuilder:
         if event_dispatcher is None:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
-            from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
+            # ホットキーは Windows 限定。他 OS 対応と Null 実装の廃止は #150 で扱う。
+            if sys.platform == "win32":
+                from src.core.hotkey.global_hotkey_listener import (
+                    GlobalHotkeyListener,
+                )
 
-            self.hotkey_listener = GlobalHotkeyListener(
-                master,
-                on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
-                    "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
-                ),
-            )
+                self.hotkey_listener = GlobalHotkeyListener(
+                    master,
+                    on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
+                        "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
+                    ),
+                )
+            else:
+                from src.core.platform.null import NullHotkeyListener
+
+                self.hotkey_listener = NullHotkeyListener()  # type: ignore[assignment]
             logger.info("グローバルホットキーリスナーを初期化しました")
             return self
         except Exception as e:
@@ -384,6 +398,7 @@ class ApplicationBuilder:
                 icon_manager=self.icon_manager,
                 translator=self.translator,  # type: ignore
                 app_status=self.app_status,  # type: ignore
+                platform_services=self.platform_services,
                 window_state_manager=self.window_state_manager,
                 hotkey_registration_manager=self.hotkey_registration_manager,
                 text_workflow_service=self.text_workflow_service,

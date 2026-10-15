@@ -311,3 +311,38 @@ def test_settings_changed_limit_increase_recovers_items_beyond_previous_limit(
     assert len(service.history) == 7
     assert service.history[0][0] == "Preloaded 6"
     assert service.history[6][0] == "Preloaded 0"
+
+
+def test_settings_changed_invalid_limit_keeps_current(
+    history_service: HistoryService, event_dispatcher: EventDispatcher
+) -> None:
+    """history_limit に無効値が渡された場合、クラッシュや破壊的トリムを起こさず
+    変更前の値と履歴を維持することを検証します（#134）。
+    """
+    for i in range(5):
+        history_service.add_history_item(f"Item {i}")
+    assert len(history_service.history) == 5
+    assert history_service.history_limit == 5
+
+    # None / 文字列 / 負数 / 0 / float のいずれでも、例外を送出せず現在値(5)を維持する。
+    for invalid in (None, "100", -10, 0, 3.5):
+        event_dispatcher.dispatch("SETTINGS_CHANGED", {"history_limit": invalid})
+        assert history_service.history_limit == 5, f"invalid={invalid!r}"
+        # 破壊的トリム（history[:-10] 等）が起きず件数が保たれていること
+        assert len(history_service.history) == 5, f"invalid={invalid!r}"
+
+
+def test_settings_changed_valid_limit_still_updates(
+    history_service: HistoryService, event_dispatcher: EventDispatcher
+) -> None:
+    """バリデーション追加後も、正当な history_limit では従来どおり
+    上限が更新されトリムされることを検証します（#134 の回帰防止）。
+    """
+    for i in range(5):
+        history_service.add_history_item(f"Item {i}")
+    assert len(history_service.history) == 5
+
+    # 正当な縮小: 上限が更新され、あふれた分がトリムされる
+    event_dispatcher.dispatch("SETTINGS_CHANGED", {"history_limit": 2})
+    assert history_service.history_limit == 2
+    assert len(history_service.history) == 2

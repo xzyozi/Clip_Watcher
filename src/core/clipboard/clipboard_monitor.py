@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes
 import logging
 import threading
 import time
@@ -18,6 +16,8 @@ except ImportError:
 
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.errors import UnsupportedFeatureError
+from src.core.platform.services import PlatformServices
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
 
@@ -45,15 +45,17 @@ class ClipboardMonitor:
         win32_available: bool,
         db_manager: DatabaseManager,
         history_service: HistoryService,
+        platform_services: PlatformServices,
         history_limit: int = _DEFAULT_HISTORY_LIMIT,
         excluded_apps: list[str] | None = None,
     ) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
         self.win32_available = win32_available
-        self.notification_manager = NotificationManager(
-            None
-        )  # 設定はイベント経由で渡されます
+        self.platform_services = platform_services
+        self._process_inspector_support_reported: bool = False
+        # 設定はイベント経由で渡されます
+        self.notification_manager = NotificationManager(platform_services)
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
@@ -96,26 +98,40 @@ class ClipboardMonitor:
         self.error_callback = callback
 
     def get_active_process_name(self) -> str | None:
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
-        psapi = ctypes.windll.psapi
+        """アクティブなプロセス名を返す。非対応環境では None（除外判定は行われない）。
 
-        hwnd = user32.GetForegroundWindow()
-        if not hwnd:
+        非対応であることは start() で一度だけ警告する。ここでは繰り返しログを出さない。
+        """
+        try:
+            inspector = self.platform_services.process_inspector()
+        except UnsupportedFeatureError:
             return None
+        return inspector.get_active_process_name()
 
-        pid = ctypes.wintypes.DWORD()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+    def _report_process_inspector_support(self) -> None:
+        """ProcessInspector が非対応の場合に、起動時に一度だけ明示的に警告する。
 
-        process_handle = kernel32.OpenProcess(0x0410, False, pid.value)
-        if not process_handle:
-            return None
+        除外アプリ判定ができない状態で履歴保存を継続するため、excluded_apps が
+        設定されている（設定があるのに効かない）場合は ERROR に格上げする。
+        """
+        if self._process_inspector_support_reported:
+            return
+        self._process_inspector_support_reported = True
 
-        exe_name = (ctypes.c_char * 260)()
-        psapi.GetModuleBaseNameA(process_handle, None, exe_name, 260)
-        kernel32.CloseHandle(process_handle)
-
-        return exe_name.value.decode(errors="ignore")
+        try:
+            self.platform_services.process_inspector()
+        except UnsupportedFeatureError as e:
+            if self.excluded_apps:
+                logging.error(
+                    "process_inspector が非対応のため、excluded_apps の設定は無視されます。"
+                    "除外対象のアプリからのコピーも履歴に保存されます: %s",
+                    e,
+                )
+            else:
+                logging.warning(
+                    "process_inspector が非対応のため、除外アプリの判定は行われません: %s",
+                    e,
+                )
 
     def update_clipboard(self, text: str) -> None:
         """プログラムでシステムクリップボードを更新し、新しいエントリとして扱います。"""
@@ -238,7 +254,13 @@ class ClipboardMonitor:
         active_process = self.get_active_process_name()
         logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
 
-        if active_process in self.excluded_apps:
+        # Windows の GetModuleBaseNameA は実行ファイルの実体ケース（例: KeePass.exe）を
+        # 返す一方、excluded_apps には小文字（keepass.exe）で登録されることがある。
+        # Windows のファイルシステムは大文字小文字を区別しないため、比較時のみ両側を
+        # 小文字化して確実に除外する（ログ表示は視認性のため実体ケースを維持する）。
+        if active_process is not None and active_process.lower() in {
+            app.lower() for app in self.excluded_apps
+        }:
             logging.info(f"除外アプリからのコピーのため無視: {active_process}")
             return
 
@@ -280,6 +302,7 @@ class ClipboardMonitor:
 
     def start(self) -> None:
         if not self._running:
+            self._report_process_inspector_support()
             self._running = True
             self.monitor_thread = threading.Thread(
                 target=self._monitor_clipboard, daemon=True

@@ -53,6 +53,19 @@ class HistoryService:
         場合は既存のトリム処理で対応する。
         """
         new_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
+
+        # history_limit は int かつ 1 以上でなければならない。None・文字列・0以下などの
+        # 無効値が渡された場合、new_limit との比較で TypeError が発生したり、負値による
+        # 破壊的なトリム（history[:-10] 等）や不正な SQL LIMIT を招く。無効値は無視し、
+        # 変更前の self.history_limit を維持することで既存の正常値を保護する。
+        if not (isinstance(new_limit, int) and new_limit > 0):
+            logger.warning(
+                "無効な history_limit (%r) を無視し、現在値 %s を維持します。",
+                new_limit,
+                self.history_limit,
+            )
+            return
+
         limit_increased = new_limit > self.history_limit
         self.history_limit = new_limit
 

@@ -3,13 +3,17 @@
 ApplicationBuilder と MainApplication へのホットキー・ウィンドウ状態組み込み検証。
 """
 
+import sys
 from unittest.mock import MagicMock, patch
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
+from src.core.platform.services import PlatformServices
 from src.core.window.window_state_manager import WindowState
 
 
-def test_application_builder_component_injection() -> None:
+def test_application_builder_component_injection(
+    platform_services: PlatformServices,
+) -> None:
     mock_root = MagicMock()
 
     with (
@@ -31,7 +35,7 @@ def test_application_builder_component_injection() -> None:
         mock_hrm_cls.return_value = mock_hrm
 
         builder = (
-            ApplicationBuilder()
+            ApplicationBuilder(platform_services)
             .with_event_dispatcher()
             .with_window_state_manager(mock_root)
             .with_global_hotkey_listener(mock_root)
@@ -39,11 +43,18 @@ def test_application_builder_component_injection() -> None:
         )
 
         assert builder.window_state_manager is mock_wsm
-        assert builder.hotkey_listener is mock_hkl
+        if sys.platform == "win32":
+            assert builder.hotkey_listener is mock_hkl
+        else:
+            from src.core.platform.null import NullHotkeyListener
+
+            assert isinstance(builder.hotkey_listener, NullHotkeyListener)
         assert builder.hotkey_registration_manager is mock_hrm
 
 
-def test_main_application_hotkey_and_window_integration() -> None:
+def test_main_application_hotkey_and_window_integration(
+    platform_services: PlatformServices,
+) -> None:
     from src.core.app_main import MainApplication
 
     mock_master = MagicMock()
@@ -79,6 +90,7 @@ def test_main_application_hotkey_and_window_integration() -> None:
             icon_manager=mock_icon_manager,
             translator=mock_translator,
             app_status=mock_status,
+            platform_services=platform_services,
             window_state_manager=mock_wsm,
             hotkey_registration_manager=mock_hrm,
         )
@@ -101,7 +113,9 @@ def test_main_application_hotkey_and_window_integration() -> None:
         mock_hrm.stop.assert_called_once()
 
 
-def test_global_hotkey_triggered_event_dispatch_zero_args() -> None:
+def test_global_hotkey_triggered_event_dispatch_zero_args(
+    platform_services: PlatformServices,
+) -> None:
     from src.core.app_main import MainApplication
     from src.core.events.event_dispatcher import EventDispatcher
 
@@ -127,6 +141,7 @@ def test_global_hotkey_triggered_event_dispatch_zero_args() -> None:
             theme_manager=MagicMock(),
             translator=MagicMock(),
             app_status=MagicMock(),
+            platform_services=platform_services,
             window_state_manager=mock_wsm,
             hotkey_registration_manager=MagicMock(),
         )
@@ -141,8 +156,10 @@ def test_start_app_builder_chain_includes_icon_manager_after_theme_manager() -> 
     from src.event_handlers import start_app
 
     with (
-        patch("src.event_handlers._acquire_windows_mutex", return_value=(None, False)),
-        patch("src.event_handlers._release_windows_mutex"),
+        patch(
+            "src.event_handlers._acquire_single_instance", return_value=(None, False)
+        ),
+        patch("src.event_handlers._release_single_instance"),
         patch("src.event_handlers.setup_logging"),
         patch("scripts.migrate_json_to_sqlite.main"),
         patch("src.event_handlers.tk.Tk") as mock_tk_cls,
