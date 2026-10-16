@@ -102,7 +102,8 @@ class ClipWatcherGUI(BaseFrameGUI):
             height=5,
             relief=tk.FLAT,
             yscrollcommand=self.clipboard_text_scrollbar.set,
-            app=self.app,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
         )
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -126,7 +127,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         )  # Text set in _update_widget_text
         self.search_label.pack(side=tk.LEFT)
 
-        self.search_entry = CustomEntry(self.search_frame, app=self.app)
+        self.search_entry = CustomEntry(
+            self.search_frame,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
+        )
         self.search_entry.pack(
             side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X
         )
