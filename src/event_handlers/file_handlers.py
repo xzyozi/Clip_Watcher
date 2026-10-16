@@ -34,7 +34,7 @@ class FileEventHandlers(BaseEventHandler):
         if file_path:
             try:
                 history_content: list[tuple[str, bool, float]] = (
-                    self.app.monitor.get_history()
+                    self.app.history_service.get_history()
                 )  # type: ignore
                 with open(file_path, "w", encoding="utf-8") as f:
                     for item_tuple in history_content:
@@ -65,7 +65,7 @@ class FileEventHandlers(BaseEventHandler):
                         item.strip() for item in raw_items if item.strip()
                     ]
 
-                self.app.monitor.import_history(imported_history)  # type: ignore
+                self.app.history_service.import_history(imported_history)  # type: ignore
                 messagebox.showinfo(
                     "インポート完了",
                     f"履歴を以下のファイルからインポートしました:\n{file_path}",

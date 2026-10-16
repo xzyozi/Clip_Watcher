@@ -89,7 +89,7 @@ class HistoryEventHandlers(BaseEventHandler):
             original_text: str = data["original_text"]
 
             command = UpdateHistoryCommand(
-                monitor=self.app.monitor,  # type: ignore
+                history_service=self.app.history_service,  # type: ignore
                 item_id=item_id,
                 original_text=original_text,
                 new_text=new_text,
@@ -110,7 +110,9 @@ class HistoryEventHandlers(BaseEventHandler):
         if not item_ids:
             return
 
-        history_data: list[tuple[str, bool, float]] = self.app.monitor.get_history()  # type: ignore
+        history_data: list[tuple[str, bool, float]] = (
+            self.app.history_service.get_history()
+        )  # type: ignore
         id_to_content: dict[float, str] = {item[2]: item[0] for item in history_data}
 
         tasks: list[str] = [
@@ -127,7 +129,9 @@ class HistoryEventHandlers(BaseEventHandler):
             return
         try:
             first_id: float = item_ids[0]
-            history_data: list[tuple[str, bool, float]] = self.app.monitor.get_history()  # type: ignore
+            history_data: list[tuple[str, bool, float]] = (
+                self.app.history_service.get_history()
+            )  # type: ignore
 
             selected_item_content: str | None = None
             for content, _, item_id in history_data:
@@ -153,7 +157,7 @@ class HistoryEventHandlers(BaseEventHandler):
                 "ホットキー割当を解除できないため、履歴の全削除を中止しました。"
             )
             return
-        self.app.monitor.clear_history()  # type: ignore
+        self.app.history_service.clear_history()  # type: ignore
         self.app.gui.update_clipboard_display("", [])  # type: ignore
         logger.info("All history cleared.")
 
@@ -169,7 +173,7 @@ class HistoryEventHandlers(BaseEventHandler):
                         item_id,
                     )
                     continue
-                self.app.monitor.delete_history_item_by_id(item_id)  # type: ignore
+                self.app.history_service.delete_history_item_by_id(item_id)  # type: ignore
             logger.info(f"Deleted {len(item_ids)} selected history item(s).")
         except Exception as e:
             logger.error(f"Error deleting selected history: {e}", exc_info=True)
@@ -180,7 +184,7 @@ class HistoryEventHandlers(BaseEventHandler):
             "ピン留めされていないすべての履歴を削除しますか？\nこの操作は元に戻せません。",
             parent=self.app.master,  # type: ignore
         ):
-            self.app.monitor.delete_all_unpinned_history()  # type: ignore
+            self.app.history_service.delete_all_unpinned_history()  # type: ignore
             messagebox.showinfo(
                 "完了",
                 "ピン留めされていない履歴をすべて削除しました。",
@@ -197,7 +201,9 @@ class HistoryEventHandlers(BaseEventHandler):
             return
         try:
             # Find the item by ID to check its current state
-            history_list: list[tuple[str, bool, float]] = self.app.monitor.get_history()  # type: ignore
+            history_list: list[tuple[str, bool, float]] = (
+                self.app.history_service.get_history()
+            )  # type: ignore
             item_tuple: tuple[str, bool, float] | None = None
             for item in history_list:
                 if item[2] == item_id:
@@ -218,10 +224,10 @@ class HistoryEventHandlers(BaseEventHandler):
                         "ホットキー割当を解除できないため、ピン解除を中止しました。"
                     )
                     return
-                self.app.monitor.unpin_item_by_id(item_id)  # type: ignore
+                self.app.history_service.unpin_item_by_id(item_id)  # type: ignore
                 logger.info(f"Unpinned: {content[:50]}...")
             else:
-                self.app.monitor.pin_item_by_id(item_id)  # type: ignore
+                self.app.history_service.pin_item_by_id(item_id)  # type: ignore
                 logger.info(f"Pinned: {content[:50]}...")
         except Exception as e:
             logger.error(f"Error pinning/unpinning history: {e}", exc_info=True)
@@ -231,7 +237,9 @@ class HistoryEventHandlers(BaseEventHandler):
             logger.warning("No history items selected for merging.")
             return
         try:
-            history_data: list[tuple[str, bool, float]] = self.app.monitor.get_history()  # type: ignore
+            history_data: list[tuple[str, bool, float]] = (
+                self.app.history_service.get_history()
+            )  # type: ignore
             id_to_content: dict[float, str] = {
                 item[2]: item[0] for item in history_data
             }
@@ -306,7 +314,7 @@ class HistoryEventHandlers(BaseEventHandler):
 
                 if processed_text != original_text:
                     command = UpdateHistoryCommand(
-                        monitor=self.app.monitor,  # type: ignore
+                        history_service=self.app.history_service,  # type: ignore
                         item_id=item_id,  # Corrected argument
                         original_text=original_text,
                         new_text=processed_text,
@@ -332,12 +340,13 @@ class HistoryEventHandlers(BaseEventHandler):
     def handle_search_history(self, search_query: str) -> None:
         if search_query:
             filtered_history: list[tuple[str, bool, float]] = (
-                self.app.monitor.get_filtered_history(search_query)
+                self.app.history_service.get_filtered_history(search_query)
             )  # type: ignore
             self.app.gui.update_clipboard_display(
-                self.app.monitor.last_clipboard_data, filtered_history
+                self.app.history_service.last_clipboard_data, filtered_history
             )  # type: ignore
         else:
             self.app.gui.update_clipboard_display(
-                self.app.monitor.last_clipboard_data, self.app.monitor.get_history()
+                self.app.history_service.last_clipboard_data,
+                self.app.history_service.get_history(),
             )  # type: ignore

@@ -210,15 +210,16 @@ def test_undo_manager_undo_redo_cycle(undo_manager: UndoManager) -> None:
 
 
 def test_update_history_command_execution(
-    mock_monitor: Any, undo_manager: UndoManager
+    mocker: Any, undo_manager: UndoManager
 ) -> None:
-    """UpdateHistoryCommandの実行とUndoにより、レシーバ(Monitor)が正しい引数で駆動されることを検証します。"""
+    """UpdateHistoryCommandの実行とUndoにより、レシーバ(HistoryService)が正しい引数で駆動されることを検証します。"""
+    mock_history_service = mocker.Mock()
     item_id = 123.0
     original_text = "Before Edit"
     new_text = "After Edit"
 
     command = UpdateHistoryCommand(
-        monitor=mock_monitor,
+        history_service=mock_history_service,
         item_id=item_id,
         original_text=original_text,
         new_text=new_text,
@@ -226,16 +227,20 @@ def test_update_history_command_execution(
 
     # 1. コマンド実行の検証
     undo_manager.execute_command(command)
-    mock_monitor.update_history_item_by_id.assert_called_once_with(item_id, new_text)
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
+        item_id, new_text
+    )
 
     # 2. Undo の検証
-    mock_monitor.update_history_item_by_id.reset_mock()
+    mock_history_service.update_history_item_by_id.reset_mock()
     undo_manager.undo()
-    mock_monitor.update_history_item_by_id.assert_called_once_with(
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
         item_id, original_text
     )
 
     # 3. Redo の検証
-    mock_monitor.update_history_item_by_id.reset_mock()
+    mock_history_service.update_history_item_by_id.reset_mock()
     undo_manager.redo()
-    mock_monitor.update_history_item_by_id.assert_called_once_with(item_id, new_text)
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
+        item_id, new_text
+    )

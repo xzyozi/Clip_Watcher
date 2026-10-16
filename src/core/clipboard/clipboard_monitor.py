@@ -12,7 +12,6 @@ from src.core.events.event_dispatcher import EventDispatcher
 from src.core.platform.errors import UnsupportedFeatureError
 from src.core.platform.services import PlatformServices
 from src.db.database_manager import DatabaseManager
-from src.services.notification_manager import NotificationManager
 from src.utils.clipboard_decode import decode_clipboard_data
 
 # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
@@ -47,8 +46,6 @@ class ClipboardMonitor:
         self.platform_services = platform_services
         self._process_inspector_support_reported: bool = False
         self._clipboard_reader_support_reported: bool = False
-        # 設定はイベント経由で渡されます
-        self.notification_manager = NotificationManager(platform_services)
         self.error_callback: Callable[[str, str], None] | None = None
         self._running: bool = False
         self.monitor_thread: threading.Thread | None = None
@@ -60,32 +57,14 @@ class ClipboardMonitor:
         self.excluded_apps: list[str] = (
             excluded_apps if excluded_apps is not None else []
         )
-        self.history: list[tuple[str, bool, float]] = self._load_history_from_db()
         self._dirty: bool = False
         self._auto_save_interval_ms: int = 5000
 
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
 
-    @property
-    def history(self) -> list[tuple[str, bool, float]]:
-        return self.history_service.history
-
-    @history.setter
-    def history(self, value: list[tuple[str, bool, float]]) -> None:
-        self.history_service.history = value
-
-    @property
-    def last_clipboard_data(self) -> str:
-        return self.history_service.last_clipboard_data
-
-    @last_clipboard_data.setter
-    def last_clipboard_data(self, value: str) -> None:
-        self.history_service.last_clipboard_data = value
-
     def on_settings_changed(self, settings: dict[str, Any]) -> None:
         self.history_limit = settings.get("history_limit", _DEFAULT_HISTORY_LIMIT)
         self.excluded_apps = settings.get("excluded_apps", [])
-        self.notification_manager.update_settings(settings)
 
     def set_error_callback(self, callback: Callable[[str, str], None]) -> None:
         self.error_callback = callback
@@ -134,8 +113,9 @@ class ClipboardMonitor:
         # テキストが直近のクリップボード内容と同一である場合、重複したエントリの
         # 追加を避けます。ピン留め項目による表示順序（is_pinned優先ソート）に
         # 影響されないよう、id（挿入順）が最大の項目と比較する。
-        if self.history:
-            last_touched = max(self.history, key=lambda item: item[2])
+        history = self.history_service.history
+        if history:
+            last_touched = max(history, key=lambda item: item[2])
             if text == last_touched[0]:
                 return
 
@@ -204,7 +184,7 @@ class ClipboardMonitor:
 
     def _update_history_with_new_entry(self, clipboard_data: str) -> None:
         """新しいクリップボードエントリで履歴を更新します。"""
-        self.last_clipboard_data = clipboard_data
+        self.history_service.last_clipboard_data = clipboard_data
         active_process = self.get_active_process_name()
         logging.info(f"クリップボードの更新を検出 - プロセス: {active_process}")
 
@@ -241,7 +221,7 @@ class ClipboardMonitor:
                 return
 
             # 3. 新しい場合、処理します
-            if clipboard_data != self.last_clipboard_data:
+            if clipboard_data != self.history_service.last_clipboard_data:
                 self._update_history_with_new_entry(clipboard_data)
 
         except Exception:
@@ -249,10 +229,6 @@ class ClipboardMonitor:
                 "クリップボードのチェック中に予期せぬエラーが発生しました。",
                 exc_info=True,
             )
-
-    def update_history_item_by_id(self, item_id: float, new_text: str) -> None:
-        """Finds a history item by its ID and updates its content."""
-        self.history_service.update_history_item_by_id(item_id, new_text)
 
     def start(self) -> None:
         if not self._running:
@@ -278,40 +254,6 @@ class ClipboardMonitor:
         self._running = False
         if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=2)
-
-    def get_history(self) -> list[tuple[str, bool, float]]:
-        return self.history_service.get_history()
-
-    def clear_history(self) -> None:
-        self.history_service.clear_history()
-
-    def delete_history_item_by_id(self, item_id: float) -> None:
-        """Deletes a history item using its unique ID."""
-        self.history_service.delete_history_item_by_id(item_id)
-
-    def pin_item_by_id(self, item_id: float) -> None:
-        """Pins an item using its unique ID."""
-        self.history_service.pin_item_by_id(item_id)
-
-    def unpin_item_by_id(self, item_id: float) -> None:
-        """Unpins an item using its unique ID."""
-        self.history_service.unpin_item_by_id(item_id)
-
-    def delete_all_unpinned_history(self) -> None:
-        self.history_service.delete_all_unpinned_history()
-
-    def import_history(self, new_history_items: list[str]) -> None:
-        self.history_service.import_history(new_history_items)
-
-    def get_filtered_history(self, query: str) -> list[tuple[str, bool, float]]:
-        return self.history_service.get_filtered_history(query)
-
-    def _load_history_from_db(self) -> list[tuple[str, bool, float]]:
-        return self.history_service.load_history()
-
-    def _load_history_from_file(self) -> list[tuple[str, bool, float]]:
-        # 後方互換性のために残していますが、移行後は空を返します
-        return []
 
     def save_history_to_file(self) -> None:
         self._save_history_to_file()

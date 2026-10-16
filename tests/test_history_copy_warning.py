@@ -9,7 +9,7 @@ def make_handler(*, warning_enabled: bool) -> HistoryEventHandlers:
     handler = HistoryEventHandlers.__new__(HistoryEventHandlers)
     handler.app = Mock()
     handler.app.settings_manager.get_setting.return_value = warning_enabled
-    handler.app.monitor.get_history.return_value = [
+    handler.app.history_service.get_history.return_value = [
         ("sudo rm -rf ./build", False, 1.0),
         ("safe text", False, 2.0),
     ]
