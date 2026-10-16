@@ -5,7 +5,11 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
-from src.core.text_workflow.models import WorkflowRequest, WorkflowResult
+from src.core.text_workflow.models import (
+    ExecutionStatus,
+    WorkflowRequest,
+    WorkflowResult,
+)
 from src.core.text_workflow.workflow import TextWorkflow
 
 if TYPE_CHECKING:
@@ -71,25 +75,35 @@ class TextWorkflowService:
         上で実行され、未指定の場合は完了したワーカースレッドから直接実行される。
         """
         future = self._executor.submit(self._workflow.execute, request)
-        future.add_done_callback(lambda f: self._on_task_done(f, callback=callback))
+        future.add_done_callback(
+            lambda f: self._on_task_done(
+                f, callback=callback, request_id=request.request_id
+            )
+        )
         return future
 
     def _on_task_done(
         self,
         future: Future[WorkflowResult],
         callback: Callable[[WorkflowResult], None] | None,
+        request_id: str,
     ) -> None:
         """ワーカースレッド側で呼ばれる完了コールバック（内部専用）。
 
         ここでは結果の取得のみを行い、実際の通知（EventDispatcher.dispatch /
         callback 呼び出し）は ``_deliver_result()`` に委譲してメインスレッドへ
-        引き渡す。
+        引き渡す。実行中に例外が発生した場合も、``FAILED`` の結果を生成して
+        通知し、呼び出し側が結果を待ち続けない（通知を喪失しない）ようにする。
         """
         try:
             result = future.result()
-        except Exception:
+        except Exception as e:
             logger.exception("TextWorkflow の非同期実行中に例外が発生しました")
-            return
+            result = WorkflowResult(
+                request_id=request_id,
+                status=ExecutionStatus.FAILED,
+                error_message=str(e) or type(e).__name__,
+            )
 
         self._deliver_result(result, callback)
 
@@ -106,12 +120,24 @@ class TextWorkflowService:
             if self._event_dispatcher is not None:
                 self._event_dispatcher.dispatch(self._result_event_type, result)
             if callback:
-                callback(result)
+                try:
+                    callback(result)
+                except Exception:
+                    logger.exception(
+                        "TextWorkflow の完了コールバックで例外が発生しました"
+                    )
 
-        if self._ui_thread_marshal is not None:
-            self._ui_thread_marshal(_notify)
-        else:
+        if self._ui_thread_marshal is None:
             _notify()
+            return
+
+        try:
+            self._ui_thread_marshal(_notify)
+        except Exception:
+            # 例: ウィンドウ破棄後に Tk のイベントキューへ投入できない場合
+            logger.exception(
+                "TextWorkflow の結果通知をUIスレッドへ引き渡せませんでした"
+            )
 
     def shutdown(self) -> None:
         """サービス停止時のスレッドクリーンアップ"""
