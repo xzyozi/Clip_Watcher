@@ -128,6 +128,10 @@ TextWorkflowは、分類・展開・正規化・履歴記録の順序制御と�
 
 アプリ設定ディレクトリは [CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md](CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md) §8「データ永続化 (SQLite & JSON)」の永続化方針を正本とし、Windowsでは `%USERPROFILE%\.clipWatcher\`、その他のOSでは `~/.clipwatcher/` を指す。
 
+ワークスペース設定は信頼できないリポジトリ由来になり得るため、次の制限を適用する (#175)。
+- `workspace_root` は、UNCパス（`\\host\share`、`//host/share`）、相対パス、実在しないディレクトリを拒否する。拒否した場合、ワークスペース設定は読み込まず（注入済みの設定も使用しない）、警告ログを出して継続する。UNCパスはファイルアクセスの時点で認証情報が送出され得るため、ファイルシステムへ触れる前に判定する。
+- `workflow.maxInputBytes` / `classifierRegexMaxPatternLength` / `classifierRegexTimeoutSeconds` は、信頼側（組み込み・ユーザー設定）の値以下の正の数値だけを採用する（厳しくする方向のみ許可）。緩める値や不正な型は無視し、信頼側の値を維持する。`Runtime Overrides` はアプリ内のコードが指定するため制限しない。
+
 ### 4.2 Classifier (`src/core/text_workflow/classifier.py`)
 - 分類ルールは `rules.json` の `rules` 配列で定義する。各ルールは次の項目を持つ。
 
@@ -197,6 +201,11 @@ src/
 
 `ui_thread_marshal` を指定しない場合（GUIを持たないテスト・CLI用途）は、通知はワーカースレッドから直接行われる。GUIと統合する場合は必ず `ui_thread_marshal` を指定し、Tkinter APIをワーカースレッドから直接呼び出さないこと。
 
+完了通知と停止時の挙動 (#175):
+- 実行中に例外が発生した場合も、`FAILED`（`error_message` に例外メッセージ。空なら例外型名）の `WorkflowResult` を生成して同じ経路で通知する。通知を喪失しない。
+- 完了コールバックの例外、および `ui_thread_marshal` の失敗（ウィンドウ破棄後など）はログに記録し、ワーカースレッドへ伝播させない。
+- `shutdown(timeout)` は冪等で、停止後の `execute_async()` は実行せずに `REJECTED` の完了済み `Future` を返し、同じ経路で通知する。実行中・待機中のタスクは最大 `timeout` 秒（既定2秒）だけ完了を待ち、終わらなかった未実行タスクは取り消して `REJECTED` で通知する。実行中のタスクは強制中断せず、完了後にワーカースレッドが終了する。
+
 ---
 
 ## 6. 公開Interfaceと互換性ポリシー
@@ -251,6 +260,9 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
   - パターン長は既定で200文字までとする。上限超過または構文エラーのパターンはマッチなしとして扱い、分類を継続する。
   - 評価はWindows互換の `multiprocessing` 子プロセス（`spawn`）に隔離し、既定0.5秒以内に完了しない場合は `terminate()` で子プロセスを強制終了してマッチなしとして扱う。これにより、CPython標準 `re` のバックトラックが呼び出し元・GUIスレッドをブロックしないことを保証する。
   - 制限値は設定の `workflow.classifierRegexMaxPatternLength` と `workflow.classifierRegexTimeoutSeconds` で上書き可能とする。プロセス生成のオーバーヘッドがあるため、`regex` ルールは必要最小限にする。
+- **異常入力・異常終了への防御** (#175):
+  - 正規表現の評価プロセスが結果を返す前に異常終了した場合（`EOFError` / `OSError`）は、警告ログを出してマッチなしとして扱い、分類を継続する。
+  - テンプレート定義の `body` / `variables` が `null` や不正な型の場合は、空文字列・空リストとして扱う。テンプレート変数の値が `None` の場合は、文字列 `"None"` ではなく空文字列に展開する。必須変数の欠落は従来どおり `TemplateError` とする。
 - **安全な失敗 (Graceful Degradation)**: 履歴書き込みが失敗しても、変換されたテキスト出力自体は壊さず `COMPLETED_WITH_WARNING` として結果を返却。正規表現の拒否・タイムアウト時も、該当ルールを非マッチとして後続ルールまたは既定カテゴリで処理を継続する。
 
 ---
@@ -276,3 +288,4 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 | Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。                                                                                                     |
 | Rev.1.3 | 2026-09-01 | 未記載 | §5.2/5.3を実装に合わせて更新。`ConfigurationResolver.from_app_data_dir()` による実ファイル読み込み、`ApplicationBuilder.with_text_workflow_service()` によるDI登録、`ui_thread_marshal` 経由の `EventDispatcher` 通知経路を反映。 |
 | Rev.1.4 | 2026-09-01 | 未記載 | §7のReDoS対策を実装に合わせて詳細化。パターン長制限と、Windows互換の子プロセス隔離・強制終了による正規表現実行時間制限を定義。                                                                                                    |
+| Rev.1.5 | 2026-10-15 | 未記載 | ワークスペース設定の安全性（`workspace_root` の検証、制限値を緩める上書きの禁止）、非同期実行の例外通知・停止時の挙動、異常入力への防御を追加 (#175)。                                                                            |
