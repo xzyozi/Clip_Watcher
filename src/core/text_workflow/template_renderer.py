@@ -17,7 +17,9 @@ class TemplateRenderer:
     """テンプレートに変数を展開するレンダラー"""
 
     def __init__(self, templates: list[dict[str, Any]] | None = None) -> None:
-        self._templates_by_id = {t["id"]: t for t in (templates or []) if "id" in t}
+        self._templates_by_id = {
+            t["id"]: t for t in (templates or []) if isinstance(t, dict) and "id" in t
+        }
 
     def render(
         self,
@@ -35,8 +37,11 @@ class TemplateRenderer:
             return str(variables.get("input", ""))
 
         template_def = self._templates_by_id[template_id]
-        body: str = template_def.get("body", "")
-        template_vars: list[dict[str, Any]] = template_def.get("variables", [])
+        # 設定ファイル由来の不正値（null、型違い）は空として扱い、TypeError を避ける
+        raw_body = template_def.get("body")
+        body: str = raw_body if isinstance(raw_body, str) else ""
+        raw_vars = template_def.get("variables")
+        template_vars: list[Any] = raw_vars if isinstance(raw_vars, list) else []
 
         # 標準環境変数の補填
         full_vars = {
@@ -46,6 +51,8 @@ class TemplateRenderer:
 
         # 変数展開と必須チェック
         for var_def in template_vars:
+            if not isinstance(var_def, dict):
+                continue
             name = var_def.get("name")
             if not isinstance(name, str):
                 continue
@@ -62,6 +69,10 @@ class TemplateRenderer:
         # 置換処理 {{variable}}
         def replace_match(match: re.Match[str]) -> str:
             var_name = match.group(1).strip()
-            return str(full_vars.get(var_name, f"{{{{{var_name}}}}}"))
+            if var_name not in full_vars:
+                return f"{{{{{var_name}}}}}"
+            value = full_vars[var_name]
+            # None は "None" という文字列にせず空文字列として展開する
+            return "" if value is None else str(value)
 
         return re.sub(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}", replace_match, body)
