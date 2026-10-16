@@ -102,7 +102,8 @@ class ClipWatcherGUI(BaseFrameGUI):
             height=5,
             relief=tk.FLAT,
             yscrollcommand=self.clipboard_text_scrollbar.set,
-            app=self.app,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
         )
         self.clipboard_text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -126,7 +127,11 @@ class ClipWatcherGUI(BaseFrameGUI):
         )  # Text set in _update_widget_text
         self.search_label.pack(side=tk.LEFT)
 
-        self.search_entry = CustomEntry(self.search_frame, app=self.app)
+        self.search_entry = CustomEntry(
+            self.search_frame,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
+        )
         self.search_entry.pack(
             side=tk.LEFT, fill=tk.X, expand=True, padx=config.BUTTON_PADDING_X
         )
@@ -158,10 +163,7 @@ class ClipWatcherGUI(BaseFrameGUI):
             self.control_frame,
             text="",
             command=lambda: self.app.event_dispatcher.dispatch(
-                "HISTORY_COPY_SELECTED",
-                self.history_component.get_ids_for_indices(
-                    self.history_component.get_selected_indices()
-                ),
+                "HISTORY_COPY_SELECTED", self.get_selected_history_ids()
             ),
         )  # type: ignore
         self.copy_history_button.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
@@ -456,6 +458,12 @@ class ClipWatcherGUI(BaseFrameGUI):
         history_font = font.Font(family=history_font_family, size=history_font_size)
         self.clipboard_text_widget.config(font=clipboard_font)
         self.history_component.apply_font(history_font)
+
+    def get_selected_history_ids(self) -> list[float]:
+        """履歴一覧で選択中の項目の ID を返す（メニュー等の外部呼び出し用ファサード）。"""
+        return self.history_component.get_ids_for_indices(
+            self.history_component.get_selected_indices()
+        )
 
     def update_clipboard_display(
         self,

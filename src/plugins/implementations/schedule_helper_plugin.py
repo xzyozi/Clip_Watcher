@@ -180,7 +180,8 @@ class ScheduleHelperComponent(BaseFrameGUI):
             wrap=tk.WORD,
             relief=tk.FLAT,
             yscrollcommand=self.text_scrollbar.set,
-            app=self.app,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
         )
         self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 

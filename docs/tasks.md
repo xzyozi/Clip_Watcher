@@ -68,7 +68,7 @@
 - [ ] [CW-0066] [security] copy_safety における入力長未検証の正規表現走査によるCPU枯渇およびUIフリーズ（DoS）リスク <!-- priority:medium issue:#137 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0067] [security] i18n におけるJSON読み込み時のデータ型検証欠落による未捕捉例外クラッシュおよびCWD依存パス解決 <!-- priority:medium issue:#138 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
 - [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
-- [ ] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->

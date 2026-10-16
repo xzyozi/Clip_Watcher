@@ -48,7 +48,11 @@ class CategoryEditDialog(BaseToplevelGUI):
         ttk.Label(main_frame, text=self.app.translator("category_name_label")).pack(
             anchor=tk.W, pady=(0, 5)
         )
-        self.entry = CustomEntry(main_frame, app=self.app)
+        self.entry = CustomEntry(
+            main_frame,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
+        )
         self.entry.pack(fill=tk.X, pady=(0, 10))
 
         if self.category_dto:
@@ -122,7 +126,11 @@ class MetaPhraseEditDialog(BaseToplevelGUI):
         ttk.Label(main_frame, text=self.app.translator("phrase_title_label")).pack(
             anchor=tk.W, pady=(0, 2)
         )
-        self.title_entry = CustomEntry(main_frame, app=self.app)
+        self.title_entry = CustomEntry(
+            main_frame,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
+        )
         self.title_entry.pack(fill=tk.X, pady=(0, 10))
 
         # カテゴリ選択
@@ -157,7 +165,13 @@ class MetaPhraseEditDialog(BaseToplevelGUI):
         ttk.Label(main_frame, text=self.app.translator("phrase_content_label")).pack(
             anchor=tk.W, pady=(0, 2)
         )
-        self.content_text = CustomText(main_frame, height=8, wrap=tk.WORD, app=self.app)
+        self.content_text = CustomText(
+            main_frame,
+            height=8,
+            wrap=tk.WORD,
+            translator=self.app.translator,
+            language_events=self.app.event_dispatcher,
+        )
         self.content_text.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         if self.phrase_dto:

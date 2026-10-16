@@ -1,22 +1,53 @@
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import Event
-from typing import Any
+from typing import Any, Protocol
+
+# translator が未指定の場合に使用する簡易フォールバック辞書。
+_FALLBACK_LABELS: dict[str, str] = {
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "select_all": "Select All",
+}
+
+LANGUAGE_CHANGED_EVENT = "LANGUAGE_CHANGED"
+
+
+def _fallback_translator(key: str) -> str:
+    return _FALLBACK_LABELS.get(key, key)
+
+
+class LanguageChangeNotifier(Protocol):
+    """言語変更イベントを購読・解除できる通知オブジェクトのインターフェース。
+
+    ``EventDispatcher`` のように ``subscribe`` / ``unsubscribe`` を持つオブジェクトを
+    そのまま渡せる。アプリケーション全体を表すオブジェクトは要求しない。
+    """
+
+    def subscribe(self, event_type: str, listener: Callable[..., Any]) -> None: ...
+
+    def unsubscribe(self, event_type: str, listener: Callable[..., Any]) -> None: ...
 
 
 class ContextMenuMixin:
     """
     Adds a right-click context menu with Cut, Copy, Paste, and Select All functionality
     to tkinter Entry and Text widgets.
+
+    Keyword Args:
+        translator: ラベル用の翻訳関数 ``(key) -> str``。省略時は英語の簡易辞書を使う。
+        language_events: 言語変更時にメニューを再構築するための通知オブジェクト。
+            省略時はメニューの自動再構築を行わない。
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        app = kwargs.pop("app", None)
-        if not app or not hasattr(app, "translator"):
-            raise ValueError(
-                "ContextMenuMixin requires an 'app' instance with a 'translator' attribute passed during initialization."
-            )
-        self.app = app
-        self.translator = app.translator
+        self.translator: Callable[[str], str] = (
+            kwargs.pop("translator", None) or _fallback_translator
+        )
+        self._language_events: LanguageChangeNotifier | None = kwargs.pop(
+            "language_events", None
+        )
 
         super().__init__(*args, **kwargs)
 
@@ -25,16 +56,17 @@ class ContextMenuMixin:
 
         self.bind("<Button-3>", self.show_context_menu)  # type: ignore
         # Rebuild the menu if the language changes
-        self.app.event_dispatcher.subscribe("LANGUAGE_CHANGED", self._rebuild_menu)
+        if self._language_events is not None:
+            self._language_events.subscribe(LANGUAGE_CHANGED_EVENT, self._rebuild_menu)
 
         # Unsubscribe when the widget is destroyed to prevent errors.
         self.bind("<Destroy>", self._on_destroy)  # type: ignore
 
     def _on_destroy(self, event: Event) -> None:
         """Unsubscribes the listener when the widget is destroyed."""
-        if event.widget == self:
-            self.app.event_dispatcher.unsubscribe(
-                "LANGUAGE_CHANGED", self._rebuild_menu
+        if event.widget == self and self._language_events is not None:
+            self._language_events.unsubscribe(
+                LANGUAGE_CHANGED_EVENT, self._rebuild_menu
             )
 
     def _rebuild_menu(self, *args: Any) -> None:
@@ -106,8 +138,7 @@ class ContextMenuMixin:
 class CustomEntry(ContextMenuMixin, tk.Entry):
     """
     A tkinter Entry widget with a right-click context menu.
-    Requires 'app' instance to be passed for translation.
-    e.g., CustomEntry(parent, app=app_instance)
+    e.g., CustomEntry(parent, translator=translator, language_events=dispatcher)
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -117,8 +148,7 @@ class CustomEntry(ContextMenuMixin, tk.Entry):
 class CustomText(ContextMenuMixin, tk.Text):
     """
     A tkinter Text widget with a right-click context menu.
-    Requires 'app' instance to be passed for translation.
-    e.g., CustomText(parent, app=app_instance)
+    e.g., CustomText(parent, translator=translator, language_events=dispatcher)
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
