@@ -182,8 +182,16 @@ class Classifier:
                 )
                 return False
 
-            if result_receiver.poll():
-                return bool(result_receiver.recv())
+            try:
+                if result_receiver.poll():
+                    return bool(result_receiver.recv())
+            except (EOFError, OSError) as e:
+                # 子プロセスが結果を送る前に異常終了した場合（送信側が閉じられ、
+                # poll() が真でも recv() が EOFError になる）。分類は継続する。
+                logger.warning(
+                    "分類ルールのregex評価プロセスが異常終了しました（マッチなしとして扱います）: %s",
+                    e,
+                )
             return False
         finally:
             result_sender.close()
