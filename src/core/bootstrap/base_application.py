@@ -48,8 +48,6 @@ class BaseApplication(ReusableBaseApplication):
     settings_handlers: SettingsEventHandlers
     gui: ClipWatcherGUI
     history_sort_ascending: bool
-    always_on_top_var: tk.BooleanVar
-    theme_var: tk.StringVar
 
     def get_pinned_hotkey_combo(self, history_id: int) -> str | None:
         """履歴項目に割り当てられたホットキーを返す。"""

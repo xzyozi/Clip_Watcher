@@ -83,6 +83,7 @@ class MainApplication(BaseApplication):
         self.undo_manager = UndoManager(event_dispatcher)
         self.history_sort_ascending: bool = False
         self.menubar: tk.Menu | None = None
+        self.main_menu: menu_bar.MenuBar | None = None
 
         event_handlers.register_class_based_handlers(self)  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
@@ -300,9 +301,10 @@ class MainApplication(BaseApplication):
 
     def _rebuild_menu(self, event: Any = None) -> None:
         """Destroys and recreates the main menu bar, usually for language changes."""
-        if hasattr(self, "menubar") and self.menubar:  # type: ignore
-            self.menubar.destroy()  # type: ignore
-        self.menubar = menu_bar.create_menu_bar(self.master, self)  # type: ignore
+        if self.menubar:
+            self.menubar.destroy()
+        self.main_menu = menu_bar.MenuBar(self.master, self)
+        self.menubar = self.main_menu.menu
         self.master.config(menu=self.menubar)
         self.theme_manager.set_menubar(self.menubar)  # type: ignore
 
@@ -334,13 +336,11 @@ class MainApplication(BaseApplication):
             theme = "light"
         self.theme_manager.apply_theme(theme)
         self.gui.history_component.apply_theme(THEMES[theme])
-        if hasattr(self, "theme_var"):  # type: ignore
-            self.theme_var.set(theme)  # type: ignore
 
         always_on_top: bool = settings.get("always_on_top", False)
         self.master.attributes("-topmost", always_on_top)
-        if hasattr(self, "always_on_top_var"):  # type: ignore
-            self.always_on_top_var.set(always_on_top)  # type: ignore
+        if self.main_menu is not None:
+            self.main_menu.sync_settings(theme, always_on_top)
 
         startup_enabled: bool = settings.get("startup_on_boot", False)
         self._manage_startup(startup_enabled)
