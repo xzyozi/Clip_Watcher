@@ -31,7 +31,6 @@ def _monitor(
         tk_root=mocker.Mock(),
         event_dispatcher=event_dispatcher,
         history_file_path="dummy.json",
-        win32_available=False,
         db_manager=mocker.Mock(),
         history_service=history_service,
         platform_services=services,

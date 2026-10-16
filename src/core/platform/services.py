@@ -8,15 +8,19 @@ OS ごとの実装の選択を一元化する ``PlatformServices``。
 
 from __future__ import annotations
 
+import logging
 import sys
 
 from src.core.platform.errors import UnsupportedFeatureError
 from src.core.platform.protocols import (
+    ClipboardReader,
     PasteSender,
     ProcessInspector,
     SingleInstanceController,
     SoundPlayer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PlatformServices:
@@ -36,12 +40,14 @@ class PlatformServices:
         sound_player: SoundPlayer | None = None,
         single_instance: SingleInstanceController | None = None,
         paste_sender: PasteSender | None = None,
+        clipboard_reader: ClipboardReader | None = None,
         platform_name: str | None = None,
     ) -> None:
         self._process_inspector = process_inspector
         self._sound_player = sound_player
         self._single_instance = single_instance
         self._paste_sender = paste_sender
+        self._clipboard_reader = clipboard_reader
         self._platform_name = platform_name if platform_name else sys.platform
 
     @classmethod
@@ -54,17 +60,29 @@ class PlatformServices:
         name = platform_name if platform_name else sys.platform
         if name == "win32":
             from src.core.platform.windows import (
+                WindowsClipboardReader,
                 WindowsPasteSender,
                 WindowsProcessInspector,
                 WindowsSingleInstanceController,
                 WindowsSoundPlayer,
             )
 
+            clipboard_reader: ClipboardReader | None
+            try:
+                clipboard_reader = WindowsClipboardReader()
+            except ImportError:
+                # pywin32 未導入の Windows 環境は、クリップボード読み取りを非対応として扱う
+                logger.warning(
+                    "pywin32 が見つからないため、clipboard_reader は非対応として扱います。"
+                )
+                clipboard_reader = None
+
             return cls(
                 process_inspector=WindowsProcessInspector(),
                 sound_player=WindowsSoundPlayer(),
                 single_instance=WindowsSingleInstanceController(),
                 paste_sender=WindowsPasteSender(),
+                clipboard_reader=clipboard_reader,
                 platform_name=name,
             )
         return cls(platform_name=name)
@@ -88,3 +106,8 @@ class PlatformServices:
         if self._paste_sender is None:
             raise UnsupportedFeatureError("paste_sender", self._platform_name)
         return self._paste_sender
+
+    def clipboard_reader(self) -> ClipboardReader:
+        if self._clipboard_reader is None:
+            raise UnsupportedFeatureError("clipboard_reader", self._platform_name)
+        return self._clipboard_reader

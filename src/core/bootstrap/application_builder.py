@@ -257,12 +257,10 @@ class ApplicationBuilder:
             )
 
         try:
-            win32_available = self.app_status.dependencies.win32_available
             self.monitor = ClipboardMonitor(
                 master,
                 self.event_dispatcher,
                 history_file_path,
-                win32_available,
                 self.db_manager,
                 self.history_service,
                 self.platform_services,

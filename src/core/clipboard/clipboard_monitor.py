@@ -5,14 +5,7 @@ import threading
 import time
 import tkinter as tk
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
-
-try:
-    import pywintypes
-    import win32clipboard
-except ImportError:
-    # このモジュールはオプションであり、利用可能性は外部から注入されるフラグによって制御されます。
-    pass
+from typing import TYPE_CHECKING, Any
 
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.events.event_dispatcher import EventDispatcher
@@ -20,6 +13,7 @@ from src.core.platform.errors import UnsupportedFeatureError
 from src.core.platform.services import PlatformServices
 from src.db.database_manager import DatabaseManager
 from src.services.notification_manager import NotificationManager
+from src.utils.clipboard_decode import decode_clipboard_data
 
 # history_limit のデフォルト値は defaults.DEFAULT_USER_SETTINGS を単一の参照元とする。
 _default_history_limit = DEFAULT_USER_SETTINGS["history_limit"]
@@ -42,7 +36,6 @@ class ClipboardMonitor:
         tk_root: tk.Tk,
         event_dispatcher: EventDispatcher,
         history_file_path: str,
-        win32_available: bool,
         db_manager: DatabaseManager,
         history_service: HistoryService,
         platform_services: PlatformServices,
@@ -51,9 +44,9 @@ class ClipboardMonitor:
     ) -> None:
         self.tk_root = tk_root
         self.event_dispatcher = event_dispatcher
-        self.win32_available = win32_available
         self.platform_services = platform_services
         self._process_inspector_support_reported: bool = False
+        self._clipboard_reader_support_reported: bool = False
         # 設定はイベント経由で渡されます
         self.notification_manager = NotificationManager(platform_services)
         self.error_callback: Callable[[str, str], None] | None = None
@@ -178,26 +171,12 @@ class ClipboardMonitor:
                 time.sleep(5)
 
     def _decode_clipboard_data(self, data: Any) -> str:
-        if isinstance(data, bytes):
-            encodings = ["utf-8", "shift-jis", "cp932", "euc-jp", "latin1"]
-            for encoding in encodings:
-                try:
-                    return data.decode(encoding)
-                except UnicodeDecodeError:
-                    continue
-            return data.decode("utf-8", errors="ignore")
-        elif isinstance(data, str):
-            try:
-                return data.encode("utf-8", errors="surrogateescape").decode(
-                    "utf-8", errors="ignore"
-                )
-            except Exception:
-                return data
-        return str(data)
+        return decode_clipboard_data(data)
 
     def _get_clipboard_content(self) -> str | None:
         """
-        tkinterを使用してクリップボードのコンテンツを取得し、失敗した場合はwin32clipboardにフォールバックします。
+        tkinterを使用してクリップボードのコンテンツを取得し、失敗した場合は
+        PlatformServices の ClipboardReader にフォールバックします。
         コンテンツを文字列として返すか、失敗した場合やコンテンツがテキストでない場合はNoneを返します。
         """
         # 1. 最初にtkinterを試します
@@ -205,48 +184,23 @@ class ClipboardMonitor:
             return self.tk_root.clipboard_get()
         except (tk.TclError, UnicodeDecodeError) as e:
             logging.warning(
-                f"tkinterのclipboard_getに失敗しました ({e})。win32clipboardにフォールバックします。"
+                f"tkinterのclipboard_getに失敗しました ({e})。ClipboardReaderにフォールバックします。"
             )
 
-        # 2. win32clipboardが利用可能な場合にフォールバックします
-        if not self.win32_available:
-            logging.warning(
-                "win32clipboardが利用できないため、フォールバックできません。"
-            )
+        # 2. OS 固有の ClipboardReader が利用可能な場合にフォールバックします
+        try:
+            reader = self.platform_services.clipboard_reader()
+        except UnsupportedFeatureError as e:
+            # 非対応であることは一度だけ警告し、ポーリングごとのログ氾濫を避ける
+            if not self._clipboard_reader_support_reported:
+                self._clipboard_reader_support_reported = True
+                logging.warning(
+                    "clipboard_reader が非対応のため、tkinter 失敗時のフォールバックはできません: %s",
+                    e,
+                )
             return None
 
-        try:
-            win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):  # type: ignore
-                return cast(
-                    str, win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
-                )
-            elif win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):  # type: ignore
-                data = win32clipboard.GetClipboardData(win32clipboard.CF_TEXT)
-                return self._decode_clipboard_data(data)
-            return ""  # 処理できないテキスト形式です
-        except pywintypes.error as e:
-            if e.winerror == 5:  # アクセスが拒否されました
-                logging.warning(
-                    "win32clipboardがクリップボードを開けませんでした（アクセス拒否）。使用中の可能性があります。"
-                )
-            else:
-                logging.error(
-                    f"win32clipboardフォールバックが予期せぬエラーで失敗しました: {e}",
-                    exc_info=True,
-                )
-            return None  # 失敗したことを示します
-        except Exception as e:
-            logging.error(
-                f"win32clipboardフォールバックが一般的なエラーで失敗しました: {e}",
-                exc_info=True,
-            )
-            return None  # 失敗したことを示します
-        finally:
-            try:
-                win32clipboard.CloseClipboard()
-            except Exception:
-                pass  # すでに閉じられているか、開けませんでした。
+        return reader.read_text()
 
     def _update_history_with_new_entry(self, clipboard_data: str) -> None:
         """新しいクリップボードエントリで履歴を更新します。"""
