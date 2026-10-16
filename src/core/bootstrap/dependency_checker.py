@@ -7,7 +7,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DependencyStatus:
-    """依存関係の状態を保持するデータクラス"""
+    """依存関係の状態を保持するデータクラス（診断表示用）
+
+    機能の有無の判定には使用しない。OS・依存パッケージに応じた機能の
+    選択は ``PlatformServices`` に集約している。
+    """
 
     win32_available: bool = False
 

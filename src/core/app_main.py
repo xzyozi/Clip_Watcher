@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager
     from src.services.history_service import HistoryService
+    from src.services.notification_manager import NotificationManager
     from src.services.text_workflow_service import TextWorkflowService
     from src.utils.i18n import Translator
 
@@ -53,6 +54,7 @@ class MainApplication(BaseApplication):
         translator: Translator,
         app_status: Any,
         platform_services: PlatformServices,
+        notification_manager: NotificationManager,
         icon_manager: IconManager | None = None,
         window_state_manager: Any | None = None,
         hotkey_registration_manager: HotkeyRegistrationManager | None = None,
@@ -73,6 +75,7 @@ class MainApplication(BaseApplication):
         self.translator = translator
         self.app_status = app_status
         self.platform_services = platform_services
+        self.notification_manager = notification_manager
         self.window_state_manager = window_state_manager
         self.hotkey_registration_manager = hotkey_registration_manager
         self.text_workflow_service = text_workflow_service
@@ -103,7 +106,9 @@ class MainApplication(BaseApplication):
     def on_ready(self) -> None:
         """Called when the application is fully initialized and ready to run."""
         self._set_state(ApplicationState.READY)
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self.update_gui(
+            self.history_service.last_clipboard_data, self.history_service.get_history()
+        )
 
         if not self._reconfigure_hotkeys_from_settings():
             combo = self.settings_manager.get_setting(
@@ -137,7 +142,9 @@ class MainApplication(BaseApplication):
 
     def _refresh_history_display(self) -> None:
         """現在の履歴を保持したまま一覧表示を更新する。"""
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())
+        self.update_gui(
+            self.history_service.last_clipboard_data, self.history_service.get_history()
+        )
 
     def configure_pinned_hotkey(self, history_id: int, combo: str) -> bool:
         if not self._is_history_item_pinned(history_id):
@@ -189,11 +196,11 @@ class MainApplication(BaseApplication):
         history_id = self.hotkey_registration_manager.history_id_for_hotkey(hotkey_id)
         if history_id is None:
             return
-        for content, is_pinned, item_id in self.monitor.get_history():
+        for content, is_pinned, item_id in self.history_service.get_history():
             if int(item_id) == history_id and is_pinned:
                 self.master.clipboard_clear()
                 self.master.clipboard_append(content)
-                self.monitor.notification_manager.play_notification_sound()
+                self.notification_manager.play_notification_sound()
                 self.master.after(
                     _PASTE_INITIAL_DELAY_MS, self._paste_into_active_window
                 )
@@ -251,7 +258,7 @@ class MainApplication(BaseApplication):
     def _is_history_item_pinned(self, history_id: int) -> bool:
         return any(
             int(item_id) == history_id and is_pinned
-            for _, is_pinned, item_id in self.monitor.get_history()
+            for _, is_pinned, item_id in self.history_service.get_history()
         )
 
     def _apply_pinned_hotkey_bindings(self, bindings: dict[int, str]) -> bool:
@@ -429,7 +436,9 @@ class MainApplication(BaseApplication):
         else:
             self.gui.sort_button.config(text=self.translator("sort_desc_button"))  # type: ignore
 
-        self.update_gui(self.monitor.last_clipboard_data, self.monitor.get_history())  # type: ignore
+        self.update_gui(
+            self.history_service.last_clipboard_data, self.history_service.get_history()
+        )  # type: ignore
         print(
             f"History sort order set to {'ascending' if self.history_sort_ascending else 'descending'}"
         )

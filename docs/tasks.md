@@ -43,9 +43,9 @@
 - [ ] [CW-0041] [edge_cases] global_hotkey_listener における GetMessageW 戻り値 -1（エラー値）の未判定による無限ループとCPU枯渇リスク <!-- priority:medium issue:#112 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [ ] [CW-0042] [edge_cases] classifier における正規表現子プロセス異常終了（EOF/切断）時の EOFError 未捕捉によるアプリクラッシュ <!-- priority:medium issue:#113 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [ ] [CW-0043] [edge_cases] template_renderer における None 値および不正データ型に対する防御処理の欠落による TypeError / 文字列化バグ <!-- priority:medium issue:#114 theme:edge_cases stage:ideation added:2026-10-01 -->
-- [ ] [CW-0044] [architecture] EventDispatcher における GUI (messagebox) への直接依存によるレイヤー逆転とスレッド安全性阻害 <!-- priority:medium issue:#115 theme:architecture stage:ideation added:2026-10-01 -->
-- [ ] [CW-0045] [architecture] ClipboardMonitor における履歴サービス・通知機能の抱え込みによる単一責任の原則違反 <!-- priority:medium issue:#116 theme:architecture stage:ideation added:2026-10-01 -->
-- [ ] [CW-0046] [architecture] text_workflow の ports.py における具象永続化モジュール (history.py) への直接依存とDIP違反 <!-- priority:medium issue:#117 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0044] [architecture] EventDispatcher における GUI (messagebox) への直接依存によるレイヤー逆転とスレッド安全性阻害 <!-- priority:medium issue:#115 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
+- [x] [CW-0045] [architecture] ClipboardMonitor における履歴サービス・通知機能の抱え込みによる単一責任の原則違反 <!-- priority:medium issue:#116 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
+- [x] [CW-0046] [architecture] text_workflow の ports.py における具象永続化モジュール (history.py) への直接依存とDIP違反 <!-- priority:medium issue:#117 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [ ] [CW-0047] [security] database_manager における旧履歴JSON移行時のパストラバーサル未検証および安全でないバックアップファイル置換 <!-- priority:medium issue:#118 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0048] [security] history_dao における検索クエリのLIKEメタ文字未エスケープによる意図しない履歴露出とDoSリスク <!-- priority:medium issue:#119 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0049] [security] database_manager および base_dao における機密履歴データベースの平文保存およびファイルアクセス権限制御の欠落 <!-- priority:medium issue:#120 theme:security stage:ideation added:2026-10-01 -->
@@ -70,5 +70,5 @@
 - [ ] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 -->
 - [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
-- [ ] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
 - [ ] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 -->

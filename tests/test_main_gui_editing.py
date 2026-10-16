@@ -179,7 +179,7 @@ def _build_gui(
     gui.history_component.displayed_history = displayed_history
     gui.format_button = Mock()
     gui.app = Mock()
-    gui.app.monitor.last_clipboard_data = "latest clipboard"
+    gui.app.history_service.last_clipboard_data = "latest clipboard"
     return gui
 
 

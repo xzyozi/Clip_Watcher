@@ -35,14 +35,14 @@ related_documents:
 
 コア層は、関心の分離（Separation of Concerns）に基づき、以下のサブパッケージに分割されています。
 
-| サブパッケージ | 主な役割と構成クラス                                                                                                                                                                                                                                                                                                                                                                                  |
-| :------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bootstrap/`   | **起動と依存関係の構築**<br>・`ApplicationBuilder`: 各サービス・UIを生成し依存性を注入（DI）する。<br>・`BaseApplication`: アプリケーションの基底インターフェース。<br>・`DependencyChecker`: 起動前の環境・依存ライブラリのチェック。                                                                                                                                                                |
-| `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                                                                                                                                                                                |
-| `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                                                                                                                                                                                        |
-| `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                                                                                                                                                                                      |
-| `platform/`    | **OS抽象化・アダプター**（詳細は§6）<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`等）。<br>・`services.py`: OS実装の選択を一元化する `PlatformServices`。<br>・`errors.py`: `PlatformError` / `UnsupportedFeatureError` / `SingleInstanceError`。<br>・`windows/`: Windows具象アダプター。<br>・`null/`: ホットキー用の暫定Nullアダプターのみ（#150で廃止予定）。 |
-| `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                                                                                                                                                                                              |
+| サブパッケージ | 主な役割と構成クラス                                                                                                                                                                                                                                                                                                                                                                                                     |
+| :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bootstrap/`   | **起動と依存関係の構築**<br>・`ApplicationBuilder`: 各サービス・UIを生成し依存性を注入（DI）する。<br>・`BaseApplication`: アプリケーションの基底インターフェース。<br>・`DependencyChecker`: 起動前の環境・依存ライブラリのチェック。                                                                                                                                                                                   |
+| `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                                                                                                                                                                                                   |
+| `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                                                                                                                                                                                                           |
+| `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                                                                                                                                                                                                         |
+| `platform/`    | **OS抽象化・アダプター**（詳細は§6）<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`, `ClipboardReader`等）。<br>・`services.py`: OS実装の選択を一元化する `PlatformServices`。<br>・`errors.py`: `PlatformError` / `UnsupportedFeatureError` / `SingleInstanceError`。<br>・`windows/`: Windows具象アダプター。<br>・`null/`: ホットキー用の暫定Nullアダプターのみ（#150で廃止予定）。 |
+| `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
@@ -152,19 +152,19 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 
 ### 6.1 対象範囲
 
-| 区分               | 機能                                                                            | 扱い                                                                                                                                                  |
-| :----------------- | :------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 本設計の対象       | `ProcessInspector` / `SoundPlayer` / `SingleInstanceController` / `PasteSender` | `PlatformServices` から取得する。                                                                                                                     |
-| 対象外（暫定維持） | `HotkeyListener`                                                                | Windows限定。`ApplicationBuilder.with_global_hotkey_listener()` の分岐と `NullHotkeyListener` を #150 まで維持する。                                  |
-| 対象外             | クリップボード読み取り（`win32_available`）                                     | 依存パッケージの有無の判定として分離を維持する。統合は #159。                                                                                         |
-| 対象外             | GUI描画・テーマ制御                                                             | [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とする。 |
+| 区分               | 機能                                                                                                | 扱い                                                                                                                                                  |
+| :----------------- | :-------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 本設計の対象       | `ProcessInspector` / `SoundPlayer` / `SingleInstanceController` / `PasteSender` / `ClipboardReader` | `PlatformServices` から取得する。                                                                                                                     |
+| 対象外（暫定維持） | `HotkeyListener`                                                                                    | Windows限定。`ApplicationBuilder.with_global_hotkey_listener()` の分岐と `NullHotkeyListener` を #150 まで維持する。                                  |
+| 対象外             | macOS / Linux 向け `ClipboardReader` の具象実装                                                     | 実機確認が必要なため #170 で扱う。                                                                                                                    |
+| 対象外             | GUI描画・テーマ制御                                                                                 | [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とする。 |
 
 ### 6.2 `PlatformServices` の契約
 
 | 項目     | 仕様                                                                                                                                                         |
 | :------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 生成     | コンストラクタで各アダプター（未対応は `None`）を受け取る。本番用は `PlatformServices.for_current_platform()` で生成する。生成は `start_app()` の1箇所のみ。 |
-| 取得     | `process_inspector()` / `sound_player()` / `single_instance()` / `paste_sender()` のメソッドで取得する。                                                     |
+| 取得     | `process_inspector()` / `sound_player()` / `single_instance()` / `paste_sender()` / `clipboard_reader()` のメソッドで取得する。                              |
 | 非対応時 | 対応するアダプターが無い場合、取得メソッドは `UnsupportedFeatureError` を送出する。`None` や成功を装うNull実装は返さない。                                   |
 | 不変性   | 生成後にアダプターを差し替えない。テストではコンストラクタにモックを渡す（`sys.platform` の差し替えは使わない）。                                            |
 
@@ -180,19 +180,20 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 
 1. `start_app()` が `PlatformServices.for_current_platform()` を生成する。
 2. `ApplicationBuilder(platform_services)` がコンストラクタで受け取って保持する（`with_platform_adapters()` は廃止し、後から設定する経路は設けない）。
-3. ビルダーが `ClipboardMonitor` / `MainApplication` へ必須引数 `platform_services` として渡す。`ClipboardMonitor` は `NotificationManager` を生成する際に同じ `platform_services` を渡す。
+3. ビルダーが `ClipboardMonitor` / `MainApplication` へ必須引数 `platform_services` として渡す。`NotificationManager` は `ApplicationBuilder.build()` が同じ `platform_services` で生成し、`SETTINGS_CHANGED` を購読させた上で `MainApplication` へ渡す（`ClipboardMonitor` は通知を保持しない, #169）。
 4. 各クラスは使う場所で取得し、`UnsupportedFeatureError` を捕捉して明示的に縮退する。コンストラクタでのデフォルト生成（`_create_default_*`）は行わない。
 
 ### 6.5 非対応時の縮退仕様
 
 「縮退」は呼び出し側が警告ログ等で明示して継続することを指し、例外の握りつぶしや成功の偽装は行いません。
 
-| 機能                       | 呼び出し側            | 非対応時の動作                                                                                                                    |
-| :------------------------- | :-------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
-| `ProcessInspector`         | `ClipboardMonitor`    | 起動時に `WARNING` を1回出す。`excluded_apps` が設定されている場合は `ERROR` に格上げする。除外判定は行わず、履歴保存は継続する。 |
-| `SoundPlayer`              | `NotificationManager` | 再生をスキップし、`DEBUG` ログを出す。                                                                                            |
-| `PasteSender`              | `MainApplication`     | 「自動貼り付けは非対応。クリップボードには内容を設定済み」の `WARNING` を出して継続する。                                         |
-| `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。ロックファイルによる代替実装は別Issueとする。                              |
+| 機能                       | 呼び出し側            | 非対応時の動作                                                                                                                                                                       |
+| :------------------------- | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProcessInspector`         | `ClipboardMonitor`    | 起動時に `WARNING` を1回出す。`excluded_apps` が設定されている場合は `ERROR` に格上げする。除外判定は行わず、履歴保存は継続する。                                                    |
+| `SoundPlayer`              | `NotificationManager` | 再生をスキップし、`DEBUG` ログを出す。                                                                                                                                               |
+| `PasteSender`              | `MainApplication`     | 「自動貼り付けは非対応。クリップボードには内容を設定済み」の `WARNING` を出して継続する。                                                                                            |
+| `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。非対応（非Windows、または `pywin32` 未導入のWindows）は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。 |
+| `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。ロックファイルによる代替実装は別Issueとする。                                                                                 |
 
 ### 6.6 `SingleInstanceController.acquire()` の契約
 
@@ -203,6 +204,13 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `SingleInstanceError` | ロック取得APIが失敗した。  | `start_app()` の `try` 内で捕捉し、エラーを表示してログに記録して終了する。重複起動として扱わない。 |
 
 `release()` は未取得の状態で呼んでも何もしない（冪等）。
+
+### 6.6a `ClipboardReader` と `ClipboardMonitor` の責務 (#169)
+
+- `ClipboardReader.read_text() -> str | None` は、失敗時 `None`、テキスト形式が処理できない場合は空文字を返す。Windows実装 `WindowsClipboardReader` は生成時に `win32clipboard` / `pywintypes` を import し、未導入なら `ImportError` を送出する。`PlatformServices.for_current_platform()` はこれを捕捉し、`clipboard_reader` のみを非対応として扱う（他のアダプターは有効）。
+- `win32_available`（`DependencyStatus`）は診断表示用に限定し、機能の有無の判定には使わない。`ClipboardMonitor` は `win32_available` 引数と `win32clipboard` の直接 import を持たない。
+- `ClipboardMonitor` はクリップボードの監視・変更検知・書き込み（`update_clipboard`）に専念する。履歴操作は `HistoryService`、通知は `NotificationManager` を呼び出し側が直接参照する。`UpdateHistoryCommand` も `HistoryService` を受け取る。
+- `QuickTaskDialog` は Tkinter の `clipboard_clear()` / `clipboard_append()` を直接呼ばず、`app.monitor.update_clipboard()` を経由する。
 
 ### 6.7 依存方向
 
@@ -217,13 +225,16 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 - `ClipboardMonitor` が、`ProcessInspector` 非対応時に `WARNING` を出し、`excluded_apps` 設定時は `ERROR` に格上げし、履歴保存を継続することを確認する。
 - `NotificationManager` が `SoundPlayer` 非対応時に再生をスキップすることを確認する。
 - `MainApplication` が `PasteSender` 非対応時に警告ログを出して継続することを確認する。
+- `ClipboardMonitor` が、tkinter 失敗時に `ClipboardReader` へフォールバックし、非対応時は `WARNING` を1回だけ出して `None` を返すことを確認する。
+- `WindowsClipboardReader` が、fakeモジュール注入で `pywin32` なしの環境でも検証でき、`pywin32` 未導入時に `ImportError` を送出することを確認する。
 - `start_app()` が、`SingleInstanceError` を捕捉してエラー終了し、`False`（重複起動）と区別することを確認する。
 - 上記は windows / ubuntu の両CIで通ること。
 
 ## 8. 改訂履歴
 
-| 版数    | 改訂日     | 変更者      | 変更内容・変更理由 (Why)                                                                                                                 |
-| :------ | :--------- | :---------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
-| Rev.1.0 | 2026-08-31 | 未記載      | コア層プログラム仕様書を詳細設計書として命名・分類し、SSOT境界、メタデータ、検証要件、改訂履歴を整備。                                   |
-| Rev.1.1 | 2026-10-11 | Antigravity | OSプラットフォーム抽象レイヤー (`src/core/platform`) の追加に伴うモジュール構成の更新 (#148)。                                           |
-| Rev.1.2 | 2026-10-13 | 未記載      | `PlatformServices` への実装選択の集約、例外階層、注入経路、非対応時の縮退仕様、`acquire()` の契約を§6に追加し、テスト要件を更新 (#158)。 |
+| 版数    | 改訂日     | 変更者      | 変更内容・変更理由 (Why)                                                                                                                                                                   |
+| :------ | :--------- | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rev.1.0 | 2026-08-31 | 未記載      | コア層プログラム仕様書を詳細設計書として命名・分類し、SSOT境界、メタデータ、検証要件、改訂履歴を整備。                                                                                     |
+| Rev.1.1 | 2026-10-11 | Antigravity | OSプラットフォーム抽象レイヤー (`src/core/platform`) の追加に伴うモジュール構成の更新 (#148)。                                                                                             |
+| Rev.1.2 | 2026-10-13 | 未記載      | `PlatformServices` への実装選択の集約、例外階層、注入経路、非対応時の縮退仕様、`acquire()` の契約を§6に追加し、テスト要件を更新 (#158)。                                                   |
+| Rev.1.3 | 2026-10-15 | 未記載      | `ClipboardReader` の追加と `win32_available` の診断用途への限定、`ClipboardMonitor` の責務を監視に限定（履歴・通知の委譲を除去）、`QuickTaskDialog` の書き込み経路を §6.6a に追加 (#169)。 |

@@ -322,7 +322,7 @@ class ClipWatcherGUI(BaseFrameGUI):
                 from src.core.events.commands import UpdateHistoryCommand
 
                 command = UpdateHistoryCommand(
-                    monitor=self.app.monitor,  # type: ignore
+                    history_service=self.app.history_service,  # type: ignore
                     item_id=target_item_id,
                     original_text=(
                         target_original_text if target_original_text is not None else ""
@@ -439,7 +439,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         else:
             self.format_button.config(state=tk.DISABLED)
             self._set_text_area(
-                self.app.monitor.last_clipboard_data,  # type: ignore
+                self.app.history_service.last_clipboard_data,  # type: ignore
                 None,
             )
 
@@ -481,7 +481,7 @@ class ClipWatcherGUI(BaseFrameGUI):
         hotkey_bindings: Mapping[int, str] = self.app.get_pinned_hotkey_bindings()
         if search_query:
             displayed_history: list[tuple[str, bool, float]] = (
-                self.app.monitor.get_filtered_history(search_query)
+                self.app.history_service.get_filtered_history(search_query)
             )  # type: ignore
         else:
             displayed_history = history

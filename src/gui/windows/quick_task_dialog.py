@@ -125,9 +125,8 @@ class QuickTaskDialog(BaseToplevelGUI):
         item = self.task_list.item(selection[0])
         content: str = item["values"][0]
 
-        # クリップボードにコピー
-        self.clipboard_clear()
-        self.clipboard_append(content)
+        # クリップボード監視レイヤー経由でコピー（履歴・重複排除・通知と整合させる）
+        self.app.monitor.update_clipboard(content)
 
         # 設定が有効な場合のみ項目を削除
         if self.delete_on_copy.get():
