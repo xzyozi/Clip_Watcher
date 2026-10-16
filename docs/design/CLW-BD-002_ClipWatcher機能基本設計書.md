@@ -40,7 +40,7 @@ related_documents:
 - **GUI方針（標準モジュール縛り）**: Python標準ライブラリ（`tkinter` / `ttk`）のみを用い、外部GUIパッケージに依存しないゼロインストール・高ポータビリティを保証。
 - **永続化**: SQLite（標準モジュール `sqlite3`）
 - **追加依存**: `pywin32` (Windows環境のみ)、`psutil`
-- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離し、OSごとの実装の選択は `PlatformServices` 1クラスに集約する（#158）。非Windows環境では、非対応の機能を要求した時点で `UnsupportedFeatureError` を返し、成功を装うNullアダプターは使用しない。呼び出し側は機能単位で明示的に縮退（警告ログを出して継続）し、アプリケーション自体は非Windows環境でも起動できる。ホットキーはWindows限定とし、他OS対応は別途扱う（#150）。GUI描画・テーマ制御の詳細は [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とします。
+- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離し、OSごとの実装の選択は `PlatformServices` 1クラスに集約する（#158）。非Windows環境では、非対応の機能を要求した時点で `UnsupportedFeatureError` を返し、成功を装うNullアダプターは使用しない。呼び出し側は機能単位で明示的に縮退（警告ログを出して継続）し、アプリケーション自体は非Windows環境でも起動できる。クリップボード読み取りの代替経路（`ClipboardReader`）も `PlatformServices` から取得し、`pywin32` 未導入のWindowsおよび非Windowsでは非対応として扱う（#169）。macOS / Linux 向けの具象実装は実機確認が必要なため別途扱う（#170）。ホットキーはWindows限定とし、他OS対応は別途扱う（#150）。GUI描画・テーマ制御の詳細は [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とします。
 
 インストール、仮想環境、検証コマンドは [../setup/toml_project_setup.md](../setup/toml_project_setup.md) を正本とします。
 
@@ -99,3 +99,4 @@ related_documents:
 | Rev.1.0 | 2026-08-31 | 未記載      | 既存仕様書を基本設計書として命名・分類し、メタデータ、セットアップ正本への参照、改訂履歴を整備。                          |
 | Rev.1.1 | 2026-10-11 | Antigravity | プラットフォーム抽象レイヤー導入に伴うOS境界および依存方針の追記 (#148)。                                                 |
 | Rev.1.2 | 2026-10-13 | 未記載      | OS実装の選択を `PlatformServices` に集約し、非対応環境はNullによる成功偽装ではなく明示的なエラーとする方針へ更新 (#158)。 |
+| Rev.1.3 | 2026-10-15 | 未記載      | クリップボード読み取り（`ClipboardReader`）を `PlatformServices` の管理対象に追加 (#169)。                                |
