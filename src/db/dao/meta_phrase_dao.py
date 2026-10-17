@@ -19,6 +19,7 @@ class MetaPhraseDAO(BaseDAO):
 
     def add(self, dto: MetaPhraseDTO) -> int:
         """メタ定型文を追加します。"""
+        dto.__post_init__()
         with self._lock:
             conn = self._get_connection()
             try:
@@ -99,6 +100,7 @@ class MetaPhraseDAO(BaseDAO):
         """メタ定型文の内容を更新します。カテゴリの切り替えも対応。"""
         if dto.id is None:
             return False
+        dto.__post_init__()
         try:
             affected_rows = self.execute_update(
                 "UPDATE t_meta_phrase SET title = ?, content = ?, category_id = ? WHERE id = ?",
