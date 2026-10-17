@@ -6,6 +6,7 @@ PlatformServices と プラットフォーム例外の振る舞いを検証す�
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -36,12 +37,13 @@ class TestPlatformErrors:
 
 class TestPlatformServices:
     def test_returns_injected_adapters(self) -> None:
-        inspector, sound, single, paste = (MagicMock() for _ in range(4))
+        inspector, sound, single, paste, clipboard = (MagicMock() for _ in range(5))
         services = PlatformServices(
             process_inspector=inspector,
             sound_player=sound,
             single_instance=single,
             paste_sender=paste,
+            clipboard_reader=clipboard,
             platform_name="win32",
         )
 
@@ -49,10 +51,17 @@ class TestPlatformServices:
         assert services.sound_player() is sound
         assert services.single_instance() is single
         assert services.paste_sender() is paste
+        assert services.clipboard_reader() is clipboard
 
     @pytest.mark.parametrize(
         "feature",
-        ["process_inspector", "sound_player", "single_instance", "paste_sender"],
+        [
+            "process_inspector",
+            "sound_player",
+            "single_instance",
+            "paste_sender",
+            "clipboard_reader",
+        ],
     )
     def test_unsupported_adapter_raises_unsupported_feature_error(
         self, feature: str
@@ -90,6 +99,20 @@ class TestForCurrentPlatform:
         assert isinstance(services.single_instance(), SingleInstanceController)
         assert isinstance(services.paste_sender(), PasteSender)
 
+    def test_windows_without_pywin32_treats_clipboard_reader_as_unsupported(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """pywin32 未導入の Windows は、clipboard_reader だけを非対応として扱う。"""
+        monkeypatch.setitem(sys.modules, "win32clipboard", None)
+        monkeypatch.setitem(sys.modules, "pywintypes", None)
+
+        services = PlatformServices.for_current_platform("win32")
+
+        with pytest.raises(UnsupportedFeatureError) as exc_info:
+            services.clipboard_reader()
+        assert exc_info.value.feature == "clipboard_reader"
+        assert services.process_inspector() is not None
+
     @pytest.mark.parametrize("platform_name", ["darwin", "linux"])
     def test_non_windows_provides_no_adapters(self, platform_name: str) -> None:
         services = PlatformServices.for_current_platform(platform_name)
@@ -99,6 +122,7 @@ class TestForCurrentPlatform:
             "sound_player",
             "single_instance",
             "paste_sender",
+            "clipboard_reader",
         ):
             with pytest.raises(UnsupportedFeatureError):
                 getattr(services, feature)()

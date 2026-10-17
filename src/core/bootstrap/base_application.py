@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from src.gui.theme_manager import ThemeManager
     from src.plugins.manager import PluginManager
     from src.services.history_service import HistoryService
+    from src.services.notification_manager import NotificationManager
     from src.utils.i18n import Translator
     from src.utils.undo_manager import UndoManager
 
@@ -34,6 +35,7 @@ class BaseApplication(ReusableBaseApplication):
     master: tk.Tk
     settings_manager: SettingsManager
     history_service: HistoryService
+    notification_manager: NotificationManager
     monitor: ClipboardMonitor
     plugin_manager: PluginManager
     event_dispatcher: EventDispatcher
@@ -46,8 +48,6 @@ class BaseApplication(ReusableBaseApplication):
     settings_handlers: SettingsEventHandlers
     gui: ClipWatcherGUI
     history_sort_ascending: bool
-    always_on_top_var: tk.BooleanVar
-    theme_var: tk.StringVar
 
     def get_pinned_hotkey_combo(self, history_id: int) -> str | None:
         """履歴項目に割り当てられたホットキーを返す。"""

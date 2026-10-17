@@ -4,7 +4,7 @@ from typing import Any
 
 from src.core.events.commands import UpdateHistoryCommand
 from src.core.events.event_dispatcher import EventDispatcher
-from src.utils.undo_manager import UndoManager
+from src.utils.undo_manager import UndoableCommand, UndoManager
 
 # ==========================================
 # EventDispatcher Tests (2 Items)
@@ -78,22 +78,16 @@ def test_event_dispatcher_variadic_listeners(event_dispatcher: EventDispatcher) 
     assert kw_arg_result == "clip_watcher"
 
 
-def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object(
-    event_dispatcher: EventDispatcher, monkeypatch: Any
-) -> None:
+def test_event_dispatcher_safe_error_logging_with_partial_and_callable_object() -> None:
     """functools.partialやcallableオブジェクトの例外発生時も安全にエラーログ出力が行われることを検証します。"""
     import functools
 
     logged_errors: list[str] = []
 
-    def mock_log_and_show_error(
-        title: str, message: str, exc_info: bool = False
-    ) -> None:
+    def mock_reporter(title: str, message: str, exc_info: bool = False) -> None:
         logged_errors.append(message)
 
-    monkeypatch.setattr(
-        "src.core.events.event_dispatcher.log_and_show_error", mock_log_and_show_error
-    )
+    event_dispatcher = EventDispatcher(error_reporter=mock_reporter)
 
     # 1. functools.partial の例
     def failing_target(arg: str) -> None:
@@ -155,7 +149,7 @@ def test_event_dispatcher_event_contracts(event_dispatcher: EventDispatcher) -> 
 # ==========================================
 
 
-class DummyCommand:
+class DummyCommand(UndoableCommand):
     """テスト用のシンプルな Command モック。"""
 
     def __init__(self) -> None:
@@ -210,21 +204,45 @@ def test_undo_manager_undo_redo_cycle(undo_manager: UndoManager) -> None:
     assert undo_manager.can_redo() is False
 
 
+def test_undo_manager_stack_size_bounded(event_dispatcher: EventDispatcher) -> None:
+    """maxlen を超えるコマンドが実行された場合、古いコマンドが破棄されスタック上限が保たれる（#139）。"""
+    manager = UndoManager(event_dispatcher, max_history=3)
+    commands = [DummyCommand() for _ in range(5)]
+
+    for cmd in commands:
+        manager.execute_command(cmd)
+
+    assert len(manager.undo_stack) == 3
+    # commands[0] と commands[1] は自動破棄され、直近3件（2, 3, 4）のみ残る
+    assert list(manager.undo_stack) == commands[2:]
+
+
+def test_undo_manager_rejects_non_positive_max_history(
+    event_dispatcher: EventDispatcher,
+) -> None:
+    """max_history に 0 以下の値が渡された場合は ValueError を送出する。"""
+    import pytest
+
+    with pytest.raises(ValueError, match="max_history must be greater than 0"):
+        UndoManager(event_dispatcher, max_history=0)
+
+
 # ==========================================
 # UpdateHistoryCommand Tests (1 Item)
 # ==========================================
 
 
 def test_update_history_command_execution(
-    mock_monitor: Any, undo_manager: UndoManager
+    mocker: Any, undo_manager: UndoManager
 ) -> None:
-    """UpdateHistoryCommandの実行とUndoにより、レシーバ(Monitor)が正しい引数で駆動されることを検証します。"""
+    """UpdateHistoryCommandの実行とUndoにより、レシーバ(HistoryService)が正しい引数で駆動されることを検証します。"""
+    mock_history_service = mocker.Mock()
     item_id = 123.0
     original_text = "Before Edit"
     new_text = "After Edit"
 
     command = UpdateHistoryCommand(
-        monitor=mock_monitor,
+        history_service=mock_history_service,
         item_id=item_id,
         original_text=original_text,
         new_text=new_text,
@@ -232,16 +250,20 @@ def test_update_history_command_execution(
 
     # 1. コマンド実行の検証
     undo_manager.execute_command(command)
-    mock_monitor.update_history_item_by_id.assert_called_once_with(item_id, new_text)
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
+        item_id, new_text
+    )
 
     # 2. Undo の検証
-    mock_monitor.update_history_item_by_id.reset_mock()
+    mock_history_service.update_history_item_by_id.reset_mock()
     undo_manager.undo()
-    mock_monitor.update_history_item_by_id.assert_called_once_with(
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
         item_id, original_text
     )
 
     # 3. Redo の検証
-    mock_monitor.update_history_item_by_id.reset_mock()
+    mock_history_service.update_history_item_by_id.reset_mock()
     undo_manager.redo()
-    mock_monitor.update_history_item_by_id.assert_called_once_with(item_id, new_text)
+    mock_history_service.update_history_item_by_id.assert_called_once_with(
+        item_id, new_text
+    )

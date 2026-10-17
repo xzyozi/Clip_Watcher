@@ -33,6 +33,7 @@ def make_app() -> Iterator[Callable[[PlatformServices], MainApplication]]:
             translator=MagicMock(),
             app_status=MagicMock(),
             platform_services=services,
+            notification_manager=MagicMock(),
         )
 
     with (

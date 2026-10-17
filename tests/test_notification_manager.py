@@ -49,7 +49,7 @@ def test_skips_with_debug_log_when_sound_player_is_unsupported(
     manager = _manager(PlatformServices(platform_name="darwin"))
 
     with (
-        patch("src.services.notification_manager.log_and_show_error") as show_error,
+        patch("src.utils.error_handler.log_and_show_error") as show_error,
         caplog.at_level(logging.DEBUG, logger="src.services.notification_manager"),
     ):
         manager.play_notification_sound()
@@ -58,12 +58,22 @@ def test_skips_with_debug_log_when_sound_player_is_unsupported(
     assert any("sound_player" in record.getMessage() for record in caplog.records)
 
 
-def test_playback_failure_is_reported_to_user() -> None:
+def test_playback_failure_logs_warning_without_gui_dialog(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """通知音の再生時に例外が発生しても messagebox を呼ばず、WARNING ログのみ記録する（#133）。"""
     player = MagicMock()
     player.play_notification_beep.side_effect = RuntimeError("device busy")
     manager = _manager(PlatformServices(sound_player=player, platform_name="win32"))
 
-    with patch("src.services.notification_manager.log_and_show_error") as show_error:
+    with (
+        patch("src.utils.error_handler.log_and_show_error") as show_error,
+        caplog.at_level(logging.WARNING, logger="src.services.notification_manager"),
+    ):
         manager.play_notification_sound()
 
-    show_error.assert_called_once()
+    show_error.assert_not_called()
+    assert any(
+        record.levelno == logging.WARNING and "device busy" in record.getMessage()
+        for record in caplog.records
+    )

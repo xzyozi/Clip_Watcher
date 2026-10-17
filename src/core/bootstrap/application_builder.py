@@ -60,7 +60,7 @@ class ApplicationBuilder:
     def with_event_dispatcher(self) -> ApplicationBuilder:
         """イベントディスパッチャの初期化"""
         try:
-            self.event_dispatcher = EventDispatcher()
+            self.event_dispatcher = EventDispatcher(error_reporter=log_and_show_error)
             logger.info("イベントディスパッチャを初期化しました")
             return self
         except Exception as e:
@@ -257,12 +257,10 @@ class ApplicationBuilder:
             )
 
         try:
-            win32_available = self.app_status.dependencies.win32_available
             self.monitor = ClipboardMonitor(
                 master,
                 self.event_dispatcher,
                 history_file_path,
-                win32_available,
                 self.db_manager,
                 self.history_service,
                 self.platform_services,
@@ -385,6 +383,14 @@ class ApplicationBuilder:
 
         try:
             from src.core.app_main import MainApplication
+            from src.services.notification_manager import NotificationManager
+
+            # 通知(通知音)はクリップボード監視とは独立した関心事のため、
+            # ここで生成して設定変更イベントを購読させ、アプリケーションへ渡す。
+            notification_manager = NotificationManager(self.platform_services)
+            self.event_dispatcher.subscribe(  # type: ignore[union-attr]
+                "SETTINGS_CHANGED", notification_manager.update_settings
+            )
 
             app = MainApplication(
                 master=master,
@@ -399,6 +405,7 @@ class ApplicationBuilder:
                 translator=self.translator,  # type: ignore
                 app_status=self.app_status,  # type: ignore
                 platform_services=self.platform_services,
+                notification_manager=notification_manager,
                 window_state_manager=self.window_state_manager,
                 hotkey_registration_manager=self.hotkey_registration_manager,
                 text_workflow_service=self.text_workflow_service,

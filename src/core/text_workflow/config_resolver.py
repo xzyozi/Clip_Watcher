@@ -11,6 +11,15 @@ logger = logging.getLogger(__name__)
 WORKSPACE_CONFIG_DIR_NAME = ".clipwatcher"
 WORKSPACE_CONFIG_FILE_NAME = "workflow.json"
 
+#: ワークスペース設定（信頼できないリポジトリ由来になり得る）から「緩める」ことを
+#: 禁止するセキュリティ関連パラメータ（`workflow` 配下）。厳しくする方向（より小さい値）の
+#: 上書きだけを許可する。
+WORKSPACE_PROTECTED_WORKFLOW_KEYS = (
+    "maxInputBytes",
+    "classifierRegexMaxPatternLength",
+    "classifierRegexTimeoutSeconds",
+)
+
 DEFAULT_BUILTIN_CONFIG: dict[str, Any] = {
     "schemaVersion": 1,
     "workflow": {
@@ -79,6 +88,59 @@ def load_json_config_file(path: str) -> dict[str, Any]:
     return data
 
 
+def is_safe_workspace_root(workspace_root: str) -> bool:
+    """ワークスペース設定を読み込んでよい `workspace_root` かを判定する。
+
+    UNC パス（``\\\\host\\share`` / ``//host/share``）は、ファイルアクセスの時点で
+    NTLM 認証情報が外部ホストへ送出され得るため、ファイルシステムへ触れる前に拒否する。
+    また、ローカルに実在する絶対パスのディレクトリのみ許可する。
+    """
+    if not isinstance(workspace_root, str) or not workspace_root:
+        return False
+    if workspace_root.startswith(("\\\\", "//")):
+        return False
+    if not os.path.isabs(workspace_root):
+        return False
+    return os.path.isdir(workspace_root)
+
+
+def _is_positive_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def _restrict_workspace_security_params(
+    workspace_config: dict[str, Any], trusted_workflow: dict[str, Any]
+) -> dict[str, Any]:
+    """ワークスペース設定のセキュリティ関連パラメータを「厳しくする方向」に限定する。
+
+    信頼できる層（組み込み・個人設定）の値以下の正の数値のみ採用し、それ以外
+    （緩める値、不正な型、信頼側に基準値がないもの）は取り除いて信頼側の値を維持する。
+    """
+    workflow = workspace_config.get("workflow")
+    if not isinstance(workflow, dict):
+        return workspace_config
+
+    sanitized = copy.deepcopy(workspace_config)
+    sanitized_workflow: dict[str, Any] = sanitized["workflow"]
+    for key in WORKSPACE_PROTECTED_WORKFLOW_KEYS:
+        if key not in sanitized_workflow:
+            continue
+        value = sanitized_workflow[key]
+        trusted_value = trusted_workflow.get(key)
+        if (
+            _is_positive_number(value)
+            and _is_positive_number(trusted_value)
+            and value <= trusted_value
+        ):
+            continue
+        logger.warning(
+            "ワークスペース設定の '%s' は信頼側の値を緩める/不正なため無視しました。",
+            key,
+        )
+        del sanitized_workflow[key]
+    return sanitized
+
+
 class ConfigurationResolver:
     """組み込み・個人・ワークスペース・実行時設定をマージする構造体。
 
@@ -142,16 +204,34 @@ class ConfigurationResolver:
                 （主にテスト用）を使用する。
         """
         effective = copy.deepcopy(self._builtin)
+        if self._personal:
+            effective = deep_overlay(effective, self._personal)
 
         workspace_config = self._workspace
         if workspace_root:
-            workspace_path = os.path.join(
-                workspace_root, WORKSPACE_CONFIG_DIR_NAME, WORKSPACE_CONFIG_FILE_NAME
-            )
-            workspace_config = load_json_config_file(workspace_path)
+            if is_safe_workspace_root(workspace_root):
+                workspace_path = os.path.join(
+                    workspace_root,
+                    WORKSPACE_CONFIG_DIR_NAME,
+                    WORKSPACE_CONFIG_FILE_NAME,
+                )
+                workspace_config = load_json_config_file(workspace_path)
+            else:
+                logger.warning(
+                    "workspace_root が安全でないためワークスペース設定を読み込みません"
+                    "（UNC パス、相対パス、または存在しないディレクトリ）"
+                )
+                workspace_config = {}
 
-        for layer in [self._personal, workspace_config, runtime_overrides or {}]:
-            if layer:
-                effective = deep_overlay(effective, layer)
+        if workspace_config:
+            trusted_workflow = effective.get("workflow")
+            workspace_config = _restrict_workspace_security_params(
+                workspace_config,
+                trusted_workflow if isinstance(trusted_workflow, dict) else {},
+            )
+            effective = deep_overlay(effective, workspace_config)
+
+        if runtime_overrides:
+            effective = deep_overlay(effective, runtime_overrides)
 
         return effective

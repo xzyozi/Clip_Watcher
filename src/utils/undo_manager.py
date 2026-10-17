@@ -1,6 +1,13 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from src.core.events.event_dispatcher import EventDispatcher
+from abc import ABC, abstractmethod
+from collections import deque
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.core.events.event_dispatcher import EventDispatcher
+
+DEFAULT_MAX_UNDO_HISTORY: int = 100
 
 
 class UndoableCommand(ABC):
@@ -20,9 +27,16 @@ class UndoableCommand(ABC):
 class UndoManager:
     """Manages undo and redo operations using command objects."""
 
-    def __init__(self, event_dispatcher: EventDispatcher):
-        self.undo_stack: list[UndoableCommand] = []
-        self.redo_stack: list[UndoableCommand] = []
+    def __init__(
+        self,
+        event_dispatcher: EventDispatcher,
+        max_history: int = DEFAULT_MAX_UNDO_HISTORY,
+    ) -> None:
+        if max_history <= 0:
+            raise ValueError(f"max_history must be greater than 0, got {max_history}")
+        self.max_history = max_history
+        self.undo_stack: deque[UndoableCommand] = deque(maxlen=max_history)
+        self.redo_stack: deque[UndoableCommand] = deque(maxlen=max_history)
         self.event_dispatcher = event_dispatcher
 
     def execute_command(self, command: UndoableCommand) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+import time
 
 from src.db.dao.base_dao import BaseDAO
 from src.db.dto import MetaPhraseDTO
@@ -18,6 +19,7 @@ class MetaPhraseDAO(BaseDAO):
 
     def add(self, dto: MetaPhraseDTO) -> int:
         """メタ定型文を追加します。"""
+        dto.__post_init__()
         with self._lock:
             conn = self._get_connection()
             try:
@@ -65,17 +67,29 @@ class MetaPhraseDAO(BaseDAO):
 
         try:
             rows = self.execute_read(sql, tuple(params))
-            return [
-                MetaPhraseDTO(
-                    id=row[0],
-                    title=row[1],
-                    content=row[2],
-                    category_id=row[3],
-                    sort_order=row[4],
-                    created_at=float(row[5]),
+            items: list[MetaPhraseDTO] = []
+            for row in rows:
+                try:
+                    created_at_val = float(row[5])
+                except (ValueError, TypeError):
+                    logger.warning(
+                        "破損した created_at (%r) を検出しました。現在時刻にフォールバックします (ID: %s)",
+                        row[5],
+                        row[0],
+                    )
+                    created_at_val = time.time()
+
+                items.append(
+                    MetaPhraseDTO(
+                        id=row[0],
+                        title=row[1],
+                        content=row[2],
+                        category_id=row[3],
+                        sort_order=row[4],
+                        created_at=created_at_val,
+                    )
                 )
-                for row in rows
-            ]
+            return items
         except Exception as e:
             logger.error(
                 "メタ定型文の取得中にエラーが発生しました: %s", str(e), exc_info=True
@@ -86,8 +100,9 @@ class MetaPhraseDAO(BaseDAO):
         """メタ定型文の内容を更新します。カテゴリの切り替えも対応。"""
         if dto.id is None:
             return False
+        dto.__post_init__()
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "UPDATE t_meta_phrase SET title = ?, content = ?, category_id = ? WHERE id = ?",
                 (dto.title, dto.content, dto.category_id, dto.id),
             )
@@ -101,7 +116,7 @@ class MetaPhraseDAO(BaseDAO):
     def delete(self, phrase_id: int) -> bool:
         """メタ定型文を削除します。"""
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "DELETE FROM t_meta_phrase WHERE id = ?", (phrase_id,)
             )
             return affected_rows > 0

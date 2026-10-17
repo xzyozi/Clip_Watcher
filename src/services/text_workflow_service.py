@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from typing import TYPE_CHECKING
 
-from src.core.text_workflow.models import WorkflowRequest, WorkflowResult
+from src.core.text_workflow.models import (
+    ExecutionStatus,
+    WorkflowRequest,
+    WorkflowResult,
+)
 from src.core.text_workflow.workflow import TextWorkflow
 
 if TYPE_CHECKING:
@@ -17,6 +22,11 @@ logger = logging.getLogger(__name__)
 #: EventDispatcher.subscribe(TEXT_WORKFLOW_RESULT_EVENT, listener) で
 #: WorkflowResult を受け取れる（DD-003 §5.3）。
 TEXT_WORKFLOW_RESULT_EVENT = "TEXT_WORKFLOW_RESULT"
+
+#: shutdown() が実行中・待機中のタスクの完了を待つ既定の最大秒数。
+DEFAULT_SHUTDOWN_TIMEOUT_SECONDS = 2.0
+
+_SHUTDOWN_REJECT_MESSAGE = "TextWorkflowService is shut down"
 
 
 class TextWorkflowService:
@@ -58,6 +68,10 @@ class TextWorkflowService:
         self._event_dispatcher = event_dispatcher
         self._ui_thread_marshal = ui_thread_marshal
         self._result_event_type = result_event_type
+        # shutdown 判定と実行中タスクの管理（submit と shutdown の競合を防ぐ）
+        self._lock = threading.Lock()
+        self._is_shutdown = False
+        self._inflight: set[Future[WorkflowResult]] = set()
 
     def execute_async(
         self,
@@ -69,27 +83,67 @@ class TextWorkflowService:
         完了通知（``event_dispatcher.dispatch()`` と ``callback``）は
         ``ui_thread_marshal`` が指定されていればメインスレッドへ引き渡した
         上で実行され、未指定の場合は完了したワーカースレッドから直接実行される。
+
+        ``shutdown()`` 後に呼ばれた場合は実行せず、``REJECTED`` の結果を持つ
+        完了済み Future を返し、同じ経路で完了通知を行う。
         """
-        future = self._executor.submit(self._workflow.execute, request)
-        future.add_done_callback(lambda f: self._on_task_done(f, callback=callback))
+        with self._lock:
+            if self._is_shutdown:
+                future: Future[WorkflowResult] = Future()
+                future.set_result(
+                    WorkflowResult(
+                        request_id=request.request_id,
+                        status=ExecutionStatus.REJECTED,
+                        error_message=_SHUTDOWN_REJECT_MESSAGE,
+                    )
+                )
+            else:
+                future = self._executor.submit(self._workflow.execute, request)
+                self._inflight.add(future)
+
+        def _finish(f: Future[WorkflowResult]) -> None:
+            with self._lock:
+                self._inflight.discard(f)
+            self._on_task_done(f, callback=callback, request_id=request.request_id)
+
+        # 完了済みの Future では、この呼び出しスレッドで直ちに _finish が実行される
+        future.add_done_callback(_finish)
         return future
 
     def _on_task_done(
         self,
         future: Future[WorkflowResult],
         callback: Callable[[WorkflowResult], None] | None,
+        request_id: str,
     ) -> None:
         """ワーカースレッド側で呼ばれる完了コールバック（内部専用）。
 
         ここでは結果の取得のみを行い、実際の通知（EventDispatcher.dispatch /
         callback 呼び出し）は ``_deliver_result()`` に委譲してメインスレッドへ
-        引き渡す。
+        引き渡す。実行中に例外が発生した場合も、``FAILED`` の結果を生成して
+        通知し、呼び出し側が結果を待ち続けない（通知を喪失しない）ようにする。
         """
+        if future.cancelled():
+            # shutdown() が待機時間内に終わらなかった未実行タスクを取り消した場合
+            self._deliver_result(
+                WorkflowResult(
+                    request_id=request_id,
+                    status=ExecutionStatus.REJECTED,
+                    error_message=_SHUTDOWN_REJECT_MESSAGE,
+                ),
+                callback,
+            )
+            return
+
         try:
             result = future.result()
-        except Exception:
+        except Exception as e:
             logger.exception("TextWorkflow の非同期実行中に例外が発生しました")
-            return
+            result = WorkflowResult(
+                request_id=request_id,
+                status=ExecutionStatus.FAILED,
+                error_message=str(e) or type(e).__name__,
+            )
 
         self._deliver_result(result, callback)
 
@@ -106,13 +160,51 @@ class TextWorkflowService:
             if self._event_dispatcher is not None:
                 self._event_dispatcher.dispatch(self._result_event_type, result)
             if callback:
-                callback(result)
+                try:
+                    callback(result)
+                except Exception:
+                    logger.exception(
+                        "TextWorkflow の完了コールバックで例外が発生しました"
+                    )
 
-        if self._ui_thread_marshal is not None:
-            self._ui_thread_marshal(_notify)
-        else:
+        if self._ui_thread_marshal is None:
             _notify()
+            return
 
-    def shutdown(self) -> None:
-        """サービス停止時のスレッドクリーンアップ"""
-        self._executor.shutdown(wait=False)
+        try:
+            self._ui_thread_marshal(_notify)
+        except Exception:
+            # 例: ウィンドウ破棄後に Tk のイベントキューへ投入できない場合
+            logger.exception(
+                "TextWorkflow の結果通知をUIスレッドへ引き渡せませんでした"
+            )
+
+    def shutdown(self, timeout: float = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS) -> None:
+        """サービスを停止する（冪等）。
+
+        停止後の ``execute_async()`` は ``REJECTED`` を返す。実行中・待機中の
+        タスクは最大 ``timeout`` 秒だけ完了を待ち、終わらなかった未実行タスクは
+        取り消して ``REJECTED`` で通知する。実行中のタスクは強制中断できないため
+        放置され、完了後にワーカースレッドが終了する。
+
+        Args:
+            timeout: 完了を待つ最大秒数（UIスレッドからの呼び出しを長時間止めない）。
+        """
+        with self._lock:
+            if self._is_shutdown:
+                return
+            self._is_shutdown = True
+            pending = set(self._inflight)
+
+        if pending:
+            _, not_done = wait(pending, timeout=timeout)
+            if not_done:
+                logger.warning(
+                    "TextWorkflow の実行中タスク %d 件が %s 秒以内に完了しませんでした。"
+                    "未実行分は取り消します。",
+                    len(not_done),
+                    timeout,
+                )
+
+        # 未実行のタスクを取り消す。実行中のタスクは完了までワーカーに任せる
+        self._executor.shutdown(wait=False, cancel_futures=True)

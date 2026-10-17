@@ -92,6 +92,53 @@ def test_build_passes_platform_services_to_main_application(
     )
 
 
+def test_build_creates_notification_manager_and_subscribes_to_settings(
+    platform_services: PlatformServices,
+) -> None:
+    """NotificationManager は Builder が生成し、設定変更イベントを購読して MainApplication へ渡す。"""
+    builder = ApplicationBuilder(platform_services)
+    builder.settings_manager = MagicMock()
+    builder.db_manager = MagicMock()
+    builder.history_service = MagicMock()
+    builder.monitor = MagicMock()
+    builder.plugin_manager = MagicMock()
+    builder.event_dispatcher = MagicMock()
+    builder.theme_manager = MagicMock()
+    builder.translator = MagicMock()
+    builder.app_status = MagicMock()
+
+    with patch("src.core.app_main.MainApplication") as main_application_class:
+        builder.build(MagicMock())
+
+    notification_manager = main_application_class.call_args.kwargs[
+        "notification_manager"
+    ]
+    assert notification_manager.platform_services is platform_services
+    builder.event_dispatcher.subscribe.assert_any_call(
+        "SETTINGS_CHANGED", notification_manager.update_settings
+    )
+
+
+def test_clipboard_monitor_does_not_own_history_or_notification_facade() -> None:
+    """ClipboardMonitor は履歴操作・通知の委譲メソッドを持たず、監視に専念する (#116)。"""
+    from src.core.clipboard.clipboard_monitor import ClipboardMonitor
+
+    for name in (
+        "get_history",
+        "clear_history",
+        "delete_history_item_by_id",
+        "pin_item_by_id",
+        "unpin_item_by_id",
+        "delete_all_unpinned_history",
+        "import_history",
+        "get_filtered_history",
+        "update_history_item_by_id",
+        "history",
+        "last_clipboard_data",
+    ):
+        assert not hasattr(ClipboardMonitor, name), name
+
+
 def test_with_clipboard_monitor_passes_platform_services(
     platform_services: PlatformServices,
 ) -> None:

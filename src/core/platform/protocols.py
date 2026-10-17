@@ -70,6 +70,21 @@ class PasteSender(Protocol):
 
 
 @runtime_checkable
+class ClipboardReader(Protocol):
+    """OS 固有の API によるクリップボードのテキスト読み取りを司るインターフェース。
+
+    tkinter の ``clipboard_get()`` が失敗した場合の代替経路として使用する。
+    """
+
+    def read_text(self) -> str | None:
+        """クリップボードのテキストを返す。
+
+        取得に失敗した場合は None、テキスト形式が処理できない場合は空文字を返す。
+        """
+        ...
+
+
+@runtime_checkable
 class HotkeyListener(Protocol):
     """グローバルホットキーの登録と監視イベントループを司るインターフェース。"""
 

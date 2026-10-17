@@ -91,6 +91,7 @@ def test_main_application_hotkey_and_window_integration(
             translator=mock_translator,
             app_status=mock_status,
             platform_services=platform_services,
+            notification_manager=MagicMock(),
             window_state_manager=mock_wsm,
             hotkey_registration_manager=mock_hrm,
         )
@@ -142,6 +143,7 @@ def test_global_hotkey_triggered_event_dispatch_zero_args(
             translator=MagicMock(),
             app_status=MagicMock(),
             platform_services=platform_services,
+            notification_manager=MagicMock(),
             window_state_manager=mock_wsm,
             hotkey_registration_manager=MagicMock(),
         )
