@@ -8,7 +8,11 @@ from src.plugins.base_plugin import TextPlugin
 from src.plugins.implementations.duplicate_line_remover_plugin import (
     DuplicateLineRemoverPlugin,
 )
-from src.plugins.implementations.html_escape_plugin import HTMLEscapePlugin
+from src.plugins.implementations.html_escape_plugin import (
+    MAX_HTML_INPUT_LENGTH,
+    HTMLEscapePlugin,
+    HTMLUnescapePlugin,
+)
 from src.plugins.implementations.json_formatter_plugin import (
     MAX_JSON_INPUT_LENGTH,
     JSONFormatterPlugin,
@@ -102,9 +106,21 @@ def test_gui_plugins_filtering() -> None:
             "line1\nline2\nline3",
         ),
         (DuplicateLineRemoverPlugin, "single", "single"),
-        # 4. HTMLエスケープ (HTMLEscapePlugin)
+        # 4. HTMLエスケープ (HTMLEscapePlugin) - 実体参照混在時もバイパスせず安全にエスケープされること (#130)
         (HTMLEscapePlugin, "<div>&hello</div>", "&lt;div&gt;&amp;hello&lt;/div&gt;"),
-        # 5. 行ソート (LineSorterPlugin)
+        (
+            HTMLEscapePlugin,
+            "<script>alert(1)</script>&amp;",
+            "&lt;script&gt;alert(1)&lt;/script&gt;&amp;amp;",
+        ),
+        # 5. HTMLアンエスケープ (HTMLUnescapePlugin) (#130)
+        (
+            HTMLUnescapePlugin,
+            "&lt;div&gt;&amp;hello&lt;/div&gt;",
+            "<div>&hello</div>",
+        ),
+        (HTMLUnescapePlugin, "plain text", "plain text"),
+        # 6. 行ソート (LineSorterPlugin)
         (LineSorterPlugin, "c\na\nb", "a\nb\nc"),
         # 6. 空白・改行正規化 (WhitespaceNormalizerPlugin)
         (WhitespaceNormalizerPlugin, "  hello   \n\n  world  ", "hello\n\nworld"),
@@ -149,3 +165,13 @@ def test_json_formatter_plugin_large_integer_safety() -> None:
     large_int_json = '{"num": ' + ("9" * 5000) + "}"
     result = plugin.process(large_int_json)
     assert result == large_int_json
+
+
+def test_html_plugins_size_limit() -> None:
+    """1MBを超えるHTML文字列は処理をスキップしてそのまま返されることを検証します (#130)。"""
+    escape_plugin = HTMLEscapePlugin()
+    unescape_plugin = HTMLUnescapePlugin()
+    large_text = "<div class='test'>" + ("&amp;" * (MAX_HTML_INPUT_LENGTH // 5 + 10))
+
+    assert escape_plugin.process(large_text) == large_text
+    assert unescape_plugin.process(large_text) == large_text
