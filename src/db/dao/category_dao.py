@@ -64,7 +64,7 @@ class CategoryDAO(BaseDAO):
         if dto.id is None:
             return False
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "UPDATE t_category SET name = ? WHERE id = ?", (dto.name, dto.id)
             )
             return affected_rows > 0
@@ -82,7 +82,7 @@ class CategoryDAO(BaseDAO):
     def delete(self, category_id: int) -> bool:
         """カテゴリを削除します。"""
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "DELETE FROM t_category WHERE id = ?", (category_id,)
             )
             return affected_rows > 0

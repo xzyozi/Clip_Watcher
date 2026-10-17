@@ -127,7 +127,7 @@ class ClipboardHistoryDAO(BaseDAO):
     def update_content(self, item_id: int, new_content: str, new_hash: str) -> bool:
         """履歴テキストの内容とハッシュを更新します。"""
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "UPDATE t_clipboard_history SET content = ?, content_hash = ? WHERE id = ?",
                 (new_content, new_hash, item_id),
             )
@@ -142,7 +142,7 @@ class ClipboardHistoryDAO(BaseDAO):
         """ピン留め状態を切り替えます。"""
         pinned_val = 1 if pin else 0
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "UPDATE t_clipboard_history SET is_pinned = ? WHERE id = ?",
                 (pinned_val, item_id),
             )
@@ -156,7 +156,7 @@ class ClipboardHistoryDAO(BaseDAO):
     def delete_item(self, item_id: int) -> bool:
         """履歴項目を削除します。"""
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "DELETE FROM t_clipboard_history WHERE id = ?", (item_id,)
             )
             return affected_rows > 0
@@ -169,7 +169,7 @@ class ClipboardHistoryDAO(BaseDAO):
     def clear_all(self) -> None:
         """すべての履歴データをクリアします。"""
         try:
-            self.execute_write("DELETE FROM t_clipboard_history")
+            self.execute_update("DELETE FROM t_clipboard_history")
             logger.info("すべての履歴をクリアしました。")
         except Exception as e:
             logger.error(
@@ -179,7 +179,7 @@ class ClipboardHistoryDAO(BaseDAO):
     def delete_unpinned(self) -> None:
         """ピン留めされていない履歴をすべて削除します。"""
         try:
-            self.execute_write("DELETE FROM t_clipboard_history WHERE is_pinned = 0")
+            self.execute_update("DELETE FROM t_clipboard_history WHERE is_pinned = 0")
             logger.info("ピン留めされていない履歴を削除しました。")
         except Exception as e:
             logger.error(

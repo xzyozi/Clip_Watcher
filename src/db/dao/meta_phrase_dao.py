@@ -87,7 +87,7 @@ class MetaPhraseDAO(BaseDAO):
         if dto.id is None:
             return False
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "UPDATE t_meta_phrase SET title = ?, content = ?, category_id = ? WHERE id = ?",
                 (dto.title, dto.content, dto.category_id, dto.id),
             )
@@ -101,7 +101,7 @@ class MetaPhraseDAO(BaseDAO):
     def delete(self, phrase_id: int) -> bool:
         """メタ定型文を削除します。"""
         try:
-            affected_rows = self.execute_write(
+            affected_rows = self.execute_update(
                 "DELETE FROM t_meta_phrase WHERE id = ?", (phrase_id,)
             )
             return affected_rows > 0
