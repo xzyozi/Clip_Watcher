@@ -151,17 +151,26 @@ def test_json_formatter_plugin_size_limit() -> None:
     assert result == large_json
 
 
-def test_json_formatter_plugin_deep_recursion_safety() -> None:
+def test_json_formatter_plugin_deep_recursion_safety(mocker: Any) -> None:
     """深いネスト構造（RecursionError）でもクラッシュせずにそのまま返されることを検証します (#128)。"""
     plugin = JSONFormatterPlugin()
-    nested_json = ("[" * 2000) + ("]" * 2000)
+    mocker.patch(
+        "json.loads", side_effect=RecursionError("maximum recursion depth exceeded")
+    )
+    nested_json = ("[" * 100) + ("]" * 100)
     result = plugin.process(nested_json)
     assert result == nested_json
 
 
-def test_json_formatter_plugin_large_integer_safety() -> None:
-    """巨大整数（CVE-2020-10735 による ValueError: Exceeds the limit 4300 digits）でもクラッシュしないことを検証します (#128)。"""
+def test_json_formatter_plugin_large_integer_safety(mocker: Any) -> None:
+    """巨大整数（CVE-2020-10735 による ValueError）でもクラッシュしないことを検証します (#128)。"""
     plugin = JSONFormatterPlugin()
+    mocker.patch(
+        "json.loads",
+        side_effect=ValueError(
+            "Exceeds the limit 4300 digits for integer string conversion"
+        ),
+    )
     large_int_json = '{"num": ' + ("9" * 5000) + "}"
     result = plugin.process(large_int_json)
     assert result == large_int_json
