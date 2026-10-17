@@ -113,9 +113,28 @@ class TestForCurrentPlatform:
         assert exc_info.value.feature == "clipboard_reader"
         assert services.process_inspector() is not None
 
-    @pytest.mark.parametrize("platform_name", ["darwin", "linux"])
-    def test_non_windows_provides_no_adapters(self, platform_name: str) -> None:
-        services = PlatformServices.for_current_platform(platform_name)
+    def test_darwin_provides_clipboard_reader_only(self) -> None:
+        """macOS (darwin) は ClipboardReader を提供し、他機能は非対応として扱う。"""
+        services = PlatformServices.for_current_platform("darwin")
+
+        from src.core.platform.protocols import ClipboardReader
+
+        assert isinstance(services.clipboard_reader(), ClipboardReader)
+
+        for feature in (
+            "process_inspector",
+            "sound_player",
+            "single_instance",
+            "paste_sender",
+        ):
+            with pytest.raises(UnsupportedFeatureError) as exc_info:
+                getattr(services, feature)()
+            assert exc_info.value.feature == feature
+            assert exc_info.value.platform == "darwin"
+
+    def test_linux_provides_no_adapters(self) -> None:
+        """Linux は現時点でアダプターを持たず、全機能が UnsupportedFeatureError となる。"""
+        services = PlatformServices.for_current_platform("linux")
 
         for feature in (
             "process_inspector",
@@ -124,5 +143,7 @@ class TestForCurrentPlatform:
             "paste_sender",
             "clipboard_reader",
         ):
-            with pytest.raises(UnsupportedFeatureError):
+            with pytest.raises(UnsupportedFeatureError) as exc_info:
                 getattr(services, feature)()
+            assert exc_info.value.feature == feature
+            assert exc_info.value.platform == "linux"

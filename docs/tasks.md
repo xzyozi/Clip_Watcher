@@ -27,7 +27,7 @@
 - [x] [CW-0025] 簡易レビュー <!-- priority:medium issue:#66 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0026] EventDispatcherのイベント契約を型安全化する <!-- priority:medium issue:#68 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0027] format設計案 <!-- priority:medium issue:#69 theme:security stage:ideation completed:2026-10-01 -->
-- [ ] [CW-0028] `test_settings_window_schema.py` の2テストが `tcl_findLibrary` エラーで失敗 <!-- priority:medium issue:#74 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0028] `test_settings_window_schema.py` の2テストが `tcl_findLibrary` エラーで失敗 <!-- priority:medium issue:#74 theme:security stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [x] [CW-0029] SQLite接続がクローズされておらず、テスト間でDBファイルが汚染される <!-- priority:medium issue:#75 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0030] ホットキー対応後 設定が一部反映されていない <!-- priority:medium issue:#83 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0031] [bug] ピン留め履歴の個別ホットキーで自動貼り付けされない <!-- priority:medium issue:#88 theme:security stage:ideation completed:2026-10-01 -->
@@ -72,3 +72,5 @@
 - [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
 - [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
 - [x] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
+- [x] [CW-0073] [feat] macOS 向け ClipboardReader 実装とクリップボード取得の実機確認 <!-- priority:medium issue:#170 theme:platform stage:completed added:2026-10-18 completed:2026-10-18 -->
+
