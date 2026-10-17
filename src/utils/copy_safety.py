@@ -42,11 +42,17 @@ _DOWNLOAD_EXECUTE_PATTERN = re.compile(
 _PRIVILEGE_ESCALATION_PATTERN = re.compile(r"\b(?:sudo|runas)\b", re.IGNORECASE)
 
 
+MAX_ANALYZE_LENGTH = 65_536  # 64KB: DoS防止のための走査上限サイズ (#137)
+
+
 def _has_multiple_executable_lines(text: str) -> bool:
-    executable_lines = [
-        line for line in text.splitlines() if _COMMAND_LINE_PATTERN.search(line)
-    ]
-    return len(executable_lines) >= 2
+    count = 0
+    for line in text.splitlines():
+        if _COMMAND_LINE_PATTERN.search(line):
+            count += 1
+            if count >= 2:
+                return True
+    return False
 
 
 def analyze_copy_risks(text: str) -> list[str]:
@@ -58,15 +64,18 @@ def analyze_copy_risks(text: str) -> list[str]:
     if not isinstance(text, str) or not text:
         return []
 
+    # DoS防止: 極端に巨大なテキストに対しては先頭チャンクのみを走査 (#137)
+    target_text = text[:MAX_ANALYZE_LENGTH]
+
     risks: list[str] = []
-    if _has_multiple_executable_lines(text):
+    if _has_multiple_executable_lines(target_text):
         risks.append("multiple_lines")
-    if _COMMAND_CHAIN_PATTERN.search(text):
+    if _COMMAND_CHAIN_PATTERN.search(target_text):
         risks.append("command_chain")
-    if _DESTRUCTIVE_PATTERN.search(text):
+    if _DESTRUCTIVE_PATTERN.search(target_text):
         risks.append("destructive_command")
-    if _DOWNLOAD_EXECUTE_PATTERN.search(text):
+    if _DOWNLOAD_EXECUTE_PATTERN.search(target_text):
         risks.append("download_execute")
-    if _PRIVILEGE_ESCALATION_PATTERN.search(text):
+    if _PRIVILEGE_ESCALATION_PATTERN.search(target_text):
         risks.append("privilege_escalation")
     return risks

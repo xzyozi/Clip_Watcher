@@ -12,6 +12,8 @@ from src.plugins.gui_plugin import GuiPlugin as Plugin
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
 
+MAX_CONVERTER_INPUT_LENGTH = 200  # DoS防止のための入力文字数上限 (#129)
+
 
 class UnitConverterComponent(BaseFrameGUI):
     """
@@ -68,6 +70,7 @@ class UnitConverterComponent(BaseFrameGUI):
             category_frame,
             textvariable=self.category_var,
             values=list(self.conversions.keys()),
+            state="readonly",
         )
         category_combo.pack(fill=tk.X, padx=5, pady=5)
         category_combo.bind("<<ComboboxSelected>>", self._on_category_change)
@@ -79,7 +82,9 @@ class UnitConverterComponent(BaseFrameGUI):
         # From
         from_frame = ttk.LabelFrame(conversion_frame, text="From")
         from_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        self.from_unit_combo = ttk.Combobox(from_frame, textvariable=self.from_unit_var)
+        self.from_unit_combo = ttk.Combobox(
+            from_frame, textvariable=self.from_unit_var, state="readonly"
+        )
         self.from_unit_combo.pack(fill=tk.X, padx=5, pady=5)
         self.from_unit_combo.bind("<<ComboboxSelected>>", self._convert)
 
@@ -90,7 +95,9 @@ class UnitConverterComponent(BaseFrameGUI):
         # To
         to_frame = ttk.LabelFrame(conversion_frame, text="To")
         to_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
-        self.to_unit_combo = ttk.Combobox(to_frame, textvariable=self.to_unit_var)
+        self.to_unit_combo = ttk.Combobox(
+            to_frame, textvariable=self.to_unit_var, state="readonly"
+        )
         self.to_unit_combo.pack(fill=tk.X, padx=5, pady=5)
         self.to_unit_combo.bind("<<ComboboxSelected>>", self._convert)
 
@@ -131,23 +138,31 @@ class UnitConverterComponent(BaseFrameGUI):
             self.output_var.set("Result:")
             return
 
+        if len(input_str) > MAX_CONVERTER_INPUT_LENGTH:
+            self.output_var.set("Result: Input too long")
+            return
+
         if category == "Time":
             self._convert_time(input_str, from_unit, to_unit)
             return
 
         try:
             value = float(input_str)
-        except ValueError:
+        except (ValueError, OverflowError):
             self.output_var.set("Result: Invalid number")
             return
 
-        if category == "Temperature":
-            result = self._convert_temperature(value, from_unit, to_unit)
-            self.output_var.set(f"Result: {result:.4f}")
-        else:  # Length and Weight
-            base_value = value * self.conversions[category][from_unit]  # type: ignore
-            result = base_value / self.conversions[category][to_unit]  # type: ignore
-            self.output_var.set(f"Result: {result:.4f}")
+        try:
+            if category == "Temperature":
+                result = self._convert_temperature(value, from_unit, to_unit)
+                self.output_var.set(f"Result: {result:.4f}")
+            else:  # Length and Weight
+                base_value = value * self.conversions[category][from_unit]  # type: ignore
+                result = base_value / self.conversions[category][to_unit]  # type: ignore
+                self.output_var.set(f"Result: {result:.4f}")
+        except (OverflowError, ZeroDivisionError, ValueError) as e:
+            self.output_var.set("Result: Error")
+            self.logger.warning("Conversion calculation error: %s", e)
 
     def _convert_temperature(self, value: float, from_unit: str, to_unit: str) -> float:
         if from_unit == to_unit:
@@ -176,6 +191,9 @@ class UnitConverterComponent(BaseFrameGUI):
             if from_unit == "Unix Timestamp":
                 # From Timestamp to Datetime
                 ts = float(input_str)
+                # 西暦0001年〜9999年相当の範囲（Windows CRT 互換のため 0 <= ts <= 253402300799）(#129)
+                if not (0 <= ts <= 253402300799):
+                    raise ValueError(f"Timestamp out of supported range: {ts}")
                 dt_obj = datetime.fromtimestamp(ts)
                 result = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
                 self.output_var.set(f"Result: {result}")
@@ -201,11 +219,11 @@ class UnitConverterComponent(BaseFrameGUI):
                 if dt_obj is None:
                     raise ValueError("Invalid datetime format")
 
-                result: float = dt_obj.timestamp()  # type: ignore
-                self.output_var.set(f"Result: {result}")
-        except (ValueError, TypeError) as e:
+                result_ts: float = dt_obj.timestamp()
+                self.output_var.set(f"Result: {result_ts}")
+        except (ValueError, TypeError, OSError, OverflowError) as e:
             self.output_var.set("Result: Error")
-            self.logger.error(f"Time conversion error: {e}")
+            self.logger.warning("Time conversion error: %s", e)
 
 
 class UnitConverterPlugin(Plugin):

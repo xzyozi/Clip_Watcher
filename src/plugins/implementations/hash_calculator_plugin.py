@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
 
 
+MAX_HASH_INPUT_LENGTH = 1_000_000  # 1MB: メモリ枯渇・DoS防止のための入力長制限 (#127)
+DEFAULT_SHAKE_DIGEST_LENGTH = 32  # SHAKE系XOFの既定出力長（バイト）(#127)
+
+
 # The GUI Component implementation, moved from gui/components
 class HashCalculatorComponent(BaseFrameGUI):
     """
@@ -27,6 +31,7 @@ class HashCalculatorComponent(BaseFrameGUI):
 
         self.hash_algorithms = sorted(hashlib.algorithms_available)
         self.algorithm_var = tk.StringVar(value="sha256")
+        self._debounce_timer: str | None = None
 
         self._create_widgets()
 
@@ -48,9 +53,10 @@ class HashCalculatorComponent(BaseFrameGUI):
             textvariable=self.algorithm_var,
             values=self.hash_algorithms,
             width=15,
+            state="readonly",
         )
         algorithm_combo.pack(side=tk.LEFT)
-        algorithm_combo.bind("<<ComboboxSelected>>", self._calculate_hash)
+        algorithm_combo.bind("<<ComboboxSelected>>", self._on_algorithm_change)
 
         calculate_button = ttk.Button(
             control_frame, text="Calculate", command=self._calculate_hash
@@ -68,31 +74,60 @@ class HashCalculatorComponent(BaseFrameGUI):
         )
         self.output_text.pack(fill=tk.BOTH, expand=True)
 
-    def _on_text_change(self, event: Event | None = None) -> None:
+    def _set_output(self, text: str) -> None:
+        self.output_text.config(state=tk.NORMAL)
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert("1.0", text)
+        self.output_text.config(state=tk.DISABLED)
+
+    def _on_algorithm_change(self, event: Event | None = None) -> None:
+        self._cancel_debounce()
         self._calculate_hash()
 
-    def _calculate_hash(self, event: Event | None = None) -> None:
-        input_data = self.input_text.get("1.0", "end-1c").encode("utf-8")
-        algorithm = self.algorithm_var.get()
+    def _on_text_change(self, event: Event | None = None) -> None:
+        self._cancel_debounce()
+        # 300ms デバウンス制御によるキーストローク時のDoS防止 (#127)
+        self._debounce_timer = self.after(300, self._calculate_hash)
 
+    def _cancel_debounce(self) -> None:
+        if self._debounce_timer is not None:
+            self.after_cancel(self._debounce_timer)
+            self._debounce_timer = None
+
+    def _calculate_hash(self, event: Event | None = None) -> None:
+        self._cancel_debounce()
+        raw_text = self.input_text.get("1.0", "end-1c")
+
+        if len(raw_text) > MAX_HASH_INPUT_LENGTH:
+            self.logger.warning(
+                "ハッシュ計算入力長が上限（%d文字）を超過しているため中断します (現在: %d文字)",
+                MAX_HASH_INPUT_LENGTH,
+                len(raw_text),
+            )
+            self._set_output(
+                f"Error: Input text exceeds maximum allowed size ({MAX_HASH_INPUT_LENGTH:,} characters)."
+            )
+            return
+
+        algorithm = self.algorithm_var.get()
         if not algorithm:
             return
+
+        input_data = raw_text.encode("utf-8")
 
         try:
             hasher = hashlib.new(algorithm)
             hasher.update(input_data)
-            hash_result = hasher.hexdigest()
+            # SHAKE系XOFアルゴリズムはhexdigestにlength指定が必須 (#127)
+            if algorithm.startswith("shake_"):
+                hash_result = hasher.hexdigest(DEFAULT_SHAKE_DIGEST_LENGTH)  # type: ignore[call-arg]
+            else:
+                hash_result = hasher.hexdigest()
 
-            self.output_text.config(state=tk.NORMAL)
-            self.output_text.delete("1.0", tk.END)
-            self.output_text.insert("1.0", hash_result)
-            self.output_text.config(state=tk.DISABLED)
-        except ValueError as e:
-            self.logger.error(f"Error calculating hash: {e}")
-            self.output_text.config(state=tk.NORMAL)
-            self.output_text.delete("1.0", tk.END)
-            self.output_text.insert("1.0", f"Error: {e}")
-            self.output_text.config(state=tk.DISABLED)
+            self._set_output(hash_result)
+        except (ValueError, TypeError) as e:
+            self.logger.warning("Error calculating hash (%s): %s", algorithm, e)
+            self._set_output(f"Error: {e}")
 
 
 # The Plugin definition
