@@ -156,7 +156,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | :----------------- | :-------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 本設計の対象       | `ProcessInspector` / `SoundPlayer` / `SingleInstanceController` / `PasteSender` / `ClipboardReader` | `PlatformServices` から取得する。                                                                                                                     |
 | 対象外（暫定維持） | `HotkeyListener`                                                                                    | Windows限定。`ApplicationBuilder.with_global_hotkey_listener()` の分岐と `NullHotkeyListener` を #150 まで維持する。                                  |
-| 対象外             | macOS / Linux 向け `ClipboardReader` の具象実装                                                     | 実機確認が必要なため #170 で扱う。                                                                                                                    |
+| 本設計の対象（追加）| macOS 向け `ClipboardReader` の具象実装 (`MacOSClipboardReader`)                                    | `pbpaste` を使用したゼロインストール実装 (#170)。Linux 向けは別途扱う。                                                                                |
 | 対象外             | GUI描画・テーマ制御                                                                                 | [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とする。 |
 
 ### 6.2 `PlatformServices` の契約
@@ -192,7 +192,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `ProcessInspector`         | `ClipboardMonitor`    | 起動時に `WARNING` を1回出す。`excluded_apps` が設定されている場合は `ERROR` に格上げする。除外判定は行わず、履歴保存は継続する。                                                    |
 | `SoundPlayer`              | `NotificationManager` | 再生をスキップし、`DEBUG` ログを出す。                                                                                                                                               |
 | `PasteSender`              | `MainApplication`     | 「自動貼り付けは非対応。クリップボードには内容を設定済み」の `WARNING` を出して継続する。                                                                                            |
-| `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。非対応（非Windows、または `pywin32` 未導入のWindows）は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。 |
+| `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。Windows では `WindowsClipboardReader`、macOS では `MacOSClipboardReader` を提供。非対応環境（Linux、または `pywin32` 未導入のWindows）は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。 |
 | `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。ロックファイルによる代替実装は別Issueとする。                                                                                 |
 
 ### 6.6 `SingleInstanceController.acquire()` の契約
@@ -205,9 +205,11 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 
 `release()` は未取得の状態で呼んでも何もしない（冪等）。
 
-### 6.6a `ClipboardReader` と `ClipboardMonitor` の責務 (#169)
+### 6.6a `ClipboardReader` と `ClipboardMonitor` の責務 (#169, #170)
 
-- `ClipboardReader.read_text() -> str | None` は、失敗時 `None`、テキスト形式が処理できない場合は空文字を返す。Windows実装 `WindowsClipboardReader` は生成時に `win32clipboard` / `pywintypes` を import し、未導入なら `ImportError` を送出する。`PlatformServices.for_current_platform()` はこれを捕捉し、`clipboard_reader` のみを非対応として扱う（他のアダプターは有効）。
+- `ClipboardReader.read_text() -> str | None` は、失敗時 `None`、テキスト形式が処理できない場合は空文字を返す。
+  - Windows実装 `WindowsClipboardReader` は生成時に `win32clipboard` / `pywintypes` を import し、未導入なら `ImportError` を送出する。`PlatformServices.for_current_platform()` はこれを捕捉し、`clipboard_reader` のみを非対応として扱う（他のアダプターは有効）。
+  - macOS実装 `MacOSClipboardReader` は標準コマンド `/usr/bin/pbpaste` を使用してクリップボードのテキストを読み取る（外部依存なしのゼロインストール実装、タイムアウト1.0秒）。
 - `win32_available`（`DependencyStatus`）は診断表示用に限定し、機能の有無の判定には使わない。`ClipboardMonitor` は `win32_available` 引数と `win32clipboard` の直接 import を持たない。
 - `ClipboardMonitor` はクリップボードの監視・変更検知・書き込み（`update_clipboard`）に専念する。履歴操作は `HistoryService`、通知は `NotificationManager` を呼び出し側が直接参照する。`UpdateHistoryCommand` も `HistoryService` を受け取る。
 - `QuickTaskDialog` は Tkinter の `clipboard_clear()` / `clipboard_append()` を直接呼ばず、`app.monitor.update_clipboard()` を経由する。
@@ -238,3 +240,4 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | Rev.1.1 | 2026-10-11 | Antigravity | OSプラットフォーム抽象レイヤー (`src/core/platform`) の追加に伴うモジュール構成の更新 (#148)。                                                                                             |
 | Rev.1.2 | 2026-10-13 | 未記載      | `PlatformServices` への実装選択の集約、例外階層、注入経路、非対応時の縮退仕様、`acquire()` の契約を§6に追加し、テスト要件を更新 (#158)。                                                   |
 | Rev.1.3 | 2026-10-15 | 未記載      | `ClipboardReader` の追加と `win32_available` の診断用途への限定、`ClipboardMonitor` の責務を監視に限定（履歴・通知の委譲を除去）、`QuickTaskDialog` の書き込み経路を §6.6a に追加 (#169)。 |
+| Rev.1.4 | 2026-10-18 | Antigravity | macOS 向け `ClipboardReader` 実装（`MacOSClipboardReader` / `pbpaste`）の追加と実機検証要件の反映 (#170)。                                                    |
