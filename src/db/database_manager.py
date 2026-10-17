@@ -26,6 +26,32 @@ class DatabaseManager:
         self.db_path = db_path
         self._lock = threading.Lock()
 
+        # 親ディレクトリの存在保証とアクセス権限制限 (#120, #126)
+        if self.db_path != ":memory:" and not self.db_path.startswith("file:"):
+            parent_dir = os.path.dirname(os.path.abspath(self.db_path))
+            if parent_dir:
+                os.makedirs(parent_dir, mode=0o700, exist_ok=True)
+                if os.name != "nt":
+                    try:
+                        os.chmod(parent_dir, 0o700)
+                    except OSError:
+                        pass
+
+            # DBファイルの安全な作成または権限設定
+            if not os.path.exists(self.db_path):
+                try:
+                    fd = os.open(self.db_path, os.O_CREAT | os.O_RDWR, 0o600)
+                    os.close(fd)
+                except OSError as e:
+                    logger.warning(
+                        "DBファイルのパーミッション事前設定に失敗しました: %s", e
+                    )
+            elif os.name != "nt":
+                try:
+                    os.chmod(self.db_path, 0o600)
+                except OSError:
+                    pass
+
         # 各DAOの初期化
         self.history_dao = ClipboardHistoryDAO(db_path, self._lock)
         self.category_dao = CategoryDAO(db_path, self._lock)
