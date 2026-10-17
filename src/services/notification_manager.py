@@ -5,7 +5,6 @@ from typing import Any
 
 from src.core.platform.errors import UnsupportedFeatureError
 from src.core.platform.services import PlatformServices
-from src.utils.error_handler import log_and_show_error
 
 logger = logging.getLogger(__name__)
 
@@ -37,4 +36,4 @@ class NotificationManager:
         try:
             sound_player.play_notification_beep(1000, 200)
         except Exception as e:
-            log_and_show_error("エラー", f"Error playing sound: {e}", exc_info=True)
+            logger.warning("通知音の再生に失敗しました: %s", e, exc_info=True)

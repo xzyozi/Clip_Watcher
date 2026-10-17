@@ -1,7 +1,48 @@
+from __future__ import annotations
+
 import logging
 import os
 import sys
 from datetime import datetime
+from io import TextIOWrapper
+
+_DIR_MODE = 0o700
+_FILE_MODE = 0o600
+
+
+def _restrict_permissions(path: str, *, is_dir: bool) -> None:
+    """ログディレクトリまたはログファイルのパーミッションを所有者のみに制限する。"""
+    mode = _DIR_MODE if is_dir else _FILE_MODE
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        # ファイルシステムやOS制約で変更できない場合でもロギング自体は継続する
+        pass
+
+
+def _cleanup_empty_logs(log_dir: str) -> None:
+    """以前の実行で生成された空の通常ログファイルを安全に削除する。
+
+    シンボリックリンクは追跡・削除せずスキップし、TOCTOU 競合による個別ファイルの
+    OSError はファイル単位で捕捉して他のファイルの処理を継続する。
+    """
+    try:
+        filenames = os.listdir(log_dir)
+    except OSError as e:
+        print(f"Error listing log directory: {e}")
+        return
+
+    for filename in filenames:
+        if not filename.endswith(".log"):
+            continue
+        file_path = os.path.join(log_dir, filename)
+        try:
+            if os.path.islink(file_path):
+                continue
+            if os.path.isfile(file_path) and os.path.getsize(file_path) == 0:
+                os.remove(file_path)
+        except OSError as e:
+            print(f"Error during log cleanup for {file_path}: {e}")
 
 
 class DailyFileHandler(logging.FileHandler):
@@ -18,6 +59,11 @@ class DailyFileHandler(logging.FileHandler):
         log_file = os.path.join(self.log_dir, f"clipwatcher_{self.current_date}.log")
         super().__init__(log_file, encoding=self.encoding_)
 
+    def _open(self) -> TextIOWrapper:
+        stream = super()._open()
+        _restrict_permissions(self.baseFilename, is_dir=False)
+        return stream
+
     def emit(self, record: logging.LogRecord) -> None:
         # ログ出力の直前に日付を確認し、日付が変わっていればファイルを切り替える
         new_date = datetime.now().strftime("%Y%m%d")
@@ -31,28 +77,21 @@ class DailyFileHandler(logging.FileHandler):
         super().emit(record)
 
 
-def setup_logging() -> logging.Logger:
+def setup_logging(log_dir: str | None = None) -> logging.Logger:
     """アプリケーション全体のロギング設定"""
     # ログディレクトリの設定
-    if sys.platform == "win32":
-        # USERPROFILEを使用して他のデータファイルと一貫性を保つ
-        log_dir = os.path.join(os.environ["USERPROFILE"], ".clipWatcher", "logs")
-    else:
-        log_dir = os.path.join(os.path.expanduser("~"), ".clipwatcher", "logs")
+    if log_dir is None:
+        if sys.platform == "win32":
+            # USERPROFILEを使用して他のデータファイルと一貫性を保つ
+            log_dir = os.path.join(os.environ["USERPROFILE"], ".clipWatcher", "logs")
+        else:
+            log_dir = os.path.join(os.path.expanduser("~"), ".clipwatcher", "logs")
 
-    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(log_dir, mode=_DIR_MODE, exist_ok=True)
+    _restrict_permissions(log_dir, is_dir=True)
 
     # 以前の実行で生成された空のログファイルをクリーンアップする
-    try:
-        for filename in os.listdir(log_dir):
-            if filename.endswith(".log"):
-                file_path = os.path.join(log_dir, filename)
-                # ファイルが空かどうかを確認
-                if os.path.getsize(file_path) == 0:
-                    os.remove(file_path)
-    except OSError as e:
-        # ロガーが完全に設定される前なので、コンソールに出力する
-        print(f"Error during log cleanup: {e}")
+    _cleanup_empty_logs(log_dir)
 
     # ログファイルの設定
     # 常時起動（日付を跨ぐ）してもファイル名の日付と実際のログのタイムスタンプが
@@ -65,7 +104,12 @@ def setup_logging() -> logging.Logger:
     # この関数が複数回呼び出された場合に備えて、既存のハンドラをクリアする
     root_logger = logging.getLogger()
     if root_logger.hasHandlers():
-        root_logger.handlers.clear()
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            try:
+                handler.close()
+            except Exception:
+                pass
 
     logging.basicConfig(
         level=logging.INFO,

@@ -61,13 +61,13 @@
 - [ ] [CW-0059] [security] HTMLEscapePlugin における二方向ヒューリスティック判定の不備によるHTMLサニタイズ（エスケープ）回避リスク <!-- priority:medium issue:#130 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0060] [security] ScheduleHelperComponent における時刻入力値（時・分）の範囲バリデーション欠落とdatetime.replaceの未捕捉例外 <!-- priority:medium issue:#131 theme:security stage:ideation added:2026-10-01 -->
 - [x] [CW-0061] [edge_cases] TextWorkflowService._on_task_done における非同期タスク例外発生時の通知喪失とUIハングリスク <!-- priority:medium issue:#132 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
-- [ ] [CW-0062] [edge_cases] NotificationManager.play_notification_sound における winsound 例外時の messagebox 直接呼び出しによるスレッドクラッシュおよびブロッキング <!-- priority:medium issue:#133 theme:edge_cases stage:ideation added:2026-10-01 -->
+- [x] [CW-0062] [edge_cases] NotificationManager.play_notification_sound における winsound 例外時の messagebox 直接呼び出しによるスレッドクラッシュおよびブロッキング <!-- priority:medium issue:#133 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [ ] [CW-0063] [edge_cases] HistoryService.on_settings_changed における history_limit の型・境界値バリデーション欠落によるクラッシュおよび過剰トリム <!-- priority:medium issue:#134 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [x] [CW-0064] [edge_cases] TextWorkflowService.shutdown における wait=False による実行中タスクの強制中断とシャットダウン後投入の未ハンドリング <!-- priority:medium issue:#135 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
-- [ ] [CW-0065] [security] logging_config における機密ログファイルのパーミッション制御欠落および安全でない空ファイル削除処理 <!-- priority:medium issue:#136 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0065] [security] logging_config における機密ログファイルのパーミッション制御欠落および安全でない空ファイル削除処理 <!-- priority:medium issue:#136 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [ ] [CW-0066] [security] copy_safety における入力長未検証の正規表現走査によるCPU枯渇およびUIフリーズ（DoS）リスク <!-- priority:medium issue:#137 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0067] [security] i18n におけるJSON読み込み時のデータ型検証欠落による未捕捉例外クラッシュおよびCWD依存パス解決 <!-- priority:medium issue:#138 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0067] [security] i18n におけるJSON読み込み時のデータ型検証欠落による未捕捉例外クラッシュおよびCWD依存パス解決 <!-- priority:medium issue:#138 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
+- [x] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [x] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
 - [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)

@@ -4,7 +4,7 @@ from typing import Any
 
 from src.core.events.commands import UpdateHistoryCommand
 from src.core.events.event_dispatcher import EventDispatcher
-from src.utils.undo_manager import UndoManager
+from src.utils.undo_manager import UndoableCommand, UndoManager
 
 # ==========================================
 # EventDispatcher Tests (2 Items)
@@ -149,7 +149,7 @@ def test_event_dispatcher_event_contracts(event_dispatcher: EventDispatcher) -> 
 # ==========================================
 
 
-class DummyCommand:
+class DummyCommand(UndoableCommand):
     """テスト用のシンプルな Command モック。"""
 
     def __init__(self) -> None:
@@ -202,6 +202,29 @@ def test_undo_manager_undo_redo_cycle(undo_manager: UndoManager) -> None:
     assert command.undo_called == 1
     assert undo_manager.can_undo() is True
     assert undo_manager.can_redo() is False
+
+
+def test_undo_manager_stack_size_bounded(event_dispatcher: EventDispatcher) -> None:
+    """maxlen を超えるコマンドが実行された場合、古いコマンドが破棄されスタック上限が保たれる（#139）。"""
+    manager = UndoManager(event_dispatcher, max_history=3)
+    commands = [DummyCommand() for _ in range(5)]
+
+    for cmd in commands:
+        manager.execute_command(cmd)
+
+    assert len(manager.undo_stack) == 3
+    # commands[0] と commands[1] は自動破棄され、直近3件（2, 3, 4）のみ残る
+    assert list(manager.undo_stack) == commands[2:]
+
+
+def test_undo_manager_rejects_non_positive_max_history(
+    event_dispatcher: EventDispatcher,
+) -> None:
+    """max_history に 0 以下の値が渡された場合は ValueError を送出する。"""
+    import pytest
+
+    with pytest.raises(ValueError, match="max_history must be greater than 0"):
+        UndoManager(event_dispatcher, max_history=0)
 
 
 # ==========================================
