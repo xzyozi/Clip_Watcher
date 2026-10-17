@@ -9,6 +9,10 @@ from src.plugins.implementations.duplicate_line_remover_plugin import (
     DuplicateLineRemoverPlugin,
 )
 from src.plugins.implementations.html_escape_plugin import HTMLEscapePlugin
+from src.plugins.implementations.json_formatter_plugin import (
+    MAX_JSON_INPUT_LENGTH,
+    JSONFormatterPlugin,
+)
 from src.plugins.implementations.line_sorter_plugin import LineSorterPlugin
 from src.plugins.implementations.uppercase_converter_plugin import (
     UppercaseConverterPlugin,
@@ -104,6 +108,14 @@ def test_gui_plugins_filtering() -> None:
         (LineSorterPlugin, "c\na\nb", "a\nb\nc"),
         # 6. 空白・改行正規化 (WhitespaceNormalizerPlugin)
         (WhitespaceNormalizerPlugin, "  hello   \n\n  world  ", "hello\n\nworld"),
+        # 7. JSON整形 (JSONFormatterPlugin)
+        (
+            JSONFormatterPlugin,
+            '{"b": 1, "a": 2}',
+            '{\n    "b": 1,\n    "a": 2\n}',
+        ),
+        (JSONFormatterPlugin, "not valid json", "not valid json"),
+        (JSONFormatterPlugin, "", ""),
     ],
 )
 def test_text_plugins_conversion(
@@ -113,3 +125,27 @@ def test_text_plugins_conversion(
     plugin = plugin_class()
     result = plugin.process(input_text)
     assert result == expected_output
+
+
+def test_json_formatter_plugin_size_limit() -> None:
+    """1MBを超えるJSON文字列は処理をスキップしてそのまま返されることを検証します (#128)。"""
+    plugin = JSONFormatterPlugin()
+    large_json = '{"key": "' + ("a" * (MAX_JSON_INPUT_LENGTH + 10)) + '"}'
+    result = plugin.process(large_json)
+    assert result == large_json
+
+
+def test_json_formatter_plugin_deep_recursion_safety() -> None:
+    """深いネスト構造（RecursionError）でもクラッシュせずにそのまま返されることを検証します (#128)。"""
+    plugin = JSONFormatterPlugin()
+    nested_json = ("[" * 2000) + ("]" * 2000)
+    result = plugin.process(nested_json)
+    assert result == nested_json
+
+
+def test_json_formatter_plugin_large_integer_safety() -> None:
+    """巨大整数（CVE-2020-10735 による ValueError: Exceeds the limit 4300 digits）でもクラッシュしないことを検証します (#128)。"""
+    plugin = JSONFormatterPlugin()
+    large_int_json = '{"num": ' + ("9" * 5000) + "}"
+    result = plugin.process(large_int_json)
+    assert result == large_int_json
