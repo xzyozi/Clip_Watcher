@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+import time
 
 from src.db.dao.base_dao import BaseDAO
 from src.db.dto import MetaPhraseDTO
@@ -65,17 +66,29 @@ class MetaPhraseDAO(BaseDAO):
 
         try:
             rows = self.execute_read(sql, tuple(params))
-            return [
-                MetaPhraseDTO(
-                    id=row[0],
-                    title=row[1],
-                    content=row[2],
-                    category_id=row[3],
-                    sort_order=row[4],
-                    created_at=float(row[5]),
+            items: list[MetaPhraseDTO] = []
+            for row in rows:
+                try:
+                    created_at_val = float(row[5])
+                except (ValueError, TypeError):
+                    logger.warning(
+                        "破損した created_at (%r) を検出しました。現在時刻にフォールバックします (ID: %s)",
+                        row[5],
+                        row[0],
+                    )
+                    created_at_val = time.time()
+
+                items.append(
+                    MetaPhraseDTO(
+                        id=row[0],
+                        title=row[1],
+                        content=row[2],
+                        category_id=row[3],
+                        sort_order=row[4],
+                        created_at=created_at_val,
+                    )
                 )
-                for row in rows
-            ]
+            return items
         except Exception as e:
             logger.error(
                 "メタ定型文の取得中にエラーが発生しました: %s", str(e), exc_info=True
