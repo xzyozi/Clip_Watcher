@@ -46,15 +46,15 @@
 - [x] [CW-0044] [architecture] EventDispatcher における GUI (messagebox) への直接依存によるレイヤー逆転とスレッド安全性阻害 <!-- priority:medium issue:#115 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [x] [CW-0045] [architecture] ClipboardMonitor における履歴サービス・通知機能の抱え込みによる単一責任の原則違反 <!-- priority:medium issue:#116 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
 - [x] [CW-0046] [architecture] text_workflow の ports.py における具象永続化モジュール (history.py) への直接依存とDIP違反 <!-- priority:medium issue:#117 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
-- [ ] [CW-0047] [security] database_manager における旧履歴JSON移行時のパストラバーサル未検証および安全でないバックアップファイル置換 <!-- priority:medium issue:#118 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0048] [security] history_dao における検索クエリのLIKEメタ文字未エスケープによる意図しない履歴露出とDoSリスク <!-- priority:medium issue:#119 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0049] [security] database_manager および base_dao における機密履歴データベースの平文保存およびファイルアクセス権限制御の欠落 <!-- priority:medium issue:#120 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0050] [security] history_dao の cleanup_old における入力値未検証および動的プレースホルダ展開によるDoS・変数上限超過エラー <!-- priority:medium issue:#121 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0051] [security] category_dao および meta_phrase_dao におけるカテゴリ名・定型文の入力長・制御文字バリデーション欠落 <!-- priority:medium issue:#122 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0052] [edge_cases] check_and_migrate_json における不正データ型・要素数に対する防御処理の欠落によるマイグレーションクラッシュ <!-- priority:medium issue:#123 theme:edge_cases stage:ideation added:2026-10-01 -->
-- [ ] [CW-0053] [edge_cases] BaseDAO.execute_write における lastrowid/rowcount 評価の混同による更新・削除成否の誤判定リスク <!-- priority:medium issue:#124 theme:edge_cases stage:ideation added:2026-10-01 -->
-- [ ] [CW-0054] [edge_cases] history_dao および meta_phrase_dao における created_at 破損レコードによる一覧取得全体のフェイル <!-- priority:medium issue:#125 theme:edge_cases stage:ideation added:2026-10-01 -->
-- [ ] [CW-0055] [edge_cases] DatabaseManager における DB 格納先親ディレクトリの存在未検証による起動時 OperationalError <!-- priority:medium issue:#126 theme:edge_cases stage:ideation added:2026-10-01 -->
+- [x] [CW-0047] [security] database_manager における旧履歴JSON移行時のパストラバーサル未検証および安全でないバックアップファイル置換 <!-- priority:medium issue:#118 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0048] [security] history_dao における検索クエリのLIKEメタ文字未エスケープによる意図しない履歴露出とDoSリスク <!-- priority:medium issue:#119 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0049] [security] database_manager および base_dao における機密履歴データベースの平文保存およびファイルアクセス権限制御の欠落 <!-- priority:medium issue:#120 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0050] [security] history_dao の cleanup_old における入力値未検証および動的プレースホルダ展開によるDoS・変数上限超過エラー <!-- priority:medium issue:#121 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0051] [security] category_dao および meta_phrase_dao におけるカテゴリ名・定型文の入力長・制御文字バリデーション欠落 <!-- priority:medium issue:#122 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0052] [edge_cases] check_and_migrate_json における不正データ型・要素数に対する防御処理の欠落によるマイグレーションクラッシュ <!-- priority:medium issue:#123 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0053] [edge_cases] BaseDAO.execute_write における lastrowid/rowcount 評価の混同による更新・削除成否の誤判定リスク <!-- priority:medium issue:#124 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0054] [edge_cases] history_dao および meta_phrase_dao における created_at 破損レコードによる一覧取得全体のフェイル <!-- priority:medium issue:#125 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
+- [x] [CW-0055] [edge_cases] DatabaseManager における DB 格納先親ディレクトリの存在未検証による起動時 OperationalError <!-- priority:medium issue:#126 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
 - [ ] [CW-0056] [security] HashCalculatorComponent における入力長未検証の同期ハッシュ計算によるDoSおよびSHAKE系アルゴリズム選択時の未捕捉TypeError <!-- priority:medium issue:#127 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0057] [security] JSONFormatterPlugin における入力サイズおよび再帰深度・巨大整数バリデーション欠落によるDoSとクラッシュ <!-- priority:medium issue:#128 theme:security stage:ideation added:2026-10-01 -->
 - [ ] [CW-0058] [security] UnitConverterComponent におけるタイムスタンプ入力範囲の未検証およびプラットフォーム例外（OSError/OverflowError）未捕捉によるクラッシュ <!-- priority:medium issue:#129 theme:security stage:ideation added:2026-10-01 -->
