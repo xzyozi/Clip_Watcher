@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 import sqlite3
 import threading
 import time
+from pathlib import Path
 
 from src.db.dao.category_dao import CategoryDAO
 from src.db.dao.history_dao import ClipboardHistoryDAO
@@ -130,24 +130,31 @@ class DatabaseManager:
                 conn.close()
 
     def check_and_migrate_json(self, history_file_path: str) -> None:
-        """
-        既存 of history.json からデータをインポートします。
+        """既存 of history.json からデータをインポートします。
+
         全体のインポート処理は単一トランザクションで行われ、失敗時はロールバックされます。
         """
-        if not os.path.exists(history_file_path):
-            logger.info(
-                "旧履歴ファイル（%s）が見つかりません。マイグレーションをスキップします。",
+        # シンボリックリンクの拒否およびパスの正規化 (#118)
+        if os.path.islink(history_file_path):
+            logger.warning(
+                "シンボリックリンク経由の旧履歴ファイル（%s）は拒否されます。",
                 history_file_path,
             )
             return
 
-        logger.info(
-            "旧履歴ファイル（%s）からのデータ移行を開始します。", history_file_path
-        )
+        resolved_path = Path(history_file_path).resolve()
+        if not resolved_path.is_file():
+            logger.info(
+                "旧履歴ファイル（%s）が見つかりません。マイグレーションをスキップします。",
+                resolved_path,
+            )
+            return
+
+        logger.info("旧履歴ファイル（%s）からのデータ移行を開始します。", resolved_path)
         with self._lock:
             conn = None
             try:
-                with open(history_file_path, encoding="utf-8") as f:
+                with open(resolved_path, encoding="utf-8") as f:
                     loaded_data = json.load(f)
 
                 if not isinstance(loaded_data, list):
@@ -166,11 +173,20 @@ class DatabaseManager:
                     created_at = time.time() - i
 
                     if isinstance(item, list):
-                        if len(item) >= 2:
+                        if len(item) >= 1 and item[0] is not None:
                             content = str(item[0])
+                        if len(item) >= 2 and item[1] is not None:
                             is_pinned = bool(item[1])
-                        if len(item) == 3:
-                            created_at = float(item[2])
+                        # 要素数判定の緩和と破損値フォールバック (#123)
+                        if len(item) >= 3 and item[2] is not None:
+                            try:
+                                created_at = float(item[2])
+                            except (ValueError, TypeError):
+                                logger.warning(
+                                    "移行データの created_at が不正なため代替時刻を使用します: %r",
+                                    item[2],
+                                )
+                                created_at = time.time() - i
                     elif isinstance(item, str):
                         content = item
 
@@ -213,16 +229,20 @@ class DatabaseManager:
                     "SQLiteへのデータ移行が成功しました。JSONファイルをバックアップします。"
                 )
 
-                # jsonファイルのバックアップ（リネーム）
-                backup_path = history_file_path + ".bak"
-                if os.path.exists(backup_path):
-                    os.remove(backup_path)
-                shutil.move(history_file_path, backup_path)
-                logger.info("旧履歴ファイルを %s にリネームしました。", backup_path)
+                # jsonファイルのバックアップ（アトミックな置換でTOCTOU競合を防止 #118）
+                backup_path = resolved_path.with_name(f"{resolved_path.name}.bak")
+                os.replace(str(resolved_path), str(backup_path))
+                logger.info("旧履歴ファイルを %s にバックアップしました。", backup_path)
 
-            except (json.JSONDecodeError, FileNotFoundError, OSError) as e:
+            except (
+                json.JSONDecodeError,
+                FileNotFoundError,
+                OSError,
+                ValueError,
+                TypeError,
+            ) as e:
                 logger.error(
-                    "履歴ファイル読み込みまたはリネーム中にエラーが発生しました: %s",
+                    "履歴ファイル読み込みまたは移行中にエラーが発生しました: %s",
                     str(e),
                     exc_info=True,
                 )
@@ -231,6 +251,14 @@ class DatabaseManager:
             except sqlite3.Error as e:
                 logger.error(
                     "マイグレーションのデータベース挿入中にエラーが発生しました。ロールバックします: %s",
+                    str(e),
+                    exc_info=True,
+                )
+                if conn:
+                    conn.rollback()
+            except Exception as e:
+                logger.error(
+                    "予期せぬエラーが発生しました。マイグレーションをロールバックします: %s",
                     str(e),
                     exc_info=True,
                 )
