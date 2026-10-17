@@ -54,8 +54,8 @@ class PlatformServices:
     def for_current_platform(cls, platform_name: str | None = None) -> PlatformServices:
         """指定（省略時は現在）の OS 向けの実装を備えた PlatformServices を生成する。
 
-        現在対応しているのは Windows のみ。他の OS ではアダプターを持たず、
-        取得時に ``UnsupportedFeatureError`` となる。
+        Windows では全アダプター、macOS では ClipboardReader を提供する。
+        非対応のアダプターは取得時に ``UnsupportedFeatureError`` となる。
         """
         name = platform_name if platform_name else sys.platform
         if name == "win32":
@@ -83,6 +83,13 @@ class PlatformServices:
                 single_instance=WindowsSingleInstanceController(),
                 paste_sender=WindowsPasteSender(),
                 clipboard_reader=clipboard_reader,
+                platform_name=name,
+            )
+        if name == "darwin":
+            from src.core.platform.macos import MacOSClipboardReader
+
+            return cls(
+                clipboard_reader=MacOSClipboardReader(),
                 platform_name=name,
             )
         return cls(platform_name=name)

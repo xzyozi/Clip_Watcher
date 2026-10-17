@@ -17,6 +17,8 @@ import pytest
 
 from src.core.clipboard.clipboard_monitor import ClipboardMonitor
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.macos import MacOSClipboardReader
+from src.core.platform.protocols import ClipboardReader
 from src.core.platform.services import PlatformServices
 from src.core.platform.windows.clipboard_reader import WindowsClipboardReader
 from src.services.history_service import HistoryService
@@ -92,6 +94,64 @@ class TestWindowsClipboardReader:
 
         with pytest.raises(ImportError):
             WindowsClipboardReader()
+
+
+class TestMacOSClipboardReader:
+    def test_satisfies_clipboard_reader_protocol(self) -> None:
+        reader = MacOSClipboardReader()
+        assert isinstance(reader, ClipboardReader)
+
+    def test_reads_text_successfully(self, mocker: Any) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "テスト文字列\nLine 2".encode()
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() == "テスト文字列\nLine 2"
+
+    def test_returns_empty_string_for_empty_clipboard(self, mocker: Any) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = b""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() == ""
+
+    def test_returns_none_on_nonzero_exit_code(self, mocker: Any) -> None:
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = b"Error"
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() is None
+
+    def test_returns_none_on_timeout(self, mocker: Any) -> None:
+        import subprocess
+
+        mocker.patch(
+            "subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="pbpaste", timeout=1.0),
+        )
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() is None
+
+    def test_returns_none_on_file_not_found(self, mocker: Any) -> None:
+        mocker.patch(
+            "subprocess.run", side_effect=FileNotFoundError("pbpaste not found")
+        )
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() is None
+
+    def test_returns_none_on_os_error(self, mocker: Any) -> None:
+        mocker.patch("subprocess.run", side_effect=OSError("permission denied"))
+
+        reader = MacOSClipboardReader()
+        assert reader.read_text() is None
 
 
 def _monitor(
