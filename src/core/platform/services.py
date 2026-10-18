@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Any
 
 from src.core.platform.errors import UnsupportedFeatureError
 from src.core.platform.protocols import (
     ClipboardReader,
+    HotkeyListener,
     PasteSender,
     ProcessInspector,
     SingleInstanceController,
@@ -93,6 +95,7 @@ class PlatformServices:
         if name == "darwin":
             from src.core.platform.macos import (
                 MacOSClipboardReader,
+                MacOSPasteSender,
                 MacOSProcessInspector,
                 MacOSSingleInstanceController,
                 MacOSSoundPlayer,
@@ -103,12 +106,14 @@ class PlatformServices:
                 process_inspector=MacOSProcessInspector(),
                 sound_player=MacOSSoundPlayer(),
                 single_instance=MacOSSingleInstanceController(),
+                paste_sender=MacOSPasteSender(),
                 clipboard_reader=MacOSClipboardReader(),
                 startup_controller=MacOSStartupController(),
                 platform_name=name,
             )
         if name.startswith("linux"):
             from src.core.platform.linux import (
+                LinuxPasteSender,
                 LinuxProcessInspector,
                 LinuxSingleInstanceController,
                 LinuxSoundPlayer,
@@ -119,10 +124,29 @@ class PlatformServices:
                 process_inspector=LinuxProcessInspector(),
                 sound_player=LinuxSoundPlayer(),
                 single_instance=LinuxSingleInstanceController(),
+                paste_sender=LinuxPasteSender(),
                 startup_controller=LinuxStartupController(),
                 platform_name=name,
             )
         return cls(platform_name=name)
+
+    def create_hotkey_listener(
+        self,
+        master: Any,
+        on_triggered: Any,
+    ) -> HotkeyListener:
+        """指定のウィンドウおよびコールバックで HotkeyListener を生成する。
+
+        非対応環境では UnsupportedFeatureError を送出する。
+        """
+        if self._platform_name == "win32":
+            from src.core.hotkey.global_hotkey_listener import (
+                GlobalHotkeyListener as WindowsHotkeyListener,
+            )
+
+            return WindowsHotkeyListener(master, on_triggered=on_triggered)
+
+        raise UnsupportedFeatureError("hotkey_listener", self._platform_name)
 
     def process_inspector(self) -> ProcessInspector:
         if self._process_inspector is None:

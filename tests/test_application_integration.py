@@ -45,11 +45,10 @@ def test_application_builder_component_injection(
         assert builder.window_state_manager is mock_wsm
         if sys.platform == "win32":
             assert builder.hotkey_listener is mock_hkl
+            assert builder.hotkey_registration_manager is mock_hrm
         else:
-            from src.core.platform.null import NullHotkeyListener
-
-            assert isinstance(builder.hotkey_listener, NullHotkeyListener)
-        assert builder.hotkey_registration_manager is mock_hrm
+            assert builder.hotkey_listener is None
+            assert builder.hotkey_registration_manager is None
 
 
 def test_main_application_hotkey_and_window_integration(

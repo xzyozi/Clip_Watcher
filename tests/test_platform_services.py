@@ -7,7 +7,7 @@ PlatformServices と プラットフォーム例外の振る舞いを検証す�
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -106,6 +106,15 @@ class TestForCurrentPlatform:
         assert isinstance(services.paste_sender(), PasteSender)
         assert isinstance(services.startup_controller(), StartupController)
 
+        # hotkey listener creation
+        mock_master = MagicMock()
+        mock_callback = MagicMock()
+        with patch(
+            "src.core.hotkey.global_hotkey_listener.GlobalHotkeyListener"
+        ) as mock_ghl:
+            services.create_hotkey_listener(mock_master, mock_callback)
+            mock_ghl.assert_called_once_with(mock_master, on_triggered=mock_callback)
+
     def test_windows_without_pywin32_treats_clipboard_reader_as_unsupported(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -120,14 +129,15 @@ class TestForCurrentPlatform:
         assert exc_info.value.feature == "clipboard_reader"
         assert services.process_inspector() is not None
 
-    def test_darwin_provides_adapters_except_paste_sender(
+    def test_darwin_provides_all_six_adapters(
         self,
     ) -> None:
-        """macOS (darwin) は PasteSender 以外の 5 つのアダプターを提供する。"""
+        """macOS (darwin) は全 6 つのアダプターを提供する。"""
         services = PlatformServices.for_current_platform("darwin")
 
         from src.core.platform.protocols import (
             ClipboardReader,
+            PasteSender,
             ProcessInspector,
             SingleInstanceController,
             SoundPlayer,
@@ -138,20 +148,22 @@ class TestForCurrentPlatform:
         assert isinstance(services.process_inspector(), ProcessInspector)
         assert isinstance(services.sound_player(), SoundPlayer)
         assert isinstance(services.single_instance(), SingleInstanceController)
+        assert isinstance(services.paste_sender(), PasteSender)
         assert isinstance(services.startup_controller(), StartupController)
 
         with pytest.raises(UnsupportedFeatureError) as exc_info:
-            services.paste_sender()
-        assert exc_info.value.feature == "paste_sender"
+            services.create_hotkey_listener(MagicMock(), MagicMock())
+        assert exc_info.value.feature == "hotkey_listener"
         assert exc_info.value.platform == "darwin"
 
-    def test_linux_provides_adapters_except_paste_sender_and_clipboard_reader(
+    def test_linux_provides_all_adapters_except_clipboard_reader(
         self,
     ) -> None:
-        """Linux は ProcessInspector, SoundPlayer, SingleInstanceController, StartupController を提供する。"""
+        """Linux は clipboard_reader 以外の 5 つのアダプターを提供する。"""
         services = PlatformServices.for_current_platform("linux")
 
         from src.core.platform.protocols import (
+            PasteSender,
             ProcessInspector,
             SingleInstanceController,
             SoundPlayer,
@@ -161,13 +173,15 @@ class TestForCurrentPlatform:
         assert isinstance(services.process_inspector(), ProcessInspector)
         assert isinstance(services.sound_player(), SoundPlayer)
         assert isinstance(services.single_instance(), SingleInstanceController)
+        assert isinstance(services.paste_sender(), PasteSender)
         assert isinstance(services.startup_controller(), StartupController)
 
-        for feature in (
-            "paste_sender",
-            "clipboard_reader",
-        ):
-            with pytest.raises(UnsupportedFeatureError) as exc_info:
-                getattr(services, feature)()
-            assert exc_info.value.feature == feature
-            assert exc_info.value.platform == "linux"
+        with pytest.raises(UnsupportedFeatureError) as exc_info:
+            services.clipboard_reader()
+        assert exc_info.value.feature == "clipboard_reader"
+        assert exc_info.value.platform == "linux"
+
+        with pytest.raises(UnsupportedFeatureError) as exc_info:
+            services.create_hotkey_listener(MagicMock(), MagicMock())
+        assert exc_info.value.feature == "hotkey_listener"
+        assert exc_info.value.platform == "linux"

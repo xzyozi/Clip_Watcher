@@ -343,6 +343,11 @@ class MainApplication(BaseApplication):
         startup_enabled: bool = settings.get("startup_on_boot", False)
         self._manage_startup(startup_enabled)
 
+        if self.hotkey_registration_manager is not None:
+            hotkey_enabled = settings.get("global_hotkey_enabled", False)
+            hotkey_combo = settings.get("global_hotkey_combo", "Ctrl+Shift+V")
+            self.hotkey_registration_manager.reconfigure(hotkey_enabled, hotkey_combo)
+
     def _manage_startup(self, startup_enabled: bool) -> None:
         """StartupController を介してログイン時自動起動を管理する。"""
         try:

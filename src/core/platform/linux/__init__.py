@@ -3,6 +3,7 @@
 Linux 具象プラットフォームアダプター群。
 """
 
+from src.core.platform.linux.paste_sender import LinuxPasteSender
 from src.core.platform.linux.process_inspector import LinuxProcessInspector
 from src.core.platform.linux.sound_player import LinuxSoundPlayer
 from src.core.platform.linux.startup import LinuxStartupController
@@ -11,6 +12,7 @@ from src.core.platform.posix.single_instance import (
 )
 
 __all__ = [
+    "LinuxPasteSender",
     "LinuxProcessInspector",
     "LinuxSingleInstanceController",
     "LinuxSoundPlayer",
