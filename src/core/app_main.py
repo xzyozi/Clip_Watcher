@@ -85,6 +85,11 @@ class MainApplication(BaseApplication):
 
         event_handlers.register_class_based_handlers(self)  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+
+        # 起動直前に OS クリップボードを取得し、初期履歴・最新テキストを同期する
+        if hasattr(self.monitor, "sync_initial_clipboard"):
+            self.monitor.sync_initial_clipboard()
+
         self.gui = ClipWatcherGUI(master, self)
 
         self.event_dispatcher.subscribe(

@@ -200,27 +200,59 @@ class ClipboardMonitor:
 
         self.history_service.add_history_item(clipboard_data)
 
+    def get_current_clipboard_text(self) -> str | None:
+        """現在のシステムクリップボードからテキストを取得して検証・正規化した文字列を返す。
+
+        テキストが存在しない場合、取得に失敗した場合、空文字、またはサイズ超過
+        （1MB超）の場合は None を返します。
+        """
+        raw_content = self._get_clipboard_content()
+        if raw_content is None:
+            return None
+
+        try:
+            clipboard_data = self._decode_clipboard_data(raw_content)
+        except Exception:
+            clipboard_data = str(raw_content)
+
+        if not clipboard_data:
+            return None
+
+        if len(clipboard_data) > 1024 * 1024:
+            return None
+
+        return clipboard_data
+
+    def sync_initial_clipboard(self) -> str | None:
+        """起動シーケンスにおいて現在のOSクリップボード内容を即座に取得・同期する。
+
+        取得できたテキストがDBの最新履歴（last_clipboard_data）と異なる場合は
+        新しいエントリとして履歴に登録し、画面・内部状態を更新する。
+        同一の場合は重複登録を避けてそのまま返す。
+        取得したテキスト（またはNone）を返す。
+        """
+        try:
+            clipboard_data = self.get_current_clipboard_text()
+            if clipboard_data is None:
+                return None
+
+            if clipboard_data != self.history_service.last_clipboard_data:
+                self._update_history_with_new_entry(clipboard_data)
+
+            return clipboard_data
+        except Exception:
+            logging.error(
+                "起動時のクリップボード同期中に予期せぬエラーが発生しました。",
+                exc_info=True,
+            )
+            return None
+
     def _check_clipboard(self) -> None:
         try:
-            # 1. 堅牢な方法でクリップボードのコンテンツを取得します
-            raw_content = self._get_clipboard_content()
-            if raw_content is None:
-                return  # コンテンツの取得に失敗したか、テキストではありません
-
-            # 2. 正規化と検証
-            try:
-                clipboard_data = self._decode_clipboard_data(raw_content)
-            except Exception:
-                clipboard_data = str(raw_content)
-
-            if not clipboard_data:
+            clipboard_data = self.get_current_clipboard_text()
+            if clipboard_data is None:
                 return
 
-            if len(clipboard_data) > 1024 * 1024:
-                # logging.warning("クリップボードのコンテンツが大きすぎるため、スキップします。")
-                return
-
-            # 3. 新しい場合、処理します
             if clipboard_data != self.history_service.last_clipboard_data:
                 self._update_history_with_new_entry(clipboard_data)
 
