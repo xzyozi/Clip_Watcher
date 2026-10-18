@@ -60,8 +60,8 @@ class SettingsWindow(ReusableSettingsWindow):
                     from tkinter import messagebox
 
                     messagebox.showerror(
-                        "Hotkey Error",
-                        "Global hotkey is not supported on this platform.",
+                        self._tr("Hotkey Error"),
+                        self._tr("Global hotkey is not supported on this platform."),
                         parent=self,
                     )
                     return False
@@ -73,9 +73,15 @@ class SettingsWindow(ReusableSettingsWindow):
                 except ValueError as e:
                     from tkinter import messagebox
 
+                    msg_tmpl = self._tr("Invalid hotkey format: {combo}. ({error})")
+                    msg = (
+                        msg_tmpl.format(combo=repr(combo), error=e)
+                        if "{combo}" in msg_tmpl
+                        else f"Invalid hotkey format: {combo!r}. ({e})"
+                    )
                     messagebox.showerror(
-                        "Hotkey Error",
-                        f"Invalid hotkey format: {combo!r}. ({e})",
+                        self._tr("Hotkey Error"),
+                        msg,
                         parent=self,
                     )
                     return False
