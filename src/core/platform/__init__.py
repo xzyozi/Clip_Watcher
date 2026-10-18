@@ -14,15 +14,18 @@ from src.core.platform.errors import (
     UnsupportedFeatureError,
 )
 from src.core.platform.protocols import (
+    ClipboardReader,
     HotkeyListener,
     PasteSender,
     ProcessInspector,
     SingleInstanceController,
     SoundPlayer,
+    StartupController,
 )
 from src.core.platform.services import PlatformServices
 
 __all__ = [
+    "ClipboardReader",
     "HotkeyListener",
     "PasteSender",
     "PlatformError",
@@ -31,5 +34,6 @@ __all__ = [
     "SingleInstanceController",
     "SingleInstanceError",
     "SoundPlayer",
+    "StartupController",
     "UnsupportedFeatureError",
 ]

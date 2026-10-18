@@ -18,6 +18,7 @@ from src.core.platform.protocols import (
     ProcessInspector,
     SingleInstanceController,
     SoundPlayer,
+    StartupController,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class PlatformServices:
         single_instance: SingleInstanceController | None = None,
         paste_sender: PasteSender | None = None,
         clipboard_reader: ClipboardReader | None = None,
+        startup_controller: StartupController | None = None,
         platform_name: str | None = None,
     ) -> None:
         self._process_inspector = process_inspector
@@ -48,6 +50,7 @@ class PlatformServices:
         self._single_instance = single_instance
         self._paste_sender = paste_sender
         self._clipboard_reader = clipboard_reader
+        self._startup_controller = startup_controller
         self._platform_name = platform_name if platform_name else sys.platform
 
     @classmethod
@@ -65,6 +68,7 @@ class PlatformServices:
                 WindowsProcessInspector,
                 WindowsSingleInstanceController,
                 WindowsSoundPlayer,
+                WindowsStartupController,
             )
 
             clipboard_reader: ClipboardReader | None
@@ -83,6 +87,7 @@ class PlatformServices:
                 single_instance=WindowsSingleInstanceController(),
                 paste_sender=WindowsPasteSender(),
                 clipboard_reader=clipboard_reader,
+                startup_controller=WindowsStartupController(),
                 platform_name=name,
             )
         if name == "darwin":
@@ -91,6 +96,7 @@ class PlatformServices:
                 MacOSProcessInspector,
                 MacOSSingleInstanceController,
                 MacOSSoundPlayer,
+                MacOSStartupController,
             )
 
             return cls(
@@ -98,6 +104,7 @@ class PlatformServices:
                 sound_player=MacOSSoundPlayer(),
                 single_instance=MacOSSingleInstanceController(),
                 clipboard_reader=MacOSClipboardReader(),
+                startup_controller=MacOSStartupController(),
                 platform_name=name,
             )
         if name.startswith("linux"):
@@ -105,12 +112,14 @@ class PlatformServices:
                 LinuxProcessInspector,
                 LinuxSingleInstanceController,
                 LinuxSoundPlayer,
+                LinuxStartupController,
             )
 
             return cls(
                 process_inspector=LinuxProcessInspector(),
                 sound_player=LinuxSoundPlayer(),
                 single_instance=LinuxSingleInstanceController(),
+                startup_controller=LinuxStartupController(),
                 platform_name=name,
             )
         return cls(platform_name=name)
@@ -139,3 +148,8 @@ class PlatformServices:
         if self._clipboard_reader is None:
             raise UnsupportedFeatureError("clipboard_reader", self._platform_name)
         return self._clipboard_reader
+
+    def startup_controller(self) -> StartupController:
+        if self._startup_controller is None:
+            raise UnsupportedFeatureError("startup_controller", self._platform_name)
+        return self._startup_controller

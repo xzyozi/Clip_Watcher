@@ -37,13 +37,16 @@ class TestPlatformErrors:
 
 class TestPlatformServices:
     def test_returns_injected_adapters(self) -> None:
-        inspector, sound, single, paste, clipboard = (MagicMock() for _ in range(5))
+        inspector, sound, single, paste, clipboard, startup = (
+            MagicMock() for _ in range(6)
+        )
         services = PlatformServices(
             process_inspector=inspector,
             sound_player=sound,
             single_instance=single,
             paste_sender=paste,
             clipboard_reader=clipboard,
+            startup_controller=startup,
             platform_name="win32",
         )
 
@@ -52,6 +55,7 @@ class TestPlatformServices:
         assert services.single_instance() is single
         assert services.paste_sender() is paste
         assert services.clipboard_reader() is clipboard
+        assert services.startup_controller() is startup
 
     @pytest.mark.parametrize(
         "feature",
@@ -61,6 +65,7 @@ class TestPlatformServices:
             "single_instance",
             "paste_sender",
             "clipboard_reader",
+            "startup_controller",
         ],
     )
     def test_unsupported_adapter_raises_unsupported_feature_error(
@@ -84,7 +89,7 @@ class TestPlatformServices:
 
 
 class TestForCurrentPlatform:
-    def test_windows_provides_all_four_adapters(self) -> None:
+    def test_windows_provides_adapters(self) -> None:
         services = PlatformServices.for_current_platform("win32")
 
         from src.core.platform.protocols import (
@@ -92,12 +97,14 @@ class TestForCurrentPlatform:
             ProcessInspector,
             SingleInstanceController,
             SoundPlayer,
+            StartupController,
         )
 
         assert isinstance(services.process_inspector(), ProcessInspector)
         assert isinstance(services.sound_player(), SoundPlayer)
         assert isinstance(services.single_instance(), SingleInstanceController)
         assert isinstance(services.paste_sender(), PasteSender)
+        assert isinstance(services.startup_controller(), StartupController)
 
     def test_windows_without_pywin32_treats_clipboard_reader_as_unsupported(
         self, monkeypatch: pytest.MonkeyPatch
@@ -116,7 +123,7 @@ class TestForCurrentPlatform:
     def test_darwin_provides_adapters_except_paste_sender(
         self,
     ) -> None:
-        """macOS (darwin) は PasteSender 以外の 4 つのアダプターを提供する。"""
+        """macOS (darwin) は PasteSender 以外の 5 つのアダプターを提供する。"""
         services = PlatformServices.for_current_platform("darwin")
 
         from src.core.platform.protocols import (
@@ -124,12 +131,14 @@ class TestForCurrentPlatform:
             ProcessInspector,
             SingleInstanceController,
             SoundPlayer,
+            StartupController,
         )
 
         assert isinstance(services.clipboard_reader(), ClipboardReader)
         assert isinstance(services.process_inspector(), ProcessInspector)
         assert isinstance(services.sound_player(), SoundPlayer)
         assert isinstance(services.single_instance(), SingleInstanceController)
+        assert isinstance(services.startup_controller(), StartupController)
 
         with pytest.raises(UnsupportedFeatureError) as exc_info:
             services.paste_sender()
@@ -139,18 +148,20 @@ class TestForCurrentPlatform:
     def test_linux_provides_adapters_except_paste_sender_and_clipboard_reader(
         self,
     ) -> None:
-        """Linux は ProcessInspector, SoundPlayer, SingleInstanceController を提供する。"""
+        """Linux は ProcessInspector, SoundPlayer, SingleInstanceController, StartupController を提供する。"""
         services = PlatformServices.for_current_platform("linux")
 
         from src.core.platform.protocols import (
             ProcessInspector,
             SingleInstanceController,
             SoundPlayer,
+            StartupController,
         )
 
         assert isinstance(services.process_inspector(), ProcessInspector)
         assert isinstance(services.sound_player(), SoundPlayer)
         assert isinstance(services.single_instance(), SingleInstanceController)
+        assert isinstance(services.startup_controller(), StartupController)
 
         for feature in (
             "paste_sender",
