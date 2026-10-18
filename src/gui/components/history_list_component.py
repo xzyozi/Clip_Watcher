@@ -26,6 +26,8 @@ class HistoryListComponent(tk.Frame):
     `HistoryContextMenu` は Glossary 上の History_Caller の定義に含まれない。
     """
 
+    current_font: tk.font.Font | None = None
+
     def __init__(self, master: tk.Misc, app_instance: BaseApplication) -> None:
         super().__init__(master)
         self.app = app_instance
@@ -35,6 +37,7 @@ class HistoryListComponent(tk.Frame):
         self.displayed_hotkey_bindings: dict[int, str] = {}
         self.current_theme: dict[str, str] = {}
         self._updating_history: bool = False
+        self.current_font: tk.font.Font | None = None
 
         self._create_widgets()
         self._bind_events()
@@ -47,6 +50,7 @@ class HistoryListComponent(tk.Frame):
             columns=("hotkey",),
             show="tree headings",
             selectmode="extended",
+            style="History.Treeview",
         )
         self._apply_translations()
         self.tree.column("hotkey", width=140, minwidth=100, stretch=False)
@@ -200,9 +204,11 @@ class HistoryListComponent(tk.Frame):
                 iid = new_iids[index]
                 display_text = self._format_display_text(content, index)
                 # Requirements 7.1: is_pinned が True の行には "pinned" タグを付与する。
-                # Requirements 7.2: is_pinned が False の行には空タプル（タグなし）とし、
-                #   "pinned" タグを付与しない。
-                tags: tuple[str, ...] = ("pinned",) if is_pinned else ()
+                # Requirements 7.2: is_pinned が False の行には "pinned" タグを付与しない。
+                # Issue #195: macOS Aqua テーマでもフォントが反映されるよう全行に "history_item" タグを付与する。
+                tags: tuple[str, ...] = (
+                    ("history_item", "pinned") if is_pinned else ("history_item",)
+                )
                 icon_image = (
                     self.app.icon_manager.get_icon("pin", theme_name)
                     if is_pinned and self.app.icon_manager is not None
@@ -235,6 +241,8 @@ class HistoryListComponent(tk.Frame):
             # Requirements 7.3: "pinned" タグの背景色は theme["pinned_bg"]（pinned_bg_color）から
             # 取得する。tag_configure は既存・新規行を問わず全ての "pinned" タグ付き行に一括適用される。
             self.tree.tag_configure("pinned", background=pinned_bg_color)
+            if self.current_font is not None:
+                self.tree.tag_configure("history_item", font=self.current_font)
 
             # 3. 選択・スクロール状態の復元
             # Requirements 3.1, 3.2: 更新前に選択されていた行のうち、更新後も存在する（tree.exists）行のみを
@@ -303,6 +311,41 @@ class HistoryListComponent(tk.Frame):
         `tk.Listbox` と異なり `font` 等のウィジェット単位設定を持たず、ttkスタイル
         （`ttk.Style`）経由でのみ見た目を制御できるため、`self.tree.config(font=...)`
         ではなく `ttk.Style` の "Treeview" スタイルにフォントを設定する。
+
+        macOS (Aqua) および行高追従対応 (Issue #195 / CW-0074):
+        1. macOS の Aqua テーマでは `style.configure("Treeview", font=...)` が
+           ネイティブ描画パイプラインによって無視されるため、全履歴行に付与された
+           `"history_item"` タグに対して `self.tree.tag_configure("history_item", font=font)`
+           を直接適用する。
+        2. `ttk.Treeview` はフォントサイズ変更時に行の高さ（rowheight）を自動調整
+           しないため、`font.metrics("linespace")` に基づいて適切な rowheight を動的
+           計算し、スタイルに設定する（ピン留めアイコン等が見切れないよう最低22pxを保証）。
+        3. 他画面の Treeview へ影響を与えないよう、専用スタイル "History.Treeview" と
+           グローバル "Treeview" の双方へ安全に適用する。
         """
-        style = ttk.Style(self)
-        style.configure("Treeview", font=font)
+        self.current_font = font
+
+        # 1. 行の高さ（rowheight）の動的計算
+        try:
+            linespace = font.metrics("linespace")
+        except Exception:
+            try:
+                size = font.cget("size")
+                linespace = abs(int(size)) + 4
+            except Exception:
+                linespace = 14
+        rowheight = max(linespace + 8, 22)
+
+        # 2. スタイルへの設定（専用スタイル & グローバルスタイル）
+        try:
+            style = ttk.Style(self)
+            style.configure("History.Treeview", font=font, rowheight=rowheight)
+            style.configure("Treeview", font=font, rowheight=rowheight)
+        except Exception:
+            pass
+
+        # 3. macOS (Aqua) 向けのタグフォント強制適用
+        try:
+            self.tree.tag_configure("history_item", font=font)
+        except Exception:
+            pass
