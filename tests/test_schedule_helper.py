@@ -227,3 +227,58 @@ def test_apply_locale_settings_sets_sunday_default(tk_root: tk.Tk) -> None:
     component._apply_locale_settings()
 
     assert calendar.firstweekday() == calendar.SUNDAY
+
+
+def test_calendar_with_real_translator_displays_japanese_weekdays_not_numbers(
+    tk_root: tk.Tk,
+) -> None:
+    """本物の Translator を使用した際、ヘッダーが数字ではなく日本語の曜日になり、%a 書式化が正常に動作する（#186）。"""
+    import calendar
+    from tkinter import ttk
+    from unittest.mock import MagicMock
+
+    from src.utils.i18n import Translator
+
+    sm = MagicMock()
+    sm.get_setting.return_value = "ja"
+    sm.event_dispatcher = MagicMock()
+    translator = Translator(sm)
+
+    component = ScheduleHelperComponent.__new__(ScheduleHelperComponent)
+    component.logger = logging.getLogger("test_schedule_helper")
+    component.today = datetime(2026, 10, 18, 12, 0)
+    component.current_year = 2026
+    component.current_month = 10
+    component.selected_dates = [datetime(2026, 10, 18, 10, 0)]  # 日曜日
+
+    mock_app = type("App", (), {})()
+    mock_app.translator = translator
+    component.app = mock_app  # type: ignore[assignment]
+
+    frame = ttk.Frame(tk_root)
+    component.calendar_frame = frame
+    component.month_year_label = ttk.Label(tk_root)
+
+    component.hour_var = tk.StringVar(master=tk_root, value="10")
+    component.minute_var = tk.StringVar(master=tk_root, value="00")
+    component.format_var = tk.StringVar(master=tk_root, value="%Y/%m/%d (%a) %H:%M")
+    component.text_widget = tk.Text(tk_root)
+
+    calendar.setfirstweekday(calendar.SUNDAY)
+    component._update_calendar()
+
+    # 1. 曜日ヘッダーが数字（0, 1, 2...）ではなく日本語（日, 月, 火...）であること
+    header_texts = [
+        child.cget("text")
+        for child in frame.winfo_children()
+        if int(child.grid_info()["row"]) == 0
+    ]
+    assert header_texts == ["日", "月", "火", "水", "木", "金", "土"]
+
+    # 2. _update_text_widget で %a が "日" として出力されること（"weekdays_full"[weekday] の "w" などにならないこと）
+    component._update_text_widget()
+    generated_text = component.text_widget.get("1.0", "end-1c")
+    assert "2026/10/18 (日) 10:00" in generated_text
+
+    frame.destroy()
+    component.text_widget.destroy()

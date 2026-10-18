@@ -55,17 +55,40 @@ def test_non_dict_json_root_is_skipped_with_warning(
     assert any("expected dict" in r.getMessage() for r in caplog.records)
 
 
-def test_non_string_values_in_json_dict_are_filtered_out(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    """辞書内の非文字列値（数値・リスト・null 等）はスキップし、正常な文字列項目は保持する。"""
+def test_valid_string_and_string_list_entries_are_loaded(tmp_path: Path) -> None:
+    """文字列（str）および文字列リスト（list[str]）は正常に読み込まれる。"""
     (tmp_path / "en.json").write_text(
         json.dumps(
             {
                 "valid_key": "Valid Text",
+                "days_short": ["Sun", "Mon", "Tue"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    sm = _mock_settings_manager("en")
+    translator = Translator(sm, locales_dir=tmp_path)
+
+    assert translator.translate("valid_key") == "Valid Text"
+    assert translator.translate("days_short") == ["Sun", "Mon", "Tue"]
+    assert translator("days_short") == ["Sun", "Mon", "Tue"]
+
+
+def test_invalid_entries_in_json_dict_are_filtered_out(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """数値・null・入れ子dict・非文字列要素を含むリスト等はスキップし、正常な項目は保持する。"""
+    (tmp_path / "en.json").write_text(
+        json.dumps(
+            {
+                "valid_key": "Valid Text",
+                "valid_list": ["a", "b"],
                 "num_val": 123,
-                "list_val": ["a"],
                 "null_val": None,
+                "dict_val": {"nested": "value"},
+                "mixed_list": ["a", 1],
+                "int_list": [1, 2],
             }
         ),
         encoding="utf-8",
@@ -76,8 +99,27 @@ def test_non_string_values_in_json_dict_are_filtered_out(
         translator = Translator(sm, locales_dir=tmp_path)
 
     assert translator.translate("valid_key") == "Valid Text"
+    assert translator.translate("valid_list") == ["a", "b"]
     assert translator.translate("num_val") == "num_val"
+    assert translator.translate("null_val") == "null_val"
+    assert translator.translate("dict_val") == "dict_val"
+    assert translator.translate("mixed_list") == "mixed_list"
+    assert translator.translate("int_list") == "int_list"
     assert (
         sum("non-string translation entry" in r.getMessage() for r in caplog.records)
-        == 3
+        == 5
     )
+
+
+def test_real_locales_load_calendar_weekday_lists() -> None:
+    """実際の locales/ ディレクトリから days_short と weekdays_full が正しく読み込める。"""
+    sm = _mock_settings_manager("ja")
+    translator = Translator(sm)
+
+    ja_days = translator("days_short")
+    assert isinstance(ja_days, list)
+    assert ja_days == ["日", "月", "火", "水", "木", "金", "土"]
+
+    ja_weekdays = translator("weekdays_full")
+    assert isinstance(ja_weekdays, list)
+    assert ja_weekdays == ["月", "火", "水", "木", "金", "土", "日"]

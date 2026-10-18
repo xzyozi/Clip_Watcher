@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 _DEFAULT_LOCALES_DIR = str(Path(__file__).resolve().parents[2] / "locales")
 
 
+TranslationValue = str | list[str]
+
+
 class Translator:
     """
     Handles translation of UI strings.
@@ -39,8 +42,8 @@ class Translator:
             _DEFAULT_LOCALES_DIR if locales_dir is None else os.fspath(locales_dir)
         )
         self.locales_dir: str = str(Path(resolved_dir).resolve())
-        self.translations: dict[str, dict[str, str]] = self._load_translations(
-            self.locales_dir
+        self.translations: dict[str, dict[str, TranslationValue]] = (
+            self._load_translations(self.locales_dir)
         )
         raw_lang = self.settings_manager.get_setting("language", self.default_lang)
         self.current_lang: str = (
@@ -52,9 +55,11 @@ class Translator:
         )
         logger.info(f"Translator initialized. Current language: {self.current_lang}")
 
-    def _load_translations(self, locales_dir: str) -> dict[str, dict[str, str]]:
+    def _load_translations(
+        self, locales_dir: str
+    ) -> dict[str, dict[str, TranslationValue]]:
         """Loads all .json translation files from the specified directory."""
-        translations: dict[str, dict[str, str]] = {}
+        translations: dict[str, dict[str, TranslationValue]] = {}
         if not os.path.isdir(locales_dir):
             logger.error(f"Locales directory not found: {locales_dir}")
             return translations
@@ -78,18 +83,24 @@ class Translator:
                     )
                     continue
 
-                valid_entries: dict[str, str] = {}
+                valid_entries: dict[str, TranslationValue] = {}
                 for k, v in raw_data.items():
-                    if isinstance(k, str) and isinstance(v, str):
-                        valid_entries[k] = v
-                    else:
-                        logger.warning(
-                            "Skipping non-string translation entry in %s: key=%r (%s), value=%s",
-                            filepath,
-                            k,
-                            type(k).__name__,
-                            type(v).__name__,
-                        )
+                    if isinstance(k, str):
+                        if isinstance(v, str):
+                            valid_entries[k] = v
+                            continue
+                        if isinstance(v, list) and all(
+                            isinstance(item, str) for item in v
+                        ):
+                            valid_entries[k] = v
+                            continue
+                    logger.warning(
+                        "Skipping non-string translation entry in %s: key=%r (%s), value=%s",
+                        filepath,
+                        k,
+                        type(k).__name__,
+                        type(v).__name__,
+                    )
 
                 translations[lang_code] = valid_entries
                 logger.info(f"Loaded translation file: {filename}")
@@ -106,7 +117,7 @@ class Translator:
             logger.info(f"Language changed to: {self.current_lang}")
             self.settings_manager.event_dispatcher.dispatch("LANGUAGE_CHANGED")
 
-    def translate(self, key: str) -> str:
+    def translate(self, key: str) -> Any:
         """
         Translates a given key into the current language.
         Falls back to the default language if the key is not found in the current one.
@@ -116,7 +127,7 @@ class Translator:
             key, self.translations.get(self.default_lang, {}).get(key, key)
         )
 
-    def get(self, key: str, default: str | None = None) -> str:
+    def get(self, key: str, default: Any = None) -> Any:
         """Translates a key with an optional default fallback, similar to dict.get."""
         translated = self.translate(key)
         if translated == key and default is not None:
@@ -124,5 +135,5 @@ class Translator:
         return translated
 
     # Alias for translate for shorter calls
-    def __call__(self, key: str) -> str:
+    def __call__(self, key: str) -> Any:
         return self.translate(key)
