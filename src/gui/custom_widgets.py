@@ -1,7 +1,8 @@
+import sys
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import Event
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 # translator が未指定の場合に使用する簡易フォールバック辞書。
 _FALLBACK_LABELS: dict[str, str] = {
@@ -12,6 +13,24 @@ _FALLBACK_LABELS: dict[str, str] = {
 }
 
 LANGUAGE_CHANGED_EVENT = "LANGUAGE_CHANGED"
+
+
+def bind_context_menu(widget: tk.Misc, callback: Callable[[Event], Any]) -> None:
+    """プラットフォームの差分を吸収して右クリック（コンテキストメニュー）をバインドする。
+
+    - macOS (Aqua Tk):
+        - <Button-2>: トラックパッドの副ボタンタップ等の右クリックイベント
+        - <Button-3>: 外付けマウス等の右クリックイベント
+        - <Control-Button-1>: macOS標準の Control+クリック（副ボタン相当）
+    - Windows / Linux:
+        - <Button-3>: 標準の右クリックイベント
+    """
+    if sys.platform == "darwin":
+        widget.bind("<Button-2>", callback, add="+")  # type: ignore[call-overload]
+        widget.bind("<Button-3>", callback, add="+")  # type: ignore[call-overload]
+        widget.bind("<Control-Button-1>", callback, add="+")  # type: ignore[call-overload]
+    else:
+        widget.bind("<Button-3>", callback, add="+")  # type: ignore[call-overload]
 
 
 def _fallback_translator(key: str) -> str:
@@ -54,7 +73,7 @@ class ContextMenuMixin:
         self.context_menu = tk.Menu(self, tearoff=0)  # type: ignore
         self._build_menu()
 
-        self.bind("<Button-3>", self.show_context_menu)  # type: ignore
+        bind_context_menu(cast(tk.Misc, self), self.show_context_menu)
         # Rebuild the menu if the language changes
         if self._language_events is not None:
             self._language_events.subscribe(LANGUAGE_CHANGED_EVENT, self._rebuild_menu)
@@ -86,21 +105,21 @@ class ContextMenuMixin:
             label=self.translator("select_all"), command=self.select_all
         )
 
-    def show_context_menu(self, event: Event) -> None:
+    def show_context_menu(self, event: Event) -> str:
         """Display the context menu at the cursor's position."""
         # Enable/disable menu items based on widget state
         has_selection = False
         try:
             if self.selection_get():  # type: ignore
                 has_selection = True
-        except tk.TclError:
+        except (tk.TclError, AttributeError):
             pass  # No selection
 
         can_paste = False
         try:
             if self.clipboard_get():  # type: ignore
                 can_paste = True
-        except tk.TclError:
+        except (tk.TclError, AttributeError):
             pass  # Nothing to paste
 
         # Use integer indices to configure menu items, which is language-independent
@@ -115,6 +134,7 @@ class ContextMenuMixin:
         )  # 2: Paste
 
         self.context_menu.tk_popup(event.x_root, event.y_root)
+        return "break"
 
     def cut(self) -> None:
         self.event_generate("<<Cut>>")  # type: ignore

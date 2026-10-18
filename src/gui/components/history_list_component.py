@@ -68,11 +68,12 @@ class HistoryListComponent(tk.Frame):
         self.tree.bind("<<TreeviewSelect>>", self._on_history_select)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
         from src.gui.base import context_menu
+        from src.gui.custom_widgets import bind_context_menu
 
         history_context_menu: HistoryContextMenu = context_menu.HistoryContextMenu(
             self.master, self.app
         )  # type: ignore
-        self.tree.bind("<Button-3>", history_context_menu.show)
+        bind_context_menu(self.tree, history_context_menu.show)
 
     def _on_double_click(self, event: tk.Event) -> None:
         """Handler for double-click events to copy an item."""
