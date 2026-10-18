@@ -3,7 +3,6 @@
 ApplicationBuilder と MainApplication へのホットキー・ウィンドウ状態組み込み検証。
 """
 
-import sys
 from unittest.mock import MagicMock, patch
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
@@ -11,9 +10,7 @@ from src.core.platform.services import PlatformServices
 from src.core.window.window_state_manager import WindowState
 
 
-def test_application_builder_component_injection(
-    platform_services: PlatformServices,
-) -> None:
+def test_application_builder_component_injection() -> None:
     mock_root = MagicMock()
 
     with (
@@ -34,21 +31,33 @@ def test_application_builder_component_injection(
         mock_hrm = MagicMock()
         mock_hrm_cls.return_value = mock_hrm
 
-        builder = (
-            ApplicationBuilder(platform_services)
+        # Windows 向け PlatformServices での検証
+        win_services = PlatformServices(platform_name="win32")
+        builder_win = (
+            ApplicationBuilder(win_services)
             .with_event_dispatcher()
             .with_window_state_manager(mock_root)
             .with_global_hotkey_listener(mock_root)
             .with_hotkey_registration_manager()
         )
 
-        assert builder.window_state_manager is mock_wsm
-        if sys.platform == "win32":
-            assert builder.hotkey_listener is mock_hkl
-            assert builder.hotkey_registration_manager is mock_hrm
-        else:
-            assert builder.hotkey_listener is None
-            assert builder.hotkey_registration_manager is None
+        assert builder_win.window_state_manager is mock_wsm
+        assert builder_win.hotkey_listener is mock_hkl
+        assert builder_win.hotkey_registration_manager is mock_hrm
+
+        # 非 Windows (非対応) PlatformServices での検証
+        non_win_services = PlatformServices(platform_name="darwin")
+        builder_non_win = (
+            ApplicationBuilder(non_win_services)
+            .with_event_dispatcher()
+            .with_window_state_manager(mock_root)
+            .with_global_hotkey_listener(mock_root)
+            .with_hotkey_registration_manager()
+        )
+
+        assert builder_non_win.window_state_manager is mock_wsm
+        assert builder_non_win.hotkey_listener is None
+        assert builder_non_win.hotkey_registration_manager is None
 
 
 def test_main_application_hotkey_and_window_integration(

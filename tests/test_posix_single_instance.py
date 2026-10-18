@@ -60,6 +60,7 @@ class TestPosixSingleInstanceController:
 
         with (
             patch("pathlib.Path.mkdir"),
+            patch.dict(sys.modules, {"fcntl": MagicMock()}),
             patch("builtins.open", side_effect=PermissionError("Permission denied")),
         ):
             with pytest.raises(SingleInstanceError) as exc_info:
