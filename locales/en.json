@@ -56,6 +56,7 @@
     "help_menu": "Help",
     "how_to_use_menu_item": "How to Use",
     "about_menu_item": "About",
+    "calendar_first_weekday": "sunday",
     "days_short": [
         "Sun",
         "Mon",

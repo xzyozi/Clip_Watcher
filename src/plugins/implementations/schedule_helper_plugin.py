@@ -73,7 +73,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
         key = "calendar_first_weekday"
         first_day_str: str = self.app.translator(key)  # type: ignore
         if first_day_str == key:  # Key not found, use default
-            first_day_str = "monday"
+            first_day_str = "sunday"
 
         day_map = {
             "monday": calendar.MONDAY,
@@ -84,7 +84,7 @@ class ScheduleHelperComponent(BaseFrameGUI):
             "saturday": calendar.SATURDAY,
             "sunday": calendar.SUNDAY,
         }
-        first_day = day_map.get(first_day_str.lower(), calendar.MONDAY)
+        first_day = day_map.get(first_day_str.lower(), calendar.SUNDAY)
         calendar.setfirstweekday(first_day)
 
         # Redraw the calendar and update the text widget to reflect changes
@@ -198,10 +198,20 @@ class ScheduleHelperComponent(BaseFrameGUI):
         )
 
         days: list[str] = self.app.translator("days_short")  # type: ignore
-        for i, day in enumerate(days):
-            ttk.Label(self.calendar_frame, text=day, width=5, anchor="center").grid(
-                row=0, column=i, padx=2, pady=2
+        first_w = calendar.firstweekday()
+        for col in range(7):
+            # days_short は [日, 月, 火, 水, 木, 金, 土] (日=0, 月=1, ..., 土=6) の順序。
+            # 各列 col に対応する Python の weekday は (first_w + col) % 7 (0=月..6=日)。
+            # したがって days_short 内のインデックスは (target_weekday + 1) % 7 となる。
+            target_weekday = (first_w + col) % 7
+            day_label = (
+                days[(target_weekday + 1) % 7]
+                if isinstance(days, list) and len(days) == 7
+                else str(col)
             )
+            ttk.Label(
+                self.calendar_frame, text=day_label, width=5, anchor="center"
+            ).grid(row=0, column=col, padx=2, pady=2)
 
         month_calendar = calendar.monthcalendar(self.current_year, self.current_month)
         for r, week in enumerate(month_calendar, 1):
