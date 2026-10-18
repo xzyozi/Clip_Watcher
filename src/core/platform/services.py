@@ -86,10 +86,21 @@ class PlatformServices:
                 platform_name=name,
             )
         if name == "darwin":
-            from src.core.platform.macos import MacOSClipboardReader
+            from src.core.platform.macos import (
+                MacOSClipboardReader,
+                MacOSProcessInspector,
+            )
 
             return cls(
+                process_inspector=MacOSProcessInspector(),
                 clipboard_reader=MacOSClipboardReader(),
+                platform_name=name,
+            )
+        if name.startswith("linux"):
+            from src.core.platform.linux import LinuxProcessInspector
+
+            return cls(
+                process_inspector=LinuxProcessInspector(),
                 platform_name=name,
             )
         return cls(platform_name=name)

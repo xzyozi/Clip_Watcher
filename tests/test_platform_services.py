@@ -113,16 +113,18 @@ class TestForCurrentPlatform:
         assert exc_info.value.feature == "clipboard_reader"
         assert services.process_inspector() is not None
 
-    def test_darwin_provides_clipboard_reader_only(self) -> None:
-        """macOS (darwin) は ClipboardReader を提供し、他機能は非対応として扱う。"""
+    def test_darwin_provides_clipboard_reader_and_process_inspector(
+        self,
+    ) -> None:
+        """macOS (darwin) は ClipboardReader と ProcessInspector を提供し、他機能は非対応として扱う。"""
         services = PlatformServices.for_current_platform("darwin")
 
-        from src.core.platform.protocols import ClipboardReader
+        from src.core.platform.protocols import ClipboardReader, ProcessInspector
 
         assert isinstance(services.clipboard_reader(), ClipboardReader)
+        assert isinstance(services.process_inspector(), ProcessInspector)
 
         for feature in (
-            "process_inspector",
             "sound_player",
             "single_instance",
             "paste_sender",
@@ -132,12 +134,15 @@ class TestForCurrentPlatform:
             assert exc_info.value.feature == feature
             assert exc_info.value.platform == "darwin"
 
-    def test_linux_provides_no_adapters(self) -> None:
-        """Linux は現時点でアダプターを持たず、全機能が UnsupportedFeatureError となる。"""
+    def test_linux_provides_process_inspector(self) -> None:
+        """Linux は ProcessInspector を提供し、他機能は UnsupportedFeatureError となる。"""
         services = PlatformServices.for_current_platform("linux")
 
+        from src.core.platform.protocols import ProcessInspector
+
+        assert isinstance(services.process_inspector(), ProcessInspector)
+
         for feature in (
-            "process_inspector",
             "sound_player",
             "single_instance",
             "paste_sender",
