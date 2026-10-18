@@ -2,10 +2,10 @@
 title: "コア層起動監視イベント制御詳細設計書"
 file_name: "CLW-DD-002_コア層起動監視イベント制御詳細設計書.md"
 document_type: "detailed_design"
-version: "1.0"
+version: "1.5"
 created_at: "2026-08-31"
-updated_at: "2026-08-31"
-author: "未記載"
+updated_at: "2026-10-18"
+author: "Antigravity"
 purpose: "コア層の起動、クリップボード監視、イベント・コマンド制御の責務と連携契約を定義するため"
 related_documents:
   - "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
@@ -20,10 +20,10 @@ related_documents:
 | 文書番号       | CLW-DD-002                                         |
 | ファイル名     | CLW-DD-002_コア層起動監視イベント制御詳細設計書.md |
 | ドキュメント名 | コア層起動監視イベント制御詳細設計書               |
-| 版数           | Rev.1.0                                            |
-| 改訂日         | 2026-08-31                                         |
+| 版数           | Rev.1.5                                            |
+| 改訂日         | 2026-10-18                                         |
 | 作成日         | 2026-08-31                                         |
-| 作成者         | 未記載                                             |
+| 作成者         | Antigravity                                        |
 
 ---
 
@@ -41,8 +41,9 @@ related_documents:
 | `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                                                                                                                                                                                                   |
 | `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                                                                                                                                                                                                           |
 | `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                                                                                                                                                                                                         |
-| `platform/`    | **OS抽象化・アダプター**（詳細は§6）<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`, `ClipboardReader`等）。<br>・`services.py`: OS実装の選択を一元化する `PlatformServices`。<br>・`errors.py`: `PlatformError` / `UnsupportedFeatureError` / `SingleInstanceError`。<br>・`windows/`: Windows具象アダプター。<br>・`null/`: ホットキー用の暫定Nullアダプターのみ（#150で廃止予定）。 |
+| `platform/`    | **OS抽象化・アダプター**（詳細は§6）<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`, `SingleInstanceController`, `PasteSender`, `ClipboardReader`, `StartupController`, `HotkeyListener`等）。<br>・`services.py`: OS実装の選択を一元化する `PlatformServices`。<br>・`errors.py`: `PlatformError` / `UnsupportedFeatureError` / `SingleInstanceError`。<br>・`windows/` / `macos/` / `linux/` / `posix/`: 各OS向け具象アダプター。<br>・`null/`: 廃止完了（成功偽装の排除 #150, #161）。 |
 | `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                                                                                                                                                                                                                 |
+
 
 ---
 
@@ -146,25 +147,29 @@ sequenceDiagram
 - 状態を変更する操作（更新、削除など）は `src/core/events/commands.py` に定義されたコマンドオブジェクトにカプセル化されます。これにより、将来的に `undo()` メソッドを呼ぶだけでデータベースと GUI の状態を元に戻すことができます。
 
 
-## 6. プラットフォーム抽象レイヤー設計 (#158)
+## 6. プラットフォーム抽象レイヤー設計 (#158, #161)
 
-OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**どのOSでどの実装を使うかの選択は `PlatformServices` の1箇所**に集約します。各クラスが `sys.platform` で分岐して自前でアダプターを生成することは行いません。
+OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**どのOSでどの実装を使うかの選択は `PlatformServices` の1箇所**に集約します。各クラスが `sys.platform` で分岐して自前でアダプターを生成することは行いません。また、外部ライブラリを原則追加せずOS標準機能・APIを活用する「ゼロインストール原則」を維持します。
 
 ### 6.1 対象範囲
 
-| 区分               | 機能                                                                                                | 扱い                                                                                                                                                  |
-| :----------------- | :-------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 本設計の対象       | `ProcessInspector` / `SoundPlayer` / `SingleInstanceController` / `PasteSender` / `ClipboardReader` | `PlatformServices` から取得する。                                                                                                                     |
-| 対象外（暫定維持） | `HotkeyListener`                                                                                    | Windows限定。`ApplicationBuilder.with_global_hotkey_listener()` の分岐と `NullHotkeyListener` を #150 まで維持する。                                  |
-| 本設計の対象（追加）| macOS 向け `ClipboardReader` の具象実装 (`MacOSClipboardReader`)                                    | `pbpaste` を使用したゼロインストール実装 (#170)。Linux 向けは別途扱う。                                                                                |
-| 対象外             | GUI描画・テーマ制御                                                                                 | [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とする。 |
+| 機能                       | Windows                                | macOS                                                          | Linux                                                          | 備考                                                                                                              |
+| :------------------------- | :------------------------------------- | :------------------------------------------------------------- | :------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+| `ProcessInspector`         | `WindowsProcessInspector`              | `MacOSProcessInspector` (`ctypes` AppKit / `osascript`)        | `LinuxProcessInspector` (`xprop` / `comm` / `WM_CLASS`)        | 最前面プロセスの実行ファイル名取得。macOSはアクセシビリティ権限不要なAppKit優先。                                 |
+| `SoundPlayer`              | `WindowsSoundPlayer` (`winsound`)      | `MacOSSoundPlayer` (`/usr/bin/afplay`)                         | `LinuxSoundPlayer` (`paplay` / `canberra-gtk-play` 等)         | コピー通知音再生。非ブロッキング非同期実行。                                                                      |
+| `SingleInstanceController` | `WindowsSingleInstanceController`      | `PosixSingleInstanceController` (`fcntl.flock`)                | `PosixSingleInstanceController` (`fcntl.flock`)                | 二重起動防止。POSIX共通でロックファイルによる非ブロッキング排他制御。                                              |
+| `PasteSender`              | `WindowsPasteSender` (`keybd_event`)   | `MacOSPasteSender` (`osascript` Cmd+V)                         | `LinuxPasteSender` (`xdotool` Ctrl+V)                          | 履歴選択時の自動貼り付けキーストローク送信。                                                                      |
+| `ClipboardReader`          | `WindowsClipboardReader` (`pywin32`)   | `MacOSClipboardReader` (`/usr/bin/pbpaste` #170)               | 非対応（Tkinter標準フォールバック）                            | `clipboard_get()` 失敗時の代替テキスト読み取り。                                                                 |
+| `StartupController`        | `WindowsStartupController` (HKCU Run)  | `MacOSStartupController` (LaunchAgents plist)                  | `LinuxStartupController` (XDG autostart desktop)               | システム起動/ログイン時の自動起動制御。バッチファイル脆弱性を根本解消 (#110, #155)。                              |
+| `HotkeyListener`           | `WindowsHotkeyListener` (RegisterHotKey)| 非対応 (`UnsupportedFeatureError`)                             | 非対応 (`UnsupportedFeatureError`)                             | グローバルホットキー。`NullHotkeyListener` を全廃し、未対応環境では明示的に無効化・UI案内する (#150, #161)。      |
 
 ### 6.2 `PlatformServices` の契約
 
 | 項目     | 仕様                                                                                                                                                         |
 | :------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 生成     | コンストラクタで各アダプター（未対応は `None`）を受け取る。本番用は `PlatformServices.for_current_platform()` で生成する。生成は `start_app()` の1箇所のみ。 |
-| 取得     | `process_inspector()` / `sound_player()` / `single_instance()` / `paste_sender()` / `clipboard_reader()` のメソッドで取得する。                              |
+| 取得     | `process_inspector()` / `sound_player()` / `single_instance()` / `paste_sender()` / `clipboard_reader()` / `startup_controller()` のメソッドで取得する。    |
+| ホットキー | `create_hotkey_listener(master, on_triggered)` ファクトリメソッドで生成する。Windows 以外では `UnsupportedFeatureError` を送出する。                         |
 | 非対応時 | 対応するアダプターが無い場合、取得メソッドは `UnsupportedFeatureError` を送出する。`None` や成功を装うNull実装は返さない。                                   |
 | 不変性   | 生成後にアダプターを差し替えない。テストではコンストラクタにモックを渡す（`sys.platform` の差し替えは使わない）。                                            |
 
@@ -174,14 +179,15 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | :------------------------ | :----------------- | :----------------------------------------------------------------------------------------------------- |
 | `PlatformError`           | `ClipWatcherError` | プラットフォーム層の共通親。                                                                           |
 | `UnsupportedFeatureError` | `PlatformError`    | 非対応の機能を要求した。`feature`（例: `"sound_player"`）と `platform`（`sys.platform`）を属性に持つ。 |
-| `SingleInstanceError`     | `PlatformError`    | 排他ロック取得APIの失敗（`CreateMutexW` の失敗など）。重複起動とは区別する。                           |
+| `SingleInstanceError`     | `PlatformError`    | 排他ロック取得APIの失敗（`CreateMutexW` や `fcntl.flock` の失敗など）。重複起動とは区別する。           |
 
 ### 6.4 注入経路
 
 1. `start_app()` が `PlatformServices.for_current_platform()` を生成する。
-2. `ApplicationBuilder(platform_services)` がコンストラクタで受け取って保持する（`with_platform_adapters()` は廃止し、後から設定する経路は設けない）。
-3. ビルダーが `ClipboardMonitor` / `MainApplication` へ必須引数 `platform_services` として渡す。`NotificationManager` は `ApplicationBuilder.build()` が同じ `platform_services` で生成し、`SETTINGS_CHANGED` を購読させた上で `MainApplication` へ渡す（`ClipboardMonitor` は通知を保持しない, #169）。
-4. 各クラスは使う場所で取得し、`UnsupportedFeatureError` を捕捉して明示的に縮退する。コンストラクタでのデフォルト生成（`_create_default_*`）は行わない。
+2. `ApplicationBuilder(platform_services)` がコンストラクタで受け取って保持する。
+3. ビルダーが `ClipboardMonitor` / `MainApplication` へ必須引数 `platform_services` として渡す。
+4. `with_global_hotkey_listener()` では、`platform_services.create_hotkey_listener()` を試行し、`UnsupportedFeatureError` 送出時は `hotkey_listener = None`, `hotkey_registration_manager = None` として配線する（`sys.platform` 直分岐や Null 実装は廃止）。
+5. 各クラスは使う場所で取得し、`UnsupportedFeatureError` を捕捉して明示的に縮退する。
 
 ### 6.5 非対応時の縮退仕様
 
@@ -192,8 +198,10 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `ProcessInspector`         | `ClipboardMonitor`    | 起動時に `WARNING` を1回出す。`excluded_apps` が設定されている場合は `ERROR` に格上げする。除外判定は行わず、履歴保存は継続する。                                                    |
 | `SoundPlayer`              | `NotificationManager` | 再生をスキップし、`DEBUG` ログを出す。                                                                                                                                               |
 | `PasteSender`              | `MainApplication`     | 「自動貼り付けは非対応。クリップボードには内容を設定済み」の `WARNING` を出して継続する。                                                                                            |
-| `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。Windows では `WindowsClipboardReader`、macOS では `MacOSClipboardReader` を提供。非対応環境（Linux、または `pywin32` 未導入のWindows）は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。 |
-| `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。ロックファイルによる代替実装は別Issueとする。                                                                                 |
+| `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。Windows・macOS 以外の非対応環境は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。                       |
+| `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。                                                                                                                              |
+| `StartupController`        | `MainApplication`     | 起動時の同期処理で `WARNING` を出し、自動起動設定の変更処理をスキップする。                                                                                                          |
+| `HotkeyListener`           | `SettingsWindow` / UI | 設定UIで「Windows限定」である旨を表示し、設定保存時のバリデーションで「このプラットフォームではサポートされていません」エラーを表示して不正登録を防止する。                           |
 
 ### 6.6 `SingleInstanceController.acquire()` の契約
 
@@ -203,20 +211,27 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `False`               | 他のインスタンスが起動中。 | 「Already Running」を表示して終了する。                                                             |
 | `SingleInstanceError` | ロック取得APIが失敗した。  | `start_app()` の `try` 内で捕捉し、エラーを表示してログに記録して終了する。重複起動として扱わない。 |
 
-`release()` は未取得の状態で呼んでも何もしない（冪等）。
+`release()` は未取得の状態で呼んでも何もしない（冪等）。POSIX実装（`PosixSingleInstanceController`）では `fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)` を用い、ファイルディスクリプタを保持して二重起動を排他します。
 
 ### 6.6a `ClipboardReader` と `ClipboardMonitor` の責務 (#169, #170)
 
 - `ClipboardReader.read_text() -> str | None` は、失敗時 `None`、テキスト形式が処理できない場合は空文字を返す。
-  - Windows実装 `WindowsClipboardReader` は生成時に `win32clipboard` / `pywintypes` を import し、未導入なら `ImportError` を送出する。`PlatformServices.for_current_platform()` はこれを捕捉し、`clipboard_reader` のみを非対応として扱う（他のアダプターは有効）。
-  - macOS実装 `MacOSClipboardReader` は標準コマンド `/usr/bin/pbpaste` を使用してクリップボードのテキストを読み取る（外部依存なしのゼロインストール実装、タイムアウト1.0秒）。
-- `win32_available`（`DependencyStatus`）は診断表示用に限定し、機能の有無の判定には使わない。`ClipboardMonitor` は `win32_available` 引数と `win32clipboard` の直接 import を持たない。
-- `ClipboardMonitor` はクリップボードの監視・変更検知・書き込み（`update_clipboard`）に専念する。履歴操作は `HistoryService`、通知は `NotificationManager` を呼び出し側が直接参照する。`UpdateHistoryCommand` も `HistoryService` を受け取る。
-- `QuickTaskDialog` は Tkinter の `clipboard_clear()` / `clipboard_append()` を直接呼ばず、`app.monitor.update_clipboard()` を経由する。
+  - Windows実装 `WindowsClipboardReader`: 生成時に `win32clipboard` / `pywintypes` を import し、未導入なら `ImportError` を送出。
+  - macOS実装 `MacOSClipboardReader`: 標準コマンド `/usr/bin/pbpaste` を使用してクリップボードのテキストを読み取る（外部依存なしのゼロインストール実装、タイムアウト1.0秒）。
+- `ClipboardMonitor` はクリップボードの監視・変更検知・書き込み（`update_clipboard`）に専念し、履歴操作は `HistoryService`、通知は `NotificationManager` を呼び出し側が直接参照する。
 
-### 6.7 依存方向
+### 6.6b `StartupController` と自動起動セキュリティ (#110, #155)
 
-`platform/windows/` の具象アダプターは `platform/protocols.py` のみに依存します。`WindowsPasteSender` は `src/core/platform/windows/paste_sender.py` に置き、`src/core/hotkey/` との相互依存を作りません。ただし `WindowsHotkeyListener` の別名はホットキー対応（#150）まで現状維持とします。
+旧実装で存在した、スタートアップフォルダへのバッチファイル（`ClipWatcher.bat`）配置によるパス埋め込み・展開起因のインジェクション脆弱性を根本解消しました。
+- **Windows**: `winreg` を用い、ユーザーレジストリ（`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`）に引用符で囲んだ絶対実行パスを安全に登録・削除。旧 `ClipWatcher.bat` がスタートアップフォルダに残存している場合は自動検出して削除・クリーンアップ。
+- **macOS**: `~/Library/LaunchAgents/com.clipwatcher.app.plist` を標準の `plistlib` で生成・削除。
+- **Linux**: XDG autostart 仕様に準拠し、`~/.config/autostart/clipwatcher.desktop` を生成・削除。
+
+### 6.7 依存方向と副作用分離 (#141)
+
+- プラットフォーム具象アダプターは `platform/protocols.py` のみに依存し、サービス層やGUI層に依存しません。
+- **設定ウィンドウにおける副作用の分離 (#141)**:
+  `SettingsWindow._validate_pending_values()` では `parse_hotkey_string()` によるホットキーの構文解析のみを実施し、OSへのホットキー再登録（`reconfigure()`）は行いません。実際の再登録処理は、設定値が確定・保存された後に発行される `SETTINGS_CHANGED` イベントを契機として `MainApplication.on_settings_changed()` で実施します。これにより、キャンセル時や他の設定値検証エラー時にホットキーのみ先行して書き換わる不整合を完全に防止しています。
 
 ## 7. テスト・検証要件
 
@@ -229,7 +244,10 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 - `MainApplication` が `PasteSender` 非対応時に警告ログを出して継続することを確認する。
 - `ClipboardMonitor` が、tkinter 失敗時に `ClipboardReader` へフォールバックし、非対応時は `WARNING` を1回だけ出して `None` を返すことを確認する。
 - `WindowsClipboardReader` が、fakeモジュール注入で `pywin32` なしの環境でも検証でき、`pywin32` 未導入時に `ImportError` を送出することを確認する。
-- `start_app()` が、`SingleInstanceError` を捕捉してエラー終了し、`False`（重複起動）と区別することを確認する。
+- `PosixSingleInstanceController` が、`fcntl.flock` を使用して排他ロックを取得し、重複起動を正しく検出することを確認する。
+- `MacOSProcessInspector`, `LinuxProcessInspector`, `MacOSSoundPlayer`, `LinuxSoundPlayer`, `MacOSPasteSender`, `LinuxPasteSender` の単体テストを確認する。
+- `StartupController` の各OS向け実装（レジストリ、plist、desktop）の登録・解除および旧バッチ削除を確認する。
+- ホットキー非対応環境において `SettingsWindow` がエラーメッセージを出して不正入力を防止し、副作用が生じないこと（#141）を確認する。
 - 上記は windows / ubuntu の両CIで通ること。
 
 ## 8. 改訂履歴
@@ -241,3 +259,5 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | Rev.1.2 | 2026-10-13 | 未記載      | `PlatformServices` への実装選択の集約、例外階層、注入経路、非対応時の縮退仕様、`acquire()` の契約を§6に追加し、テスト要件を更新 (#158)。                                                   |
 | Rev.1.3 | 2026-10-15 | 未記載      | `ClipboardReader` の追加と `win32_available` の診断用途への限定、`ClipboardMonitor` の責務を監視に限定（履歴・通知の委譲を除去）、`QuickTaskDialog` の書き込み経路を §6.6a に追加 (#169)。 |
 | Rev.1.4 | 2026-10-18 | Antigravity | macOS 向け `ClipboardReader` 実装（`MacOSClipboardReader` / `pbpaste`）の追加と実機検証要件の反映 (#170)。                                                    |
+| Rev.1.5 | 2026-10-18 | Antigravity | macOS/Linux 向け各具象アダプター拡充、`PosixSingleInstanceController`、`StartupController`新設とWindowsレジストリ移行（#110, #155）、`NullHotkeyListener`全廃（#150）、ホットキー検証の副作用分離（#141）を反映 (#161)。 |
+

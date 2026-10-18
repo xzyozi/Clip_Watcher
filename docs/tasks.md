@@ -38,7 +38,7 @@
 - [x] [CW-0036] [bug] 二重起動防止のTCP固定ポートがWindows動的除外ポートと競合し「Already Running」と誤判定されて起動できない <!-- priority:medium issue:#102 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0037] [feat] 複数行・危険コマンドのコピー前に警告する <!-- priority:medium issue:#103 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0038] [security] clipboard_monitor におけるプロセス名比較の大文字小文字不一致によるパスワードマネージャー除外バイパス <!-- priority:medium issue:#109 theme:security stage:ready added:2026-10-01 completed:2026-10-07 -->
-- [ ] [CW-0039] [security] app_main におけるスタートアップバッチ生成時のパスエスケープ不足とPATHハイジャックリスク <!-- priority:medium issue:#110 theme:security stage:ready added:2026-10-01 -->
+- [x] [CW-0039] [security] app_main におけるスタートアップバッチ生成時のパスエスケープ不足とPATHハイジャックリスク <!-- priority:medium issue:#110 theme:security stage:ready added:2026-10-01 completed:2026-10-18 --> (統合先: #161)
 - [x] [CW-0040] [security] config_resolver における workspace_root の未検証パス解決によるNTLM漏洩および設定改変リスク <!-- priority:medium issue:#111 theme:security stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
 - [ ] [CW-0041] [edge_cases] global_hotkey_listener における GetMessageW 戻り値 -1（エラー値）の未判定による無限ループとCPU枯渇リスク <!-- priority:medium issue:#112 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [x] [CW-0042] [edge_cases] classifier における正規表現子プロセス異常終了（EOF/切断）時の EOFError 未捕捉によるアプリクラッシュ <!-- priority:medium issue:#113 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
@@ -69,8 +69,9 @@
 - [x] [CW-0067] [security] i18n におけるJSON読み込み時のデータ型検証欠落による未捕捉例外クラッシュおよびCWD依存パス解決 <!-- priority:medium issue:#138 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [x] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [x] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
-- [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-18 --> (統合先: #161)
 - [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
 - [x] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [x] [CW-0073] [feat] macOS 向け ClipboardReader 実装とクリップボード取得の実機確認 <!-- priority:medium issue:#170 theme:platform stage:completed added:2026-10-18 completed:2026-10-18 -->
+- [x] [CW-0074] [feat] 非Windows(macOS/Linux)環境向けのプラットフォーム機能対応 <!-- priority:medium issue:#161 theme:platform stage:completed added:2026-10-18 completed:2026-10-18 -->
 
