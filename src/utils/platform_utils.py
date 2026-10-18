@@ -5,8 +5,12 @@ OSプラットフォーム固有のシステム情報・環境検知ユーティ
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
+from collections.abc import Sequence
+
+logger = logging.getLogger(__name__)
 
 
 def is_macos_dark_mode() -> bool:
@@ -176,3 +180,84 @@ def apply_macos_aqua_appearance(root: object | None = None) -> bool:
         return True
     except Exception:
         return False
+
+
+# プラットフォームごとの推奨フォールバックフォント優先順位
+_PLATFORM_FALLBACK_FONTS: dict[str, list[str]] = {
+    "darwin": ["Helvetica", "Arial", "San Francisco", "Menlo", "Courier"],
+    "win32": ["Segoe UI", "Arial", "Consolas", "Courier New", "MS Gothic"],
+    "linux": ["DejaVu Sans", "Liberation Sans", "Ubuntu", "FreeSans", "Helvetica"],
+}
+
+_STANDARD_TK_FONTS = frozenset(
+    {
+        "TkDefaultFont",
+        "TkFixedFont",
+        "TkMenuFont",
+        "TkHeadingFont",
+        "TkCaptionFont",
+        "TkSmallCaptionFont",
+        "TkIconFont",
+        "TkTooltipFont",
+        "TkTextFont",
+        "",
+    }
+)
+
+
+def resolve_safe_font_family(
+    font_family: str,
+    available_families: Sequence[str] | None = None,
+) -> str:
+    """指定されたフォントファミリが現在の環境で利用可能か検証し、安全なフォント名を返す。
+
+    1. Tk の標準フォント（例: 'TkDefaultFont'）や空文字はそのまま許可する。
+    2. 指定されたフォント名が利用可能フォント（available_families または font.families()）
+       に存在する場合（大文字小文字の違いを含む）は、そのフォント名を返す。
+    3. 存在しない場合（例: Windows 固有の 'FixedSys' が macOS 上で指定された場合等）は、
+       プラットフォーム別の推奨フォントまたは 'TkDefaultFont' へ安全にフォールバックする。
+    """
+    if not font_family or font_family in _STANDARD_TK_FONTS:
+        return font_family or "TkDefaultFont"
+
+    # 利用可能フォントリストの解決
+    families: Sequence[str] = ()
+    if available_families is not None:
+        families = available_families
+    else:
+        try:
+            import tkinter.font as tkfont
+
+            families = tkfont.families()
+        except Exception:
+            # Tk ルート未初期化等の場合は検証できないため、元のフォント名をそのまま返す
+            return font_family
+
+    if not families:
+        return font_family
+
+    # 大文字小文字を区別しない完全一致チェック
+    family_map = {f.lower(): f for f in families}
+    if font_family.lower() in family_map:
+        return family_map[font_family.lower()]
+
+    # 存在しない場合はプラットフォーム別の推奨フォントへフォールバック
+    preferred = _PLATFORM_FALLBACK_FONTS.get(
+        sys.platform, _PLATFORM_FALLBACK_FONTS["linux"]
+    )
+    for pref in preferred:
+        if pref.lower() in family_map:
+            logger.warning(
+                "Font '%s' is not available on %s. Falling back to '%s'.",
+                font_family,
+                sys.platform,
+                family_map[pref.lower()],
+            )
+            return family_map[pref.lower()]
+
+    logger.warning(
+        "Font '%s' is not available on %s and no preferred fallback found. Falling back to 'TkDefaultFont'.",
+        font_family,
+        sys.platform,
+    )
+    return "TkDefaultFont"

@@ -14,6 +14,7 @@ from src.gui.components import HistoryListComponent
 # from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomEntry, CustomText
 from src.gui.windows.meta_management_window import MetaManagementFrame
+from src.utils.platform_utils import resolve_safe_font_family
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
@@ -452,10 +453,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         history_font_family: str,
         history_font_size: int,
     ) -> None:
+        # Issue #197: 存在しないフォント名が保存されている場合は安全な有効フォントに解決
+        safe_clipboard_family = resolve_safe_font_family(clipboard_content_font_family)
+        safe_history_family = resolve_safe_font_family(history_font_family)
+
         clipboard_font = font.Font(
-            family=clipboard_content_font_family, size=clipboard_content_font_size
+            family=safe_clipboard_family, size=clipboard_content_font_size
         )
-        history_font = font.Font(family=history_font_family, size=history_font_size)
+        history_font = font.Font(family=safe_history_family, size=history_font_size)
         self.clipboard_text_widget.config(font=clipboard_font)
         self.history_component.apply_font(history_font)
 

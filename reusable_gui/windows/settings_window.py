@@ -321,6 +321,16 @@ class SettingsWindow(tk.Toplevel):
             self._translatable_widgets.append((lbl, "label_with_colon", f.label))
             font_families = sorted(font.families())
             var = self._vars[f.key]
+            current_val = var.get()
+            # Issue #197: 存在しないフォント名が保存されている場合は安全な有効フォントにサニタイズ
+            try:
+                from src.utils.platform_utils import resolve_safe_font_family
+
+                safe_val = resolve_safe_font_family(current_val, font_families)
+            except Exception:
+                safe_val = current_val
+            if current_val != safe_val:
+                var.set(safe_val)
             menu = ttk.OptionMenu(parent, var, var.get(), *font_families)  # type: ignore[arg-type]
             menu.grid(
                 row=row,
