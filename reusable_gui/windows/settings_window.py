@@ -16,7 +16,7 @@ import tkinter as tk
 from collections import defaultdict
 from functools import partial
 from tkinter import filedialog, font, messagebox, simpledialog, ttk
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from reusable_gui.core.config import defaults as config
 from reusable_gui.core.config.schema import SettingField, WidgetType
@@ -50,15 +50,15 @@ class SettingsWindow(tk.Toplevel):
         ):
             app_instance.theme_manager.apply_theme_to_toplevel(self)  # type: ignore
 
-        self.title("Settings")
-        self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
-        self.resizable(True, True)
-
         self.settings_manager = settings_manager
         self.app_instance = app_instance
 
         self.initial_settings = copy.deepcopy(self.settings_manager.settings)
         self.settings_saved = False
+
+        self.title(self._tr("Settings"))
+        self.geometry(config.SETTINGS_WINDOW_GEOMETRY)
+        self.resizable(True, True)
 
         # スキーマ取得
         self._schema: list[SettingField] = self._get_schema()
@@ -70,8 +70,14 @@ class SettingsWindow(tk.Toplevel):
         self._list_vars: dict[str, list[str]] = {}
         self._listbox_widgets: dict[str, tk.Listbox] = {}
 
+        # 動的言語更新用ウィジェット追跡
+        self._translatable_widgets: list[tuple[tk.Widget, str, str]] = []
+        self._group_frames: list[tuple[ttk.LabelFrame, str]] = []
+        self._tab_frames: dict[str, ttk.Frame] = {}
+
         self._init_variables()
         self._build_ui()
+        self._init_language_listener()
 
     def _get_schema(self) -> list[SettingField]:
         """設定ウィンドウが使用するスキーマを返す。
@@ -148,13 +154,60 @@ class SettingsWindow(tk.Toplevel):
                 tab_groups[f.tab] = defaultdict(list)
             tab_groups[f.tab][f.group].append(f)
 
-        self._tab_frames: dict[str, ttk.Frame] = {}
+        self._tab_frames.clear()
 
         for tab_name in tab_order:
             frame = ttk.Frame(self.notebook, padding=config.FRAME_PADDING)
-            self.notebook.add(frame, text=tab_name)
+            self.notebook.add(frame, text=self._tr(tab_name))
             self._tab_frames[tab_name] = frame
             self._render_tab(frame, tab_groups[tab_name])
+
+    def _init_language_listener(self) -> None:
+        """LANGUAGE_CHANGED イベントを購読する。"""
+        self._event_dispatcher = getattr(self.app, "event_dispatcher", None) or getattr(
+            self.settings_manager, "event_dispatcher", None
+        )
+        if self._event_dispatcher and hasattr(self._event_dispatcher, "subscribe"):
+            self._event_dispatcher.subscribe(
+                "LANGUAGE_CHANGED", self._on_language_changed
+            )
+
+    def _on_language_changed(self, *args: Any) -> None:
+        """言語変更通知を受信した際に、全UI要素のテキストを動的に再翻訳する。"""
+        try:
+            if not self.winfo_exists():
+                return
+        except tk.TclError:
+            return
+
+        self.title(self._tr("Settings"))
+
+        if hasattr(self, "notebook") and hasattr(self, "_tab_frames"):
+            for tab_name, frame in self._tab_frames.items():
+                try:
+                    self.notebook.tab(frame, text=self._tr(tab_name))
+                except (tk.TclError, KeyError):
+                    pass
+
+        if hasattr(self, "_group_frames"):
+            for lf, group_name in self._group_frames:
+                try:
+                    if lf.winfo_exists():
+                        lf.configure(text=self._tr(group_name))
+                except (tk.TclError, KeyError):
+                    pass
+
+        if hasattr(self, "_translatable_widgets"):
+            for widget, kind, raw_text in self._translatable_widgets:
+                try:
+                    if not widget.winfo_exists():
+                        continue
+                    if kind == "text":
+                        cast(Any, widget).configure(text=self._tr(raw_text))
+                    elif kind == "label_with_colon":
+                        cast(Any, widget).configure(text=f"{self._tr(raw_text)}:")
+                except (tk.TclError, KeyError):
+                    pass
 
     def _tr(self, text: str) -> str:
         """翻訳サービスが存在する場合はテキストを翻訳し、なければそのまま返す。"""
@@ -182,6 +235,8 @@ class SettingsWindow(tk.Toplevel):
                     pady=config.BUTTON_PADDING_Y,
                     padx=config.BUTTON_PADDING_X,
                 )
+                if isinstance(container, ttk.LabelFrame):
+                    self._group_frames.append((container, group_name))
             else:
                 container = ttk.Frame(parent, padding=config.FRAME_PADDING)
                 container.pack(fill=tk.X)
@@ -203,6 +258,7 @@ class SettingsWindow(tk.Toplevel):
                 padx=config.BUTTON_PADDING_X,
                 pady=config.BUTTON_PADDING_Y,
             )
+            self._translatable_widgets.append((cb, "text", f.label))
             return row + 1
 
         elif f.widget_type == WidgetType.SPINBOX:
@@ -214,6 +270,7 @@ class SettingsWindow(tk.Toplevel):
                 padx=config.BUTTON_PADDING_X,
                 pady=config.BUTTON_PADDING_Y,
             )
+            self._translatable_widgets.append((lbl, "label_with_colon", f.label))
             sp = ttk.Spinbox(
                 parent,
                 from_=f.min_value,
@@ -240,6 +297,7 @@ class SettingsWindow(tk.Toplevel):
                 padx=config.BUTTON_PADDING_X,
                 pady=config.BUTTON_PADDING_Y,
             )
+            self._translatable_widgets.append((lbl, "label_with_colon", f.label))
             var = self._vars[f.key]
             menu = ttk.OptionMenu(parent, var, var.get(), *f.choices)  # type: ignore[arg-type]
             menu.grid(
@@ -260,6 +318,7 @@ class SettingsWindow(tk.Toplevel):
                 padx=config.BUTTON_PADDING_X,
                 pady=config.BUTTON_PADDING_Y,
             )
+            self._translatable_widgets.append((lbl, "label_with_colon", f.label))
             font_families = sorted(font.families())
             var = self._vars[f.key]
             menu = ttk.OptionMenu(parent, var, var.get(), *font_families)  # type: ignore[arg-type]
@@ -281,6 +340,7 @@ class SettingsWindow(tk.Toplevel):
                 padx=config.BUTTON_PADDING_X,
                 pady=config.BUTTON_PADDING_Y,
             )
+            self._translatable_widgets.append((lbl, "label_with_colon", f.label))
             entry = ttk.Entry(parent, textvariable=self._vars[f.key], width=f.width)
             entry.grid(
                 row=row,
@@ -318,6 +378,7 @@ class SettingsWindow(tk.Toplevel):
             padx=config.BUTTON_PADDING_X,
             pady=config.BUTTON_PADDING_Y,
         )
+        self._translatable_widgets.append((lbl, "label_with_colon", f.label))
 
         var = self._vars[f.key]
         entry = ttk.Entry(parent, textvariable=var, width=f.width, state="readonly")
@@ -393,22 +454,24 @@ class SettingsWindow(tk.Toplevel):
         for item in self._list_vars[f.key]:
             listbox.insert(tk.END, item)
         listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self._listbox_widgets[f.key] = listbox
-
         btn_frame = ttk.Frame(wrapper)
         btn_frame.pack(side=tk.LEFT, padx=(10, 0))
 
-        ttk.Button(
+        add_btn = ttk.Button(
             btn_frame,
-            text="Add",
+            text=self._tr("Add"),
             command=partial(self._add_list_item, f.key),
-        ).pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        )
+        add_btn.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        self._translatable_widgets.append((add_btn, "text", "Add"))
 
-        ttk.Button(
+        remove_btn = ttk.Button(
             btn_frame,
-            text="Remove",
+            text=self._tr("Remove"),
             command=partial(self._remove_list_item, f.key),
-        ).pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        )
+        remove_btn.pack(fill=tk.X, pady=config.BUTTON_PADDING_Y)
+        self._translatable_widgets.append((remove_btn, "text", "Remove"))
 
     def _build_action_buttons(self) -> None:
         """Import / Export / Restore Defaults / Save / Cancel / Apply ボタンを構築する。"""
@@ -421,35 +484,59 @@ class SettingsWindow(tk.Toplevel):
             padx=config.BUTTON_PADDING_X,
         )
 
-        ttk.Button(
-            io_frame, text="Export Settings", command=self._export_settings
-        ).pack(side=tk.LEFT)
-        ttk.Button(
-            io_frame, text="Import Settings", command=self._import_settings
-        ).pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
-        ttk.Button(
-            io_frame, text="Restore Defaults", command=self._restore_defaults
-        ).pack(side=tk.LEFT)
+        export_btn = ttk.Button(
+            io_frame, text=self._tr("Export Settings"), command=self._export_settings
+        )
+        export_btn.pack(side=tk.LEFT)
+        self._translatable_widgets.append((export_btn, "text", "Export Settings"))
+
+        import_btn = ttk.Button(
+            io_frame, text=self._tr("Import Settings"), command=self._import_settings
+        )
+        import_btn.pack(side=tk.LEFT, padx=config.BUTTON_PADDING_X)
+        self._translatable_widgets.append((import_btn, "text", "Import Settings"))
+
+        restore_btn = ttk.Button(
+            io_frame, text=self._tr("Restore Defaults"), command=self._restore_defaults
+        )
+        restore_btn.pack(side=tk.LEFT)
+        self._translatable_widgets.append((restore_btn, "text", "Restore Defaults"))
 
         # Save / Cancel / Apply
         btn_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
         btn_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
-        ttk.Button(btn_frame, text="Save", command=self._save_and_close).pack(
-            side=tk.RIGHT, padx=(10, 0)
+        save_btn = ttk.Button(
+            btn_frame, text=self._tr("Save"), command=self._save_and_close
         )
-        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
-        ttk.Button(btn_frame, text="Apply", command=self._apply_only).pack(
-            side=tk.RIGHT
+        save_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        self._translatable_widgets.append((save_btn, "text", "Save"))
+
+        cancel_btn = ttk.Button(
+            btn_frame, text=self._tr("Cancel"), command=self.destroy
         )
+        cancel_btn.pack(side=tk.RIGHT)
+        self._translatable_widgets.append((cancel_btn, "text", "Cancel"))
+
+        apply_btn = ttk.Button(
+            btn_frame, text=self._tr("Apply"), command=self._apply_only
+        )
+        apply_btn.pack(side=tk.RIGHT)
+        self._translatable_widgets.append((apply_btn, "text", "Apply"))
 
     # ------------------------------------------------------------------
     # リスト操作（LISTBOX_EDIT）
     # ------------------------------------------------------------------
 
     def _add_list_item(self, key: str) -> None:
+        prompt_tmpl = self._tr("Enter value for '{key}':")
+        prompt = (
+            prompt_tmpl.format(key=key)
+            if "{key}" in prompt_tmpl
+            else f"{prompt_tmpl} {key}"
+        )
         new_item: str | None = simpledialog.askstring(
-            "Add Item", f"Enter value for '{key}':", parent=self
+            self._tr("Add Item"), prompt, parent=self
         )
         if new_item and new_item not in self._list_vars[key]:
             self._list_vars[key].append(new_item)
@@ -512,38 +599,54 @@ class SettingsWindow(tk.Toplevel):
     def _export_settings(self) -> None:
         filepath: str | None = filedialog.asksaveasfilename(
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Export Settings",
+            filetypes=[
+                (self._tr("JSON files"), "*.json"),
+                (self._tr("All files"), "*.*"),
+            ],
+            title=self._tr("Export Settings"),
         )
         if filepath:
             self.settings_manager.save_settings_to_file(filepath)
             logger.info("Settings exported to %s", filepath)
-            messagebox.showinfo("Export Successful", f"Settings exported to {filepath}")
+            msg_tmpl = self._tr("Settings exported to {filepath}")
+            msg = (
+                msg_tmpl.format(filepath=filepath)
+                if "{filepath}" in msg_tmpl
+                else f"{msg_tmpl}: {filepath}"
+            )
+            messagebox.showinfo(self._tr("Export Successful"), msg)
 
     def _import_settings(self) -> bool:
         filepath: str | None = filedialog.askopenfilename(
             defaultextension=".json",
-            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
-            title="Import Settings",
+            filetypes=[
+                (self._tr("JSON files"), "*.json"),
+                (self._tr("All files"), "*.*"),
+            ],
+            title=self._tr("Import Settings"),
         )
         if filepath:
             if self.settings_manager.load_settings_from_file(filepath):
                 self._update_ui_from_settings()
                 messagebox.showinfo(
-                    "Import Successful", "Settings imported successfully."
+                    self._tr("Import Successful"),
+                    self._tr("Settings imported successfully."),
                 )
                 return True
             else:
                 logger.error("Could not load settings from: %s", filepath)
                 messagebox.showerror(
-                    "Import Failed", "Could not load settings from the selected file."
+                    self._tr("Import Failed"),
+                    self._tr("Could not load settings from the selected file."),
                 )
         return False
 
     def _restore_defaults(self) -> None:
         if messagebox.askyesno(
-            "Restore Defaults",
-            "Are you sure you want to restore all settings to their default values?",
+            self._tr("Restore Defaults"),
+            self._tr(
+                "Are you sure you want to restore all settings to their default values?"
+            ),
         ):
             self.settings_manager.settings = (
                 self.settings_manager._get_default_settings()
@@ -552,6 +655,18 @@ class SettingsWindow(tk.Toplevel):
             logger.info("Settings restored to defaults.")
 
     def destroy(self) -> None:
+        if (
+            hasattr(self, "_event_dispatcher")
+            and self._event_dispatcher
+            and hasattr(self._event_dispatcher, "unsubscribe")
+        ):
+            try:
+                self._event_dispatcher.unsubscribe(
+                    "LANGUAGE_CHANGED", self._on_language_changed
+                )
+            except Exception:
+                pass
+
         if (
             not self.settings_saved
             and self.settings_manager.settings != self.initial_settings

@@ -86,3 +86,56 @@ def test_rebuild_menu_recreates_entries() -> None:
 
 def test_mixin_has_no_app_attribute_contract() -> None:
     assert "app" not in ContextMenuMixin.__init__.__code__.co_varnames
+
+
+def test_bind_context_menu_on_darwin() -> None:
+    """macOS (darwin) では Button-2, Button-3, Control-Button-1 がバインドされること。"""
+    from src.gui.custom_widgets import bind_context_menu
+
+    widget = MagicMock()
+    callback = MagicMock()
+
+    with patch("sys.platform", "darwin"):
+        bind_context_menu(widget, callback)
+
+    bound_events = [c.args[0] for c in widget.bind.call_args_list]
+    assert "<Button-2>" in bound_events
+    assert "<Button-3>" in bound_events
+    assert "<Control-Button-1>" in bound_events
+    for c in widget.bind.call_args_list:
+        assert c.kwargs.get("add") == "+"
+        assert c.args[1] is callback
+
+
+def test_bind_context_menu_on_non_darwin() -> None:
+    """非 macOS (win32, linux) では Button-3 のみがバインドされること。"""
+    from src.gui.custom_widgets import bind_context_menu
+
+    widget_win = MagicMock()
+    callback = MagicMock()
+
+    with patch("sys.platform", "win32"):
+        bind_context_menu(widget_win, callback)
+
+    bound_events_win = [c.args[0] for c in widget_win.bind.call_args_list]
+    assert bound_events_win == ["<Button-3>"]
+
+    widget_linux = MagicMock()
+    with patch("sys.platform", "linux"):
+        bind_context_menu(widget_linux, callback)
+
+    bound_events_linux = [c.args[0] for c in widget_linux.bind.call_args_list]
+    assert bound_events_linux == ["<Button-3>"]
+
+
+def test_show_context_menu_returns_break() -> None:
+    """show_context_menu は後続のデフォルト動作を抑制するために 'break' を返すこと。"""
+    widget, menu = _construct()
+    event = MagicMock()
+    event.x_root = 100
+    event.y_root = 150
+
+    result = widget.show_context_menu(event)
+
+    menu.tk_popup.assert_called_once_with(100, 150)
+    assert result == "break"
