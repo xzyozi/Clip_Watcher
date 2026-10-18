@@ -146,6 +146,11 @@ class PlatformServices:
 
             return WindowsHotkeyListener(master, on_triggered=on_triggered)
 
+        if self._platform_name == "darwin":
+            from src.core.platform.macos.hotkey import MacOSHotkeyListener
+
+            return MacOSHotkeyListener(master, on_triggered=on_triggered)
+
         raise UnsupportedFeatureError("hotkey_listener", self._platform_name)
 
     def process_inspector(self) -> ProcessInspector:

@@ -151,10 +151,10 @@ class TestForCurrentPlatform:
         assert isinstance(services.paste_sender(), PasteSender)
         assert isinstance(services.startup_controller(), StartupController)
 
-        with pytest.raises(UnsupportedFeatureError) as exc_info:
-            services.create_hotkey_listener(MagicMock(), MagicMock())
-        assert exc_info.value.feature == "hotkey_listener"
-        assert exc_info.value.platform == "darwin"
+        from src.core.platform.protocols import HotkeyListener
+
+        listener = services.create_hotkey_listener(MagicMock(), MagicMock())
+        assert isinstance(listener, HotkeyListener)
 
     def test_linux_provides_all_adapters_except_clipboard_reader(
         self,

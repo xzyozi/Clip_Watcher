@@ -1,3 +1,5 @@
+import sys
+
 # version of the application
 APP_VERSION = "0.1.2"
 
@@ -40,7 +42,9 @@ DEFAULT_USER_SETTINGS = {
     "quick_task_delete_on_copy": True,
     "copy_warning_enabled": False,
     "global_hotkey_enabled": True,
-    "global_hotkey_combo": "Ctrl+Shift+F",
+    "global_hotkey_combo": (
+        "Cmd+Shift+F" if sys.platform == "darwin" else "Ctrl+Shift+F"
+    ),
     "pinned_hotkey_bindings": {},
 }
 

@@ -157,9 +157,9 @@ def test_with_clipboard_monitor_passes_platform_services(
     assert monitor_class.call_args.args[-1] is platform_services
 
 
-def test_with_global_hotkey_listener_non_windows() -> None:
-    """ホットキー非対応環境で with_global_hotkey_listener が None を設定することを検証する。"""
-    services = PlatformServices(platform_name="darwin")
+def test_with_global_hotkey_listener_unsupported_platform() -> None:
+    """ホットキー非対応環境 (Linux) で with_global_hotkey_listener が None を設定することを検証する。"""
+    services = PlatformServices(platform_name="linux")
 
     builder = ApplicationBuilder(services)
     builder.event_dispatcher = MagicMock()
@@ -171,3 +171,17 @@ def test_with_global_hotkey_listener_non_windows() -> None:
 
     builder.with_hotkey_registration_manager()
     assert builder.hotkey_registration_manager is None
+
+
+def test_with_global_hotkey_listener_darwin() -> None:
+    """macOS (darwin) で with_global_hotkey_listener がリスナーを設定することを検証する。"""
+    from src.core.platform.macos.hotkey import MacOSHotkeyListener
+
+    services = PlatformServices(platform_name="darwin")
+    builder = ApplicationBuilder(services)
+    builder.event_dispatcher = MagicMock()
+    mock_handler = MagicMock()
+
+    result = builder.with_global_hotkey_listener(mock_handler)
+    assert result is builder
+    assert isinstance(builder.hotkey_listener, MacOSHotkeyListener)

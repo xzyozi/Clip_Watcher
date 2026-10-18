@@ -24,10 +24,74 @@ _MODIFIER_MAP = {
     "ctrl": MOD_CONTROL,
     "control": MOD_CONTROL,
     "alt": MOD_ALT,
+    "opt": MOD_ALT,
+    "option": MOD_ALT,
     "shift": MOD_SHIFT,
     "win": MOD_WIN,
     "super": MOD_WIN,
+    "cmd": MOD_WIN,
+    "command": MOD_WIN,
 }
+
+# macOS Carbon HotKey 修飾キー定数
+DARWIN_CMD = 0x0100
+DARWIN_SHIFT = 0x0200
+DARWIN_OPT = 0x0800
+DARWIN_CTRL = 0x1000
+
+_DARWIN_MODIFIER_MAP = {
+    "cmd": DARWIN_CMD,
+    "command": DARWIN_CMD,
+    "win": DARWIN_CMD,
+    "super": DARWIN_CMD,
+    "shift": DARWIN_SHIFT,
+    "opt": DARWIN_OPT,
+    "option": DARWIN_OPT,
+    "alt": DARWIN_OPT,
+    "ctrl": DARWIN_CTRL,
+    "control": DARWIN_CTRL,
+}
+
+# macOS Carbon ANSI 仮想キーコード
+_DARWIN_KEY_MAP = {
+    "A": 0,
+    "B": 11,
+    "C": 8,
+    "D": 2,
+    "E": 14,
+    "F": 3,
+    "G": 5,
+    "H": 4,
+    "I": 34,
+    "J": 38,
+    "K": 40,
+    "L": 37,
+    "M": 46,
+    "N": 45,
+    "O": 31,
+    "P": 35,
+    "Q": 12,
+    "R": 15,
+    "S": 1,
+    "T": 17,
+    "U": 32,
+    "V": 9,
+    "W": 13,
+    "X": 7,
+    "Y": 16,
+    "Z": 6,
+    "0": 29,
+    "1": 18,
+    "2": 19,
+    "3": 20,
+    "4": 21,
+    "5": 23,
+    "6": 22,
+    "7": 26,
+    "8": 28,
+    "9": 25,
+}
+_DARWIN_VK_TO_KEY = {v: k for k, v in _DARWIN_KEY_MAP.items()}
 
 
 # GetMessageW の戻り値を分類した結果。
@@ -55,21 +119,34 @@ def classify_get_message_result(ret: int) -> str:
 
 @dataclass(frozen=True)
 class HotkeyRegistration:
-    """Windows に登録するホットキーの不変な定義。"""
+    """ホットキーの不変な定義。"""
 
     hotkey_id: int
     modifiers: int
     vk_code: int
 
 
-def parse_hotkey_string(combo: str) -> tuple[int, int]:
-    """`Ctrl+Shift+F` 形式を Windows の修飾子と仮想キーコードへ変換する。"""
+def parse_hotkey_string(combo: str, platform: str | None = None) -> tuple[int, int]:
+    """`Ctrl+Shift+F` または `Cmd+Shift+F` 形式を修飾子と仮想キーコードへ変換する。"""
+    target_platform = platform if platform is not None else sys.platform
     parts = [part.strip().lower() for part in combo.split("+") if part.strip()]
     if len(parts) < 2:
         raise ValueError(f"ホットキー文字列の形式が不正です: {combo!r}")
 
     modifiers = 0
     key_part = parts[-1]
+
+    if target_platform == "darwin":
+        for modifier in parts[:-1]:
+            if modifier not in _DARWIN_MODIFIER_MAP:
+                raise ValueError(f"不明な修飾キーです: {modifier!r}")
+            modifiers |= _DARWIN_MODIFIER_MAP[modifier]
+
+        key_upper = key_part.upper()
+        if key_upper not in _DARWIN_KEY_MAP:
+            raise ValueError(f"対応していない主キーです: {key_part!r}")
+        return modifiers, _DARWIN_KEY_MAP[key_upper]
+
     for modifier in parts[:-1]:
         if modifier not in _MODIFIER_MAP:
             raise ValueError(f"不明な修飾キーです: {modifier!r}")
@@ -80,9 +157,27 @@ def parse_hotkey_string(combo: str) -> tuple[int, int]:
     return modifiers, ord(key_part.upper())
 
 
-def format_hotkey(modifiers: int, vk_code: int) -> str:
-    """Windows の修飾子と仮想キーコードを正規化したキー文字列へ変換する。"""
+def format_hotkey(modifiers: int, vk_code: int, platform: str | None = None) -> str:
+    """修飾子と仮想キーコードを正規化したキー文字列へ変換する。"""
+    target_platform = platform if platform is not None else sys.platform
     parts: list[str] = []
+
+    if target_platform == "darwin":
+        if modifiers & DARWIN_CMD:
+            parts.append("Cmd")
+        if modifiers & DARWIN_CTRL:
+            parts.append("Ctrl")
+        if modifiers & DARWIN_OPT:
+            parts.append("Opt")
+        if modifiers & DARWIN_SHIFT:
+            parts.append("Shift")
+        key_str = _DARWIN_VK_TO_KEY.get(vk_code)
+        if key_str:
+            parts.append(key_str)
+        else:
+            parts.append(chr(vk_code))
+        return "+".join(parts)
+
     if modifiers & MOD_CONTROL:
         parts.append("Ctrl")
     if modifiers & MOD_ALT:
