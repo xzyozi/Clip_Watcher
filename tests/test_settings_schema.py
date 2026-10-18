@@ -73,11 +73,11 @@ def test_os_specific_settings_labels() -> None:
 
     with patch("sys.platform", "darwin"):
         assert _get_startup_label() == "Start at Login"
-        assert _get_hotkey_label() == "Enable Global Hotkey (Windows only)"
+        assert _get_hotkey_label() == "Enable Global Hotkey"
 
     with patch("sys.platform", "linux"):
         assert _get_startup_label() == "Start on System Boot"
-        assert _get_hotkey_label() == "Enable Global Hotkey (Windows only)"
+        assert _get_hotkey_label() == "Enable Global Hotkey (Windows/macOS only)"
 
     with patch("sys.platform", "win32"):
         assert _get_startup_label() == "Start with Windows"
@@ -88,6 +88,10 @@ def test_os_specific_settings_labels() -> None:
     assert translator.translate("Start with Windows") == "Windows 起動時に自動起動"
     assert translator.translate("Start at Login") == "ログイン時に自動起動"
     assert translator.translate("Start on System Boot") == "システム起動時に自動起動"
+    assert (
+        translator.translate("Enable Global Hotkey (Windows/macOS only)")
+        == "グローバルホットキーを有効にする (Windows/macOS限定)"
+    )
     assert (
         translator.translate("Enable Global Hotkey (Windows only)")
         == "グローバルホットキーを有効にする (Windows限定)"

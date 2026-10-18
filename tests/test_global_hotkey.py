@@ -22,11 +22,11 @@ from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManage
 
 
 def test_parse_hotkey_string_valid() -> None:
-    mods, vk = parse_hotkey_string("Ctrl+Shift+F")
+    mods, vk = parse_hotkey_string("Ctrl+Shift+F", platform="win32")
     assert mods == (MOD_CONTROL | MOD_SHIFT)
     assert vk == ord("F")
 
-    mods2, vk2 = parse_hotkey_string("Alt+Control+Shift+K")
+    mods2, vk2 = parse_hotkey_string("Alt+Control+Shift+K", platform="win32")
     assert mods2 == (MOD_ALT | MOD_CONTROL | MOD_SHIFT)
     assert vk2 == ord("K")
 
@@ -43,7 +43,7 @@ def test_parse_hotkey_string_invalid() -> None:
 
 
 def test_format_hotkey() -> None:
-    formatted = format_hotkey(MOD_CONTROL | MOD_SHIFT, ord("F"))
+    formatted = format_hotkey(MOD_CONTROL | MOD_SHIFT, ord("F"), platform="win32")
     assert formatted == "Ctrl+Shift+F"
 
 
@@ -72,7 +72,7 @@ def test_hotkey_registration_manager_disable() -> None:
 
 def test_hotkey_registration_manager_conflict_fallback() -> None:
     mock_listener = MagicMock()
-    manager = HotkeyRegistrationManager(mock_listener)
+    manager = HotkeyRegistrationManager(mock_listener, platform="win32")
 
     # 1. 最初キー A を正常登録
     mock_listener.start.return_value = True

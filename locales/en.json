@@ -105,6 +105,7 @@
     "Start on System Boot": "Start on System Boot",
     "Enable Global Hotkey": "Enable Global Hotkey",
     "Enable Global Hotkey (Windows only)": "Enable Global Hotkey (Windows only)",
+    "Enable Global Hotkey (Windows/macOS only)": "Enable Global Hotkey (Windows/macOS only)",
     "Settings": "Settings",
     "General": "General",
     "Appearance": "Appearance",
