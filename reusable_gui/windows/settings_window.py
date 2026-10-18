@@ -164,9 +164,8 @@ class SettingsWindow(tk.Toplevel):
 
     def _init_language_listener(self) -> None:
         """LANGUAGE_CHANGED イベントを購読する。"""
-        self._event_dispatcher = (
-            getattr(self.app, "event_dispatcher", None)
-            or getattr(self.settings_manager, "event_dispatcher", None)
+        self._event_dispatcher = getattr(self.app, "event_dispatcher", None) or getattr(
+            self.settings_manager, "event_dispatcher", None
         )
         if self._event_dispatcher and hasattr(self._event_dispatcher, "subscribe"):
             self._event_dispatcher.subscribe(
@@ -507,15 +506,21 @@ class SettingsWindow(tk.Toplevel):
         btn_frame = ttk.Frame(self, padding=config.FRAME_PADDING)
         btn_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
-        save_btn = ttk.Button(btn_frame, text=self._tr("Save"), command=self._save_and_close)
+        save_btn = ttk.Button(
+            btn_frame, text=self._tr("Save"), command=self._save_and_close
+        )
         save_btn.pack(side=tk.RIGHT, padx=(10, 0))
         self._translatable_widgets.append((save_btn, "text", "Save"))
 
-        cancel_btn = ttk.Button(btn_frame, text=self._tr("Cancel"), command=self.destroy)
+        cancel_btn = ttk.Button(
+            btn_frame, text=self._tr("Cancel"), command=self.destroy
+        )
         cancel_btn.pack(side=tk.RIGHT)
         self._translatable_widgets.append((cancel_btn, "text", "Cancel"))
 
-        apply_btn = ttk.Button(btn_frame, text=self._tr("Apply"), command=self._apply_only)
+        apply_btn = ttk.Button(
+            btn_frame, text=self._tr("Apply"), command=self._apply_only
+        )
         apply_btn.pack(side=tk.RIGHT)
         self._translatable_widgets.append((apply_btn, "text", "Apply"))
 
@@ -650,7 +655,11 @@ class SettingsWindow(tk.Toplevel):
             logger.info("Settings restored to defaults.")
 
     def destroy(self) -> None:
-        if hasattr(self, "_event_dispatcher") and self._event_dispatcher and hasattr(self._event_dispatcher, "unsubscribe"):
+        if (
+            hasattr(self, "_event_dispatcher")
+            and self._event_dispatcher
+            and hasattr(self._event_dispatcher, "unsubscribe")
+        ):
             try:
                 self._event_dispatcher.unsubscribe(
                     "LANGUAGE_CHANGED", self._on_language_changed

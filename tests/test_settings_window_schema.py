@@ -127,8 +127,7 @@ def test_settings_window_initializes_with_japanese_translations(
 
     assert window.title() == "設定"
     tab_texts = [
-        window.notebook.tab(i, "text")
-        for i in range(window.notebook.index("end"))
+        window.notebook.tab(i, "text") for i in range(window.notebook.index("end"))
     ]
     assert "一般" in tab_texts
     assert "履歴" in tab_texts
@@ -169,8 +168,7 @@ def test_settings_window_updates_dynamically_on_language_change(
 
     assert window.title() == "Settings"
     initial_tabs = [
-        window.notebook.tab(i, "text")
-        for i in range(window.notebook.index("end"))
+        window.notebook.tab(i, "text") for i in range(window.notebook.index("end"))
     ]
     assert "General" in initial_tabs
 
@@ -181,8 +179,7 @@ def test_settings_window_updates_dynamically_on_language_change(
     # Apply 後、即座に日本語へ動的更新されていること
     assert window.title() == "設定"
     updated_tabs = [
-        window.notebook.tab(i, "text")
-        for i in range(window.notebook.index("end"))
+        window.notebook.tab(i, "text") for i in range(window.notebook.index("end"))
     ]
     assert "一般" in updated_tabs
     assert "履歴" in updated_tabs
