@@ -113,20 +113,24 @@ class TestForCurrentPlatform:
         assert exc_info.value.feature == "clipboard_reader"
         assert services.process_inspector() is not None
 
-    def test_darwin_provides_clipboard_reader_and_process_inspector(
+    def test_darwin_provides_clipboard_reader_and_process_inspector_and_single_instance(
         self,
     ) -> None:
-        """macOS (darwin) は ClipboardReader と ProcessInspector を提供し、他機能は非対応として扱う。"""
+        """macOS (darwin) は ClipboardReader, ProcessInspector, SingleInstanceController を提供する。"""
         services = PlatformServices.for_current_platform("darwin")
 
-        from src.core.platform.protocols import ClipboardReader, ProcessInspector
+        from src.core.platform.protocols import (
+            ClipboardReader,
+            ProcessInspector,
+            SingleInstanceController,
+        )
 
         assert isinstance(services.clipboard_reader(), ClipboardReader)
         assert isinstance(services.process_inspector(), ProcessInspector)
+        assert isinstance(services.single_instance(), SingleInstanceController)
 
         for feature in (
             "sound_player",
-            "single_instance",
             "paste_sender",
         ):
             with pytest.raises(UnsupportedFeatureError) as exc_info:
@@ -134,17 +138,20 @@ class TestForCurrentPlatform:
             assert exc_info.value.feature == feature
             assert exc_info.value.platform == "darwin"
 
-    def test_linux_provides_process_inspector(self) -> None:
-        """Linux は ProcessInspector を提供し、他機能は UnsupportedFeatureError となる。"""
+    def test_linux_provides_process_inspector_and_single_instance(self) -> None:
+        """Linux は ProcessInspector と SingleInstanceController を提供する。"""
         services = PlatformServices.for_current_platform("linux")
 
-        from src.core.platform.protocols import ProcessInspector
+        from src.core.platform.protocols import (
+            ProcessInspector,
+            SingleInstanceController,
+        )
 
         assert isinstance(services.process_inspector(), ProcessInspector)
+        assert isinstance(services.single_instance(), SingleInstanceController)
 
         for feature in (
             "sound_player",
-            "single_instance",
             "paste_sender",
             "clipboard_reader",
         ):

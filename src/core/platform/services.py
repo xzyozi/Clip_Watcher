@@ -89,18 +89,24 @@ class PlatformServices:
             from src.core.platform.macos import (
                 MacOSClipboardReader,
                 MacOSProcessInspector,
+                MacOSSingleInstanceController,
             )
 
             return cls(
                 process_inspector=MacOSProcessInspector(),
+                single_instance=MacOSSingleInstanceController(),
                 clipboard_reader=MacOSClipboardReader(),
                 platform_name=name,
             )
         if name.startswith("linux"):
-            from src.core.platform.linux import LinuxProcessInspector
+            from src.core.platform.linux import (
+                LinuxProcessInspector,
+                LinuxSingleInstanceController,
+            )
 
             return cls(
                 process_inspector=LinuxProcessInspector(),
+                single_instance=LinuxSingleInstanceController(),
                 platform_name=name,
             )
         return cls(platform_name=name)
