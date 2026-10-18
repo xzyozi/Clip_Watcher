@@ -14,6 +14,7 @@ class RecordingTree:
         self.rows: dict[str, dict[str, Any]] = {}
         self.item_calls: list[tuple[str, dict[str, Any]]] = []
         self.insert_calls: list[tuple[str, int, str, dict[str, Any]]] = []
+        self.tag_configure_calls: list[tuple[str, dict[str, Any]]] = []
 
     def selection(self) -> tuple[str, ...]:
         return ()
@@ -45,8 +46,7 @@ class RecordingTree:
         return iid
 
     def tag_configure(self, tag: str, **options: Any) -> None:
-        assert tag == "pinned"
-        assert "background" in options
+        self.tag_configure_calls.append((tag, options))
 
     def exists(self, iid: str) -> bool:
         return iid in self.rows
@@ -81,6 +81,7 @@ def make_component(
     component.displayed_hotkey_bindings = {}
     component.current_theme = {}
     component._updating_history = False
+    component.current_font = None
     return component
 
 
@@ -180,3 +181,83 @@ def test_update_history_refreshes_existing_row_when_only_hotkey_changes() -> Non
     assert tree.rows["item-1.0"]["values"] == ("Ctrl+Alt+1",)
     assert tree.item_calls[-1][0] == "item-1.0"
     assert tree.item_calls[-1][1]["values"] == ("Ctrl+Alt+1",)
+
+
+def test_update_history_applies_history_item_tag_to_all_rows() -> None:
+    """Issue #195: 全行に "history_item" タグを付与し、ピン留め行には "pinned" も付与する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+    history = [("pinned item", True, 1.0), ("normal item", False, 2.0)]
+
+    component.update_history(history, THEMES["light"], {})
+
+    assert tree.rows["item-1.0"]["tags"] == ("history_item", "pinned")
+    assert tree.rows["item-2.0"]["tags"] == ("history_item",)
+
+
+def test_update_history_reconfigures_history_item_font_when_current_font_is_set() -> (
+    None
+):
+    """Issue #195: current_font が設定されている場合、update_history で history_item タグにフォントを再設定する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+    dummy_font = SimpleNamespace(metrics=lambda k: 20, cget=lambda k: 14)
+    component.current_font = dummy_font  # type: ignore[assignment]
+
+    component.update_history([("item", False, 1.0)], THEMES["light"], {})
+
+    assert ("history_item", {"font": dummy_font}) in tree.tag_configure_calls
+    assert (
+        "pinned",
+        {"background": THEMES["light"]["pinned_bg"]},
+    ) in tree.tag_configure_calls
+
+
+def test_apply_font_calculates_rowheight_and_configures_tag(monkeypatch: Any) -> None:
+    """Issue #195: apply_font が rowheight を動的計算し、スタイルとタグへ設定する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+    style_calls: list[tuple[str, dict[str, Any]]] = []
+
+    class MockStyle:
+        def __init__(self, master: Any = None) -> None:
+            pass
+
+        def configure(self, style_name: str, **kwargs: Any) -> None:
+            style_calls.append((style_name, kwargs))
+
+    monkeypatch.setattr(
+        "src.gui.components.history_list_component.ttk.Style", MockStyle
+    )
+
+    dummy_font = SimpleNamespace(metrics=lambda k: 18, cget=lambda k: 12)
+    component.apply_font(dummy_font)  # type: ignore[arg-type]
+
+    assert component.current_font is dummy_font
+    # rowheight = max(18 + 8, 22) = 26
+    assert ("History.Treeview", {"font": dummy_font, "rowheight": 26}) in style_calls
+    assert ("history_item", {"font": dummy_font}) in tree.tag_configure_calls
+
+
+def test_apply_font_enforces_minimum_rowheight(monkeypatch: Any) -> None:
+    """Issue #195: 極小フォントでもピン留めアイコンが見切れないよう最低22pxの rowheight を保証する。"""
+    tree = RecordingTree()
+    component = make_component(tree, RecordingIconManager())
+    style_calls: list[tuple[str, dict[str, Any]]] = []
+
+    class MockStyle:
+        def __init__(self, master: Any = None) -> None:
+            pass
+
+        def configure(self, style_name: str, **kwargs: Any) -> None:
+            style_calls.append((style_name, kwargs))
+
+    monkeypatch.setattr(
+        "src.gui.components.history_list_component.ttk.Style", MockStyle
+    )
+
+    dummy_font = SimpleNamespace(metrics=lambda k: 10, cget=lambda k: 8)
+    component.apply_font(dummy_font)  # type: ignore[arg-type]
+
+    # rowheight = max(10 + 8, 22) = 22
+    assert ("History.Treeview", {"font": dummy_font, "rowheight": 22}) in style_calls
