@@ -126,3 +126,51 @@ def test_apply_macos_aqua_appearance_darwin_exception(
     monkeypatch.setattr(sys, "platform", "darwin")
     with patch("ctypes.cdll.LoadLibrary", side_effect=RuntimeError("Test error")):
         assert apply_macos_aqua_appearance(tk_root) is False
+
+
+def test_resolve_safe_font_family_standard_fonts() -> None:
+    """Tk 標準フォントや空文字はそのまま返却される。"""
+    from src.utils.platform_utils import resolve_safe_font_family
+
+    assert resolve_safe_font_family("TkDefaultFont") == "TkDefaultFont"
+    assert resolve_safe_font_family("TkFixedFont") == "TkFixedFont"
+    assert resolve_safe_font_family("") == "TkDefaultFont"
+
+
+def test_resolve_safe_font_family_matching() -> None:
+    """利用可能フォントリスト内に存在するフォント（大文字小文字差異含む）は正規化されて返る。"""
+    from src.utils.platform_utils import resolve_safe_font_family
+
+    available = ["Helvetica", "Courier New", "Arial"]
+    assert resolve_safe_font_family("Helvetica", available) == "Helvetica"
+    assert resolve_safe_font_family("helvetica", available) == "Helvetica"
+    assert resolve_safe_font_family("COURIER NEW", available) == "Courier New"
+
+
+def test_resolve_safe_font_family_fallback_to_platform_preferred(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """存在しないフォントの場合、プラットフォーム推奨フォントへフォールバックする。"""
+    from src.utils.platform_utils import resolve_safe_font_family
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    available_mac = ["Helvetica", "Menlo", "Symbol"]
+    # "FixedSys" は Windows 専用のため、macOS では Helvetica にフォールバック
+    assert resolve_safe_font_family("FixedSys", available_mac) == "Helvetica"
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    available_win = ["Segoe UI", "Consolas", "Symbol"]
+    assert resolve_safe_font_family("Menlo", available_win) == "Segoe UI"
+
+
+def test_resolve_safe_font_family_fallback_to_tk_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """推奨フォントも存在しない場合は安全に TkDefaultFont にフォールバックする。"""
+    from src.utils.platform_utils import resolve_safe_font_family
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert (
+        resolve_safe_font_family("NonExistentFont123", ["Symbol", "Webdings"])
+        == "TkDefaultFont"
+    )
