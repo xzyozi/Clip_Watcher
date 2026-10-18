@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -10,7 +9,7 @@ from typing import TYPE_CHECKING, Any, cast
 from src.db.dto import CategoryDTO, MetaPhraseDTO
 from src.gui.base.base_frame_gui import BaseFrameGUI
 from src.gui.base.base_toplevel_gui import BaseToplevelGUI
-from src.gui.custom_widgets import CustomEntry, CustomText
+from src.gui.custom_widgets import CustomEntry, CustomText, bind_context_menu
 from src.utils.error_handler import log_and_show_error
 
 if TYPE_CHECKING:
@@ -275,11 +274,8 @@ class MetaManagementFrame(BaseFrameGUI):
             self.cat_menu.add_command(
                 label=self.app.translator("edit_category"), command=self.edit_category
             )
-            # プラットフォームに応じた右クリックのバインド (macOSはButton-2, Windows/LinuxはButton-3)
-            if sys.platform == "darwin":
-                self.cat_listbox.bind("<Button-2>", self.show_context_menu)
-            else:
-                self.cat_listbox.bind("<Button-3>", self.show_context_menu)
+            # プラットフォームの差分を吸収して右クリックをバインド
+            bind_context_menu(self.cat_listbox, self.show_context_menu)
 
             # カテゴリボタン群
             cat_btn_frame = ttk.Frame(self.left_frame)
@@ -683,7 +679,7 @@ class MetaManagementFrame(BaseFrameGUI):
                 exc_info=True,
             )
 
-    def show_context_menu(self, event: tk.Event) -> None:
+    def show_context_menu(self, event: tk.Event) -> str | None:
         """右クリック時にコンテキストメニューを表示します。"""
         try:
             clicked_idx = self.cat_listbox.nearest(event.y)
@@ -709,12 +705,14 @@ class MetaManagementFrame(BaseFrameGUI):
                 self.cat_menu.entryconfig(2, state="disabled")
 
             self.cat_menu.tk_popup(event.x_root, event.y_root)
+            return "break"
         except Exception as e:
             self.log_and_show_error(
                 "エラー",
                 f"コンテキストメニュー表示中にエラーが発生しました: {str(e)}",
                 exc_info=True,
             )
+            return None
 
     # ================= 多言語対応 =================
     def on_language_changed(self, event: Any = None) -> None:

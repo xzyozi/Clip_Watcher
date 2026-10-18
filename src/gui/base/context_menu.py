@@ -113,12 +113,13 @@ class BaseContextMenu(ABC):
         if self.dispatcher is not None:
             self.dispatcher.dispatch(event_name, *args)
 
-    def show(self, event: tk.Event) -> None:
+    def show(self, event: tk.Event) -> str:
         """Show the context menu at the event's position."""
         try:
             self.menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.menu.grab_release()
+        return "break"
 
 
 # --- Concrete Implementations ---
@@ -216,7 +217,7 @@ class HistoryContextMenu(BaseContextMenu):
                     command=lambda: self.app.remove_pinned_hotkey_binding(history_id),
                 )
 
-    def show(self, event: tk.Event) -> None:
+    def show(self, event: tk.Event) -> str:
         """Show the context menu, syncing selection to the right-clicked row.
 
         Preconditions:
@@ -238,7 +239,7 @@ class HistoryContextMenu(BaseContextMenu):
         # else: row_iid == "" (空行クリック)。既存の選択状態を変更しない。
 
         self._build_dynamic_menu()
-        super().show(event)
+        return super().show(event)
 
 
 class PhraseListContextMenu(BaseContextMenu):
@@ -269,7 +270,7 @@ class PhraseListContextMenu(BaseContextMenu):
             label=self._translate("delete"), command=self.edit_component._delete_phrase
         )
 
-    def show(self, event: tk.Event) -> None:
+    def show(self, event: tk.Event) -> str:
         try:
             item_index = self.list_component.phrase_listbox.nearest(event.y)
             if not self.list_component.phrase_listbox.selection_includes(item_index):
@@ -278,4 +279,4 @@ class PhraseListContextMenu(BaseContextMenu):
                 self.list_component.phrase_listbox.activate(item_index)
         except tk.TclError:
             pass  # Listbox is empty
-        super().show(event)
+        return super().show(event)
