@@ -357,11 +357,20 @@ class ClipWatcherGUI(BaseFrameGUI):
         )
 
         if not self.clipboard_text_widget.get("1.0", "end-1c"):
-            waiting_text = translator("waiting_for_clipboard_content")
-            self.clipboard_text_widget.insert(tk.END, waiting_text)
-            # 案内文は履歴由来ではないため、未編集のまま履歴へ保存されないよう基準に記録する
-            self._text_source_item_id = None
-            self._text_source_text = waiting_text
+            history_service = getattr(self.app, "history_service", None)
+            current_content = (
+                history_service.last_clipboard_data if history_service else ""
+            )
+            if current_content:
+                self.clipboard_text_widget.insert(tk.END, current_content)
+                self._text_source_item_id = None
+                self._text_source_text = current_content
+            else:
+                waiting_text = translator("waiting_for_clipboard_content")
+                self.clipboard_text_widget.insert(tk.END, waiting_text)
+                # 案内文は履歴由来ではないため、未編集のまま履歴へ保存されないよう基準に記録する
+                self._text_source_item_id = None
+                self._text_source_text = waiting_text
 
         self.search_label.config(text=translator("search_label"))
         self.history_container_frame.config(text=translator("clipboard_history_label"))
@@ -524,7 +533,19 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         # ② テキストに差分がある、かつユーザーが選択操作中でない場合のみ上書きする
         if current_area_text != new_insert_content and not is_text_selected:
-            self._set_text_area(new_insert_content, new_source_item_id)
+            waiting_placeholder = (
+                self.app.translator("waiting_for_clipboard_content")
+                if hasattr(self.app, "translator")
+                else ""
+            )
+            if (
+                not new_insert_content
+                and not displayed_history
+                and current_area_text == waiting_placeholder
+            ):
+                pass
+            else:
+                self._set_text_area(new_insert_content, new_source_item_id)
 
     def select_tool_tab(self, plugin_name: str) -> None:
         """Selects a notebook tab corresponding to the given plugin name."""
