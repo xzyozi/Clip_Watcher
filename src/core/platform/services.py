@@ -90,10 +90,12 @@ class PlatformServices:
                 MacOSClipboardReader,
                 MacOSProcessInspector,
                 MacOSSingleInstanceController,
+                MacOSSoundPlayer,
             )
 
             return cls(
                 process_inspector=MacOSProcessInspector(),
+                sound_player=MacOSSoundPlayer(),
                 single_instance=MacOSSingleInstanceController(),
                 clipboard_reader=MacOSClipboardReader(),
                 platform_name=name,
@@ -102,10 +104,12 @@ class PlatformServices:
             from src.core.platform.linux import (
                 LinuxProcessInspector,
                 LinuxSingleInstanceController,
+                LinuxSoundPlayer,
             )
 
             return cls(
                 process_inspector=LinuxProcessInspector(),
+                sound_player=LinuxSoundPlayer(),
                 single_instance=LinuxSingleInstanceController(),
                 platform_name=name,
             )

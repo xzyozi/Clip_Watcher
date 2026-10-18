@@ -5,6 +5,7 @@ macOS 具象プラットフォームアダプター群。
 
 from src.core.platform.macos.clipboard_reader import MacOSClipboardReader
 from src.core.platform.macos.process_inspector import MacOSProcessInspector
+from src.core.platform.macos.sound_player import MacOSSoundPlayer
 from src.core.platform.posix.single_instance import (
     PosixSingleInstanceController as MacOSSingleInstanceController,
 )
@@ -13,4 +14,5 @@ __all__ = [
     "MacOSClipboardReader",
     "MacOSProcessInspector",
     "MacOSSingleInstanceController",
+    "MacOSSoundPlayer",
 ]
