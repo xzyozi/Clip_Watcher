@@ -99,3 +99,20 @@ class HotkeyListener(Protocol):
     def stop(self) -> None:
         """ホットキー監視スレッドを安全に停止し、登録をすべて解除する。"""
         ...
+
+
+@runtime_checkable
+class StartupController(Protocol):
+    """OS 起動時の自動起動（スタートアップ）管理インターフェース。"""
+
+    def is_enabled(self) -> bool:
+        """自動起動が有効化されているかを返す。"""
+        ...
+
+    def enable(self) -> bool:
+        """自動起動を有効化する。成功した場合 True を返す。"""
+        ...
+
+    def disable(self) -> bool:
+        """自動起動を無効化する。成功した場合 True を返す。"""
+        ...

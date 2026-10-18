@@ -94,5 +94,14 @@
     "no_title": "(タイトルなし)",
     "enable_global_hotkey": "グローバルホットキーを有効にする",
     "show_hide_hotkey": "表示/非表示ホットキー",
-    "global_hotkey_group": "グローバルホットキー"
+    "global_hotkey_group": "グローバルホットキー",
+    "start_with_windows": "Windows 起動時に自動起動",
+    "start_at_login": "ログイン時に自動起動",
+    "start_on_boot": "システム起動時に自動起動",
+    "hotkey_windows_only": "グローバルホットキーを有効にする (Windows限定)",
+    "Start with Windows": "Windows 起動時に自動起動",
+    "Start at Login": "ログイン時に自動起動",
+    "Start on System Boot": "システム起動時に自動起動",
+    "Enable Global Hotkey": "グローバルホットキーを有効にする",
+    "Enable Global Hotkey (Windows only)": "グローバルホットキーを有効にする (Windows限定)"
 }

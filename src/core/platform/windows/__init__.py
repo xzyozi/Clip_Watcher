@@ -11,12 +11,14 @@ from src.core.platform.windows.paste_sender import WindowsPasteSender
 from src.core.platform.windows.process_inspector import WindowsProcessInspector
 from src.core.platform.windows.single_instance import WindowsSingleInstanceController
 from src.core.platform.windows.sound_player import WindowsSoundPlayer
+from src.core.platform.windows.startup import WindowsStartupController
 
 __all__ = [
     "WindowsClipboardReader",
     "WindowsProcessInspector",
     "WindowsSingleInstanceController",
     "WindowsSoundPlayer",
+    "WindowsStartupController",
     "WindowsPasteSender",
     "WindowsHotkeyListener",
 ]

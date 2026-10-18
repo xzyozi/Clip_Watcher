@@ -5,11 +5,11 @@ from collections.abc import Mapping
 
 from src.core.hotkey.global_hotkey_listener import (
     GLOBAL_HOTKEY_ID,
-    GlobalHotkeyListener,
     HotkeyRegistration,
     format_hotkey,
     parse_hotkey_string,
 )
+from src.core.platform.protocols import HotkeyListener
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def normalize_pinned_hotkey_bindings(value: object) -> dict[int, str]:
 class HotkeyRegistrationManager:
     """ホットキー登録集合の検証・置換・失敗時復元を一元管理する。"""
 
-    def __init__(self, hotkey_listener: GlobalHotkeyListener) -> None:
+    def __init__(self, hotkey_listener: HotkeyListener) -> None:
         self._listener = hotkey_listener
         self._global_enabled = False
         self._global_combo = ""

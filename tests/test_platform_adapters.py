@@ -12,9 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.platform.null import NullHotkeyListener
 from src.core.platform.protocols import (
-    HotkeyListener,
     PasteSender,
     ProcessInspector,
     SingleInstanceController,
@@ -26,17 +24,6 @@ from src.core.platform.windows import (
     WindowsSingleInstanceController,
     WindowsSoundPlayer,
 )
-
-
-class TestNullHotkeyListener:
-    """ホットキー用の暫定 Null アダプターの検証（#150 で廃止予定）。"""
-
-    def test_null_hotkey_listener(self) -> None:
-        listener = NullHotkeyListener()
-        assert isinstance(listener, HotkeyListener)
-        assert listener.start(1, 65) is True
-        assert listener.start_many([{"modifiers": 1, "vk_code": 65}]) is True
-        listener.stop()  # 例外が発生しないこと
 
 
 class TestWindowsAdapters:
