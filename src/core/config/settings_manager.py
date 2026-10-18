@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from typing import Any, cast
 
 from reusable_gui.core.config.schema import SettingField, WidgetType
@@ -7,6 +8,22 @@ from reusable_gui.core.config.settings_manager import BaseSettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
 
 from . import defaults
+
+
+def _get_startup_label() -> str:
+    """OS に適した自動起動設定ラベルを返す。"""
+    if sys.platform == "darwin":
+        return "Start at Login"
+    if sys.platform.startswith("linux"):
+        return "Start on System Boot"
+    return "Start with Windows"
+
+
+def _get_hotkey_label() -> str:
+    """OS に適したグローバルホットキー設定ラベルを返す。"""
+    if sys.platform != "win32":
+        return "Enable Global Hotkey (Windows only)"
+    return "Enable Global Hotkey"
 
 
 class SettingsManager(BaseSettingsManager):
@@ -121,7 +138,7 @@ class SettingsManager(BaseSettingsManager):
             # ── General / Startup ──────────────────────────────────────
             SettingField(
                 key="startup_on_boot",
-                label="Start with Windows",
+                label=_get_startup_label(),
                 widget_type=WidgetType.CHECKBUTTON,
                 tab="General",
                 group="Startup",
@@ -130,7 +147,7 @@ class SettingsManager(BaseSettingsManager):
             # ── General / Global Hotkey ────────────────────────────────
             SettingField(
                 key="global_hotkey_enabled",
-                label="Enable Global Hotkey",
+                label=_get_hotkey_label(),
                 widget_type=WidgetType.CHECKBUTTON,
                 tab="General",
                 group="Global Hotkey",

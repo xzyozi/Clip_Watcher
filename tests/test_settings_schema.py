@@ -3,10 +3,17 @@
 SettingsManager と reusable_gui schema のスキーマ設定テスト。
 """
 
+from unittest.mock import patch
+
 from reusable_gui.core.config.schema import SettingField, WidgetType
 from reusable_gui.core.config.settings_manager import BaseSettingsManager
-from src.core.config.settings_manager import SettingsManager
+from src.core.config.settings_manager import (
+    SettingsManager,
+    _get_hotkey_label,
+    _get_startup_label,
+)
 from src.core.events.event_dispatcher import EventDispatcher
+from src.utils.i18n import Translator
 
 
 def test_widget_type_hotkey_capture_exists() -> None:
@@ -57,3 +64,31 @@ def test_copy_warning_setting_is_disabled_by_default() -> None:
     assert field.widget_type == WidgetType.CHECKBUTTON
     assert field.tab == "History"
     assert field.default is False
+
+
+def test_os_specific_settings_labels() -> None:
+    dispatcher = EventDispatcher()
+    manager = SettingsManager(dispatcher)
+    translator = Translator(manager)
+
+    with patch("sys.platform", "darwin"):
+        assert _get_startup_label() == "Start at Login"
+        assert _get_hotkey_label() == "Enable Global Hotkey (Windows only)"
+
+    with patch("sys.platform", "linux"):
+        assert _get_startup_label() == "Start on System Boot"
+        assert _get_hotkey_label() == "Enable Global Hotkey (Windows only)"
+
+    with patch("sys.platform", "win32"):
+        assert _get_startup_label() == "Start with Windows"
+        assert _get_hotkey_label() == "Enable Global Hotkey"
+
+    # 日本語翻訳の検証
+    translator.current_lang = "ja"
+    assert translator.translate("Start with Windows") == "Windows 起動時に自動起動"
+    assert translator.translate("Start at Login") == "ログイン時に自動起動"
+    assert translator.translate("Start on System Boot") == "システム起動時に自動起動"
+    assert (
+        translator.translate("Enable Global Hotkey (Windows only)")
+        == "グローバルホットキーを有効にする (Windows限定)"
+    )
