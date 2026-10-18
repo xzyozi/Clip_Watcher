@@ -27,7 +27,3 @@ updated_at: 2026-09-07
 - 現行の基本設計・詳細設計は `docs/design/` を正本とします。個別の実装状況は対象コードで確認してください。
 - `docs/` 直下とリポジトリ直下にある `compatibility_stub` 文書は、旧URLを維持するための案内です。仕様本文を更新せず、`canonical_source` が示す正本を更新してください。
 - `docs/archive/` と `docs/review/archive/` は履歴資料です。現行の機能仕様・実装判断の根拠として単独では使用しません。
-
-## Kiroの作業仕様
-
-[`.kiro/specs/`](../.kiro/specs/) は、個別変更の requirements、design、tasks を管理するための作業記録です。製品・開発者向けの恒久ドキュメントは、原則として `docs/` に配置します。
