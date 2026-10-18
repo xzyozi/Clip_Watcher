@@ -157,21 +157,17 @@ def test_with_clipboard_monitor_passes_platform_services(
     assert monitor_class.call_args.args[-1] is platform_services
 
 
-def test_with_global_hotkey_listener_non_windows(
-    monkeypatch: pytest.MonkeyPatch,
-    platform_services: PlatformServices,
-) -> None:
-    """非 Windows 環境で with_global_hotkey_listener が NullHotkeyListener を設定することを検証する。"""
-    import sys
+def test_with_global_hotkey_listener_non_windows() -> None:
+    """ホットキー非対応環境で with_global_hotkey_listener が None を設定することを検証する。"""
+    services = PlatformServices(platform_name="darwin")
 
-    from src.core.platform.null import NullHotkeyListener
-
-    monkeypatch.setattr(sys, "platform", "darwin")
-
-    builder = ApplicationBuilder(platform_services)
+    builder = ApplicationBuilder(services)
     builder.event_dispatcher = MagicMock()
     mock_handler = MagicMock()
 
     result = builder.with_global_hotkey_listener(mock_handler)
     assert result is builder
-    assert isinstance(builder.hotkey_listener, NullHotkeyListener)
+    assert builder.hotkey_listener is None
+
+    builder.with_hotkey_registration_manager()
+    assert builder.hotkey_registration_manager is None

@@ -27,7 +27,7 @@
 - [x] [CW-0025] 簡易レビュー <!-- priority:medium issue:#66 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0026] EventDispatcherのイベント契約を型安全化する <!-- priority:medium issue:#68 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0027] format設計案 <!-- priority:medium issue:#69 theme:security stage:ideation completed:2026-10-01 -->
-- [ ] [CW-0028] `test_settings_window_schema.py` の2テストが `tcl_findLibrary` エラーで失敗 <!-- priority:medium issue:#74 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0028] `test_settings_window_schema.py` の2テストが `tcl_findLibrary` エラーで失敗 <!-- priority:medium issue:#74 theme:security stage:ideation added:2026-10-01 completed:2026-10-15 -->
 - [x] [CW-0029] SQLite接続がクローズされておらず、テスト間でDBファイルが汚染される <!-- priority:medium issue:#75 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0030] ホットキー対応後 設定が一部反映されていない <!-- priority:medium issue:#83 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0031] [bug] ピン留め履歴の個別ホットキーで自動貼り付けされない <!-- priority:medium issue:#88 theme:security stage:ideation completed:2026-10-01 -->
@@ -38,7 +38,7 @@
 - [x] [CW-0036] [bug] 二重起動防止のTCP固定ポートがWindows動的除外ポートと競合し「Already Running」と誤判定されて起動できない <!-- priority:medium issue:#102 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0037] [feat] 複数行・危険コマンドのコピー前に警告する <!-- priority:medium issue:#103 theme:security stage:ideation completed:2026-10-01 -->
 - [x] [CW-0038] [security] clipboard_monitor におけるプロセス名比較の大文字小文字不一致によるパスワードマネージャー除外バイパス <!-- priority:medium issue:#109 theme:security stage:ready added:2026-10-01 completed:2026-10-07 -->
-- [ ] [CW-0039] [security] app_main におけるスタートアップバッチ生成時のパスエスケープ不足とPATHハイジャックリスク <!-- priority:medium issue:#110 theme:security stage:ready added:2026-10-01 -->
+- [x] [CW-0039] [security] app_main におけるスタートアップバッチ生成時のパスエスケープ不足とPATHハイジャックリスク <!-- priority:medium issue:#110 theme:security stage:ready added:2026-10-01 completed:2026-10-18 --> (統合先: #161)
 - [x] [CW-0040] [security] config_resolver における workspace_root の未検証パス解決によるNTLM漏洩および設定改変リスク <!-- priority:medium issue:#111 theme:security stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
 - [ ] [CW-0041] [edge_cases] global_hotkey_listener における GetMessageW 戻り値 -1（エラー値）の未判定による無限ループとCPU枯渇リスク <!-- priority:medium issue:#112 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [x] [CW-0042] [edge_cases] classifier における正規表現子プロセス異常終了（EOF/切断）時の EOFError 未捕捉によるアプリクラッシュ <!-- priority:medium issue:#113 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
@@ -55,20 +55,23 @@
 - [x] [CW-0053] [edge_cases] BaseDAO.execute_write における lastrowid/rowcount 評価の混同による更新・削除成否の誤判定リスク <!-- priority:medium issue:#124 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
 - [x] [CW-0054] [edge_cases] history_dao および meta_phrase_dao における created_at 破損レコードによる一覧取得全体のフェイル <!-- priority:medium issue:#125 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
 - [x] [CW-0055] [edge_cases] DatabaseManager における DB 格納先親ディレクトリの存在未検証による起動時 OperationalError <!-- priority:medium issue:#126 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #173)
-- [ ] [CW-0056] [security] HashCalculatorComponent における入力長未検証の同期ハッシュ計算によるDoSおよびSHAKE系アルゴリズム選択時の未捕捉TypeError <!-- priority:medium issue:#127 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0057] [security] JSONFormatterPlugin における入力サイズおよび再帰深度・巨大整数バリデーション欠落によるDoSとクラッシュ <!-- priority:medium issue:#128 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0058] [security] UnitConverterComponent におけるタイムスタンプ入力範囲の未検証およびプラットフォーム例外（OSError/OverflowError）未捕捉によるクラッシュ <!-- priority:medium issue:#129 theme:security stage:ideation added:2026-10-01 -->
-- [ ] [CW-0059] [security] HTMLEscapePlugin における二方向ヒューリスティック判定の不備によるHTMLサニタイズ（エスケープ）回避リスク <!-- priority:medium issue:#130 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0056] [security] HashCalculatorComponent における入力長未検証の同期ハッシュ計算によるDoSおよびSHAKE系アルゴリズム選択時の未捕捉TypeError <!-- priority:medium issue:#127 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #174)
+- [x] [CW-0057] [security] JSONFormatterPlugin における入力サイズおよび再帰深度・巨大整数バリデーション欠落によるDoSとクラッシュ <!-- priority:medium issue:#128 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #174)
+- [x] [CW-0058] [security] UnitConverterComponent におけるタイムスタンプ入力範囲の未検証およびプラットフォーム例外（OSError/OverflowError）未捕捉によるクラッシュ <!-- priority:medium issue:#129 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #174)
+- [x] [CW-0059] [security] HTMLEscapePlugin における二方向ヒューリスティック判定の不備によるHTMLサニタイズ（エスケープ）回避リスク <!-- priority:medium issue:#130 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #174)
 - [ ] [CW-0060] [security] ScheduleHelperComponent における時刻入力値（時・分）の範囲バリデーション欠落とdatetime.replaceの未捕捉例外 <!-- priority:medium issue:#131 theme:security stage:ideation added:2026-10-01 -->
 - [x] [CW-0061] [edge_cases] TextWorkflowService._on_task_done における非同期タスク例外発生時の通知喪失とUIハングリスク <!-- priority:medium issue:#132 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
 - [x] [CW-0062] [edge_cases] NotificationManager.play_notification_sound における winsound 例外時の messagebox 直接呼び出しによるスレッドクラッシュおよびブロッキング <!-- priority:medium issue:#133 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [ ] [CW-0063] [edge_cases] HistoryService.on_settings_changed における history_limit の型・境界値バリデーション欠落によるクラッシュおよび過剰トリム <!-- priority:medium issue:#134 theme:edge_cases stage:ideation added:2026-10-01 -->
 - [x] [CW-0064] [edge_cases] TextWorkflowService.shutdown における wait=False による実行中タスクの強制中断とシャットダウン後投入の未ハンドリング <!-- priority:medium issue:#135 theme:edge_cases stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #175)
 - [x] [CW-0065] [security] logging_config における機密ログファイルのパーミッション制御欠落および安全でない空ファイル削除処理 <!-- priority:medium issue:#136 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
-- [ ] [CW-0066] [security] copy_safety における入力長未検証の正規表現走査によるCPU枯渇およびUIフリーズ（DoS）リスク <!-- priority:medium issue:#137 theme:security stage:ideation added:2026-10-01 -->
+- [x] [CW-0066] [security] copy_safety における入力長未検証の正規表現走査によるCPU枯渇およびUIフリーズ（DoS）リスク <!-- priority:medium issue:#137 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #174)
 - [x] [CW-0067] [security] i18n におけるJSON読み込み時のデータ型検証欠落による未捕捉例外クラッシュおよびCWD依存パス解決 <!-- priority:medium issue:#138 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [x] [CW-0068] [security] undo_manager におけるスタックサイズ無制限によるメモリ枯渇（DoS）および機密データのメモリ永続化リスク <!-- priority:medium issue:#139 theme:security stage:ideation added:2026-10-01 completed:2026-10-17 --> (統合先: #176)
 - [x] [CW-0069] [architecture] menu_bar における外部アプリケーションインスタンスへの暗黙の属性注入および深層デメテル則違反 <!-- priority:medium issue:#140 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
-- [ ] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 -->
+- [x] [CW-0070] [architecture] SettingsWindow._validate_pending_values における検証フェーズとインフラ副作用（ホットキー再登録）の混同 <!-- priority:medium issue:#141 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-18 --> (統合先: #161)
 - [x] [CW-0071] [architecture] QuickTaskDialog におけるクリップボード管理・監視レイヤーのバイパスと Tkinter 生 API の直接操作 <!-- priority:medium issue:#142 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 --> (統合先: #169)
 - [x] [CW-0072] [architecture] ContextMenuMixin における汎用 UI コンポーネントとグローバルアプリケーションインスタンスの過度な密結合 <!-- priority:medium issue:#143 theme:architecture stage:ideation added:2026-10-01 completed:2026-10-15 -->
+- [x] [CW-0073] [feat] macOS 向け ClipboardReader 実装とクリップボード取得の実機確認 <!-- priority:medium issue:#170 theme:platform stage:completed added:2026-10-18 completed:2026-10-18 -->
+- [x] [CW-0074] [feat] 非Windows(macOS/Linux)環境向けのプラットフォーム機能対応 <!-- priority:medium issue:#161 theme:platform stage:completed added:2026-10-18 completed:2026-10-18 -->
+

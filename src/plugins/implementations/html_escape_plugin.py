@@ -1,33 +1,62 @@
+from __future__ import annotations
+
 import html
+import logging
 
 from src.plugins.base_plugin import TextPlugin
 
+logger = logging.getLogger(__name__)
+
+MAX_HTML_INPUT_LENGTH = 1_000_000  # 1MB: メモリ枯渇・DoS防止のための入力長制限 (#130)
+
 
 class HTMLEscapePlugin(TextPlugin):
+    """HTML特殊文字（&, <, >, ", '）をエスケープするプラグイン。"""
+
     @property
     def name(self) -> str:
-        return "HTML Escape/Unescape"
+        return "HTML Escape"
 
     @property
     def description(self) -> str:
-        return "Escapes or unescapes HTML special characters."
+        return "Escapes HTML special characters."
 
     def process(self, text: str) -> str:
-        if not isinstance(text, str):
+        if not isinstance(text, str) or not text:
             return text
 
-        # Heuristic: If text contains HTML entities, try to unescape
-        # Otherwise, try to escape
-        if (
-            "&amp;" in text
-            or "&lt;" in text
-            or "&gt;" in text
-            or "&quot;" in text
-            or "&#39;" in text
-        ):
-            unescaped_text = html.unescape(text)
-            if unescaped_text != text:
-                return unescaped_text
+        if len(text) > MAX_HTML_INPUT_LENGTH:
+            logger.warning(
+                "HTMLエスケープ入力長が上限（%d文字）を超過しているためスキップします (現在: %d文字)",
+                MAX_HTML_INPUT_LENGTH,
+                len(text),
+            )
+            return text
 
-        # If no entities found or unescaping didn't change, escape
         return html.escape(text)
+
+
+class HTMLUnescapePlugin(TextPlugin):
+    """HTML実体参照をデコード（アンエスケープ）するプラグイン。"""
+
+    @property
+    def name(self) -> str:
+        return "HTML Unescape"
+
+    @property
+    def description(self) -> str:
+        return "Unescapes HTML special characters."
+
+    def process(self, text: str) -> str:
+        if not isinstance(text, str) or not text:
+            return text
+
+        if len(text) > MAX_HTML_INPUT_LENGTH:
+            logger.warning(
+                "HTMLアンエスケープ入力長が上限（%d文字）を超過しているためスキップします (現在: %d文字)",
+                MAX_HTML_INPUT_LENGTH,
+                len(text),
+            )
+            return text
+
+        return html.unescape(text)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 import tkinter as tk
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -14,6 +13,8 @@ from src.core.config.app_status import AppStatus
 from src.core.config.defaults import DEFAULT_USER_SETTINGS
 from src.core.config.settings_manager import SettingsManager
 from src.core.events.event_dispatcher import EventDispatcher
+from src.core.platform.errors import UnsupportedFeatureError
+from src.core.platform.protocols import HotkeyListener
 from src.core.platform.services import PlatformServices
 from src.gui.icon_manager import IconManager
 from src.gui.theme_manager import ThemeManager
@@ -23,7 +24,6 @@ from src.utils.i18n import Translator
 
 if TYPE_CHECKING:
     from src.core.app_main import MainApplication
-    from src.core.hotkey.global_hotkey_listener import GlobalHotkeyListener
     from src.core.hotkey.hotkey_registration_manager import HotkeyRegistrationManager
     from src.core.window.window_state_manager import WindowStateManager
     from src.db.database_manager import DatabaseManager
@@ -53,7 +53,7 @@ class ApplicationBuilder:
         self.app_status: AppStatus | None = None
 
         self.window_state_manager: WindowStateManager | None = None
-        self.hotkey_listener: GlobalHotkeyListener | None = None
+        self.hotkey_listener: HotkeyListener | None = None
         self.hotkey_registration_manager: HotkeyRegistrationManager | None = None
         self.text_workflow_service: TextWorkflowService | None = None
 
@@ -314,23 +314,17 @@ class ApplicationBuilder:
         if event_dispatcher is None:
             raise ConfigError("イベントディスパッチャが初期化されていません")
         try:
-            # ホットキーは Windows 限定。他 OS 対応と Null 実装の廃止は #150 で扱う。
-            if sys.platform == "win32":
-                from src.core.hotkey.global_hotkey_listener import (
-                    GlobalHotkeyListener,
-                )
-
-                self.hotkey_listener = GlobalHotkeyListener(
-                    master,
-                    on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
-                        "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
-                    ),
-                )
-            else:
-                from src.core.platform.null import NullHotkeyListener
-
-                self.hotkey_listener = NullHotkeyListener()  # type: ignore[assignment]
+            self.hotkey_listener = self.platform_services.create_hotkey_listener(
+                master,
+                on_triggered=lambda hotkey_id: event_dispatcher.dispatch(
+                    "GLOBAL_HOTKEY_TRIGGERED", hotkey_id
+                ),
+            )
             logger.info("グローバルホットキーリスナーを初期化しました")
+            return self
+        except UnsupportedFeatureError as e:
+            logger.info("ホットキーは非対応プラットフォームのためスキップします: %s", e)
+            self.hotkey_listener = None
             return self
         except Exception as e:
             log_and_show_error(
@@ -343,8 +337,13 @@ class ApplicationBuilder:
 
     def with_hotkey_registration_manager(self) -> ApplicationBuilder:
         """ホットキー登録マネージャーの初期化"""
-        if not self.hotkey_listener:
-            raise ConfigError("グローバルホットキーリスナーが初期化されていません")
+        if self.hotkey_listener is None:
+            logger.info(
+                "ホットキーリスナーが無効なため、HotkeyRegistrationManager は初期化しません"
+            )
+            self.hotkey_registration_manager = None
+            return self
+
         try:
             from src.core.hotkey.hotkey_registration_manager import (
                 HotkeyRegistrationManager,
