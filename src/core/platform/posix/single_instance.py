@@ -9,7 +9,7 @@ import errno
 import logging
 import os
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from src.core.platform.errors import SingleInstanceError
 
@@ -40,6 +40,8 @@ class PosixSingleInstanceController:
         """
         try:
             import fcntl
+
+            fcntl_mod: Any = fcntl
         except ImportError as e:
             raise SingleInstanceError("fcntl モジュールが利用できません") from e
 
@@ -52,7 +54,7 @@ class PosixSingleInstanceController:
             ) from e
 
         try:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl_mod.flock(f.fileno(), fcntl_mod.LOCK_EX | fcntl_mod.LOCK_NB)
             f.seek(0)
             f.truncate(0)
             f.write(f"{os.getpid()}\n")
@@ -94,8 +96,9 @@ class PosixSingleInstanceController:
             try:
                 import fcntl
 
+                fcntl_mod: Any = fcntl
                 try:
-                    fcntl.flock(self._file.fileno(), fcntl.LOCK_UN)
+                    fcntl_mod.flock(self._file.fileno(), fcntl_mod.LOCK_UN)
                 except Exception as e:
                     logger.debug("flock の解除中にエラー: %s", e)
                 self._file.close()
