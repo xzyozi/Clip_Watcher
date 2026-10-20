@@ -3,7 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Mapping, Sequence
 from tkinter import ttk
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
@@ -40,6 +40,7 @@ class HistoryListComponent(tk.Frame):
         self._displayed_icon_generation: int = 0
         self._updating_history: bool = False
         self.current_font: tk.font.Font | None = None
+        self._current_pin_image: Any = None
 
         self._create_widgets()
         self._bind_events()
@@ -220,6 +221,11 @@ class HistoryListComponent(tk.Frame):
                     if is_pinned and self.app.icon_manager is not None
                     else ""
                 )
+                if icon_image:
+                    self._current_pin_image = icon_image
+                elif is_pinned:
+                    # アイコン画像が取得できない環境（アセット未配置やヘッドレス等）での安全なテキストフォールバック
+                    display_text = f"📌 {display_text}"
                 hotkey_combo = (
                     displayed_hotkey_bindings.get(int(item_id), "") if is_pinned else ""
                 )

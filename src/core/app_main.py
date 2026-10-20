@@ -338,7 +338,8 @@ class MainApplication(BaseApplication):
         if theme not in THEMES:
             theme = "light"
         self.theme_manager.apply_theme(theme)
-        self.gui.history_component.apply_theme(THEMES[theme])
+        actual_theme = self.theme_manager.get_current_theme()
+        self.gui.history_component.apply_theme(THEMES[actual_theme])
 
         always_on_top: bool = settings.get("always_on_top", False)
         self.master.attributes("-topmost", always_on_top)
