@@ -145,13 +145,14 @@ class ApplicationBuilder:
                 f"テーママネージャーの初期化に失敗しました: {str(e)}"
             ) from e
 
-    def with_icon_manager(self, icons_dir: str = "assets/icons") -> ApplicationBuilder:
+    def with_icon_manager(self, icons_dir: str | None = None) -> ApplicationBuilder:
         """IconManagerを初期化し、ThemeManagerへ登録する。
 
         このメソッドは必ず ``with_theme_manager()`` の後に呼び出すこと。
 
         Args:
             icons_dir: アイコンPNGファイルを格納するディレクトリ。
+                未指定の場合はIconManagerの既定（cwd非依存の絶対パス）を使う。
 
         Raises:
             ConfigError: ThemeManagerが初期化されていない場合。

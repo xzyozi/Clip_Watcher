@@ -3,17 +3,26 @@
 import os
 from tkinter import PhotoImage
 
+# src/gui/icon_manager.py -> リポジトリルート/assets/icons
+DEFAULT_ICONS_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "assets",
+    "icons",
+)
+
 
 class IconManager:
     """アイコン画像の元データとテーマ別表示画像のキャッシュを保持する。"""
 
-    def __init__(self, icons_dir: str = "assets/icons") -> None:
+    def __init__(self, icons_dir: str | None = None) -> None:
         """アイコン画像のキャッシュを空の状態で初期化する。
 
         Args:
             icons_dir: アイコンPNGファイルを格納するディレクトリ。
+                未指定の場合は、カレントディレクトリに依存しない
+                リポジトリ内の ``assets/icons`` の絶対パスを使う。
         """
-        self._icons_dir = icons_dir
+        self._icons_dir = DEFAULT_ICONS_DIR if icons_dir is None else icons_dir
         self._source_images: dict[str, PhotoImage] = {}
         self._icon_cache: dict[str, PhotoImage] = {}
 
