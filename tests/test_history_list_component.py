@@ -84,6 +84,7 @@ def make_component(
     component._displayed_icon_generation = 0
     component._updating_history = False
     component.current_font = None
+    component._current_pin_image = None
     return component
 
 
@@ -285,3 +286,34 @@ def test_apply_font_enforces_minimum_rowheight(monkeypatch: Any) -> None:
 
     # rowheight = max(10 + 8, 22) = 22
     assert ("History.Treeview", {"font": dummy_font, "rowheight": 22}) in style_calls
+
+
+def test_update_history_retains_image_reference_and_no_text_prefix_when_icon_present() -> (
+    None
+):
+    """Issue CW-0078: 画像取得時はテキストを二重装飾せず画像のみを設定し、参照を保持する（Windows互換）。"""
+    tree = RecordingTree()
+    icon_manager = RecordingIconManager()
+    component = make_component(tree, icon_manager)
+    history = [("pinned item", True, 1.0)]
+
+    component.update_history(history, THEMES["light"], {})
+
+    assert component._current_pin_image == "pin-light-icon"
+    # テキスト先頭に絵文字が混入せず、元のインデックス表示のままであること
+    assert tree.rows["item-1.0"]["text"] == "1. pinned item..."
+    assert tree.rows["item-1.0"]["image"] == "pin-light-icon"
+
+
+def test_update_history_falls_back_to_pin_symbol_when_icon_missing() -> None:
+    """Issue CW-0078: アイコン画像が取得できない環境ではテキスト先頭にピン記号をフォールバック付与する。"""
+    tree = RecordingTree()
+    component = make_component(tree, None)  # type: ignore[arg-type]
+    history = [("pinned item", True, 1.0), ("normal item", False, 2.0)]
+
+    component.update_history(history, THEMES["light"], {})
+
+    assert tree.rows["item-1.0"]["text"] == "📌 1. pinned item..."
+    assert tree.rows["item-1.0"]["image"] == ""
+    assert tree.rows["item-2.0"]["text"] == "2. normal item..."
+    assert tree.rows["item-2.0"]["image"] == ""
