@@ -183,11 +183,15 @@ def start_app() -> None:
                 root.destroy()
                 return
         if sys.version_info < (3, 10):  # noqa: UP036
-            logger.warning(
-                "[WARN-RUNTIME] サポート外の Python バージョン (%s) が検出されました。"
-                "本アプリケーションは Python >= 3.10 を前提としています。",
-                sys.version.split()[0],
+            error_msg = (
+                f"Clip Watcher の実行には Python 3.10 以上が必要です。\n\n"
+                f"現在のバージョン: Python {sys.version.split()[0]} ({sys.executable})\n"
+                "仮想環境 (.venv) をアクティベートするか、Python 3.10 以降で実行してください。"
             )
+            logger.error("[ERROR-RUNTIME] %s", error_msg)
+            messagebox.showerror("Clip Watcher 起動エラー", error_msg)
+            root.destroy()
+            return
 
         builder = ApplicationBuilder(platform_services)
         app = (
