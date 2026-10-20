@@ -70,18 +70,51 @@ class TestWindowsStartupController:
             assert controller.enable() is False
             assert controller.disable() is False
 
-    def test_enable_sets_registry_and_removes_legacy_bat(self, tmp_path: Path) -> None:
+    @staticmethod
+    def _fake_win32com(shortcut: MagicMock) -> MagicMock:
+        """win32com.client.Dispatch("WScript.Shell").CreateShortCut を模擬する。"""
+        client = MagicMock()
+        client.Dispatch.return_value.CreateShortCut.return_value = shortcut
+        return client
+
+    def test_enable_creates_shortcut_and_never_writes_registry(
+        self, tmp_path: Path
+    ) -> None:
+        script = tmp_path / "clip_watcher.py"
+        lnk = tmp_path / "Startup" / "ClipWatcher.lnk"
         controller = WindowsStartupController(
             python_executable="C:\\Python\\pythonw.exe",
-            main_script=tmp_path / "clip_watcher.py",
+            main_script=script,
+            shortcut_path=lnk,
         )
-
+        shortcut = MagicMock()
+        client = self._fake_win32com(shortcut)
         mock_winreg = MagicMock()
-        mock_key = MagicMock()
-        mock_winreg.CreateKey.return_value.__enter__.return_value = mock_key
 
-        # レガシーバッチの模擬
-        legacy_dir = (
+        with (
+            patch("sys.platform", "win32"),
+            patch.dict(
+                sys.modules,
+                {
+                    "win32com": MagicMock(client=client),
+                    "win32com.client": client,
+                    "winreg": mock_winreg,
+                },
+            ),
+            patch.dict("os.environ", {"APPDATA": str(tmp_path / "AppData")}),
+        ):
+            assert controller.enable() is True
+
+        assert shortcut.TargetPath == "C:\\Python\\pythonw.exe"
+        assert shortcut.Arguments == f'"{script}"'
+        assert shortcut.WorkingDirectory == str(tmp_path)
+        shortcut.Save.assert_called_once_with()
+        client.Dispatch.return_value.CreateShortCut.assert_called_once_with(str(lnk))
+        mock_winreg.CreateKey.assert_not_called()
+        mock_winreg.SetValueEx.assert_not_called()
+
+    def test_enable_removes_legacy_bat_and_registry_value(self, tmp_path: Path) -> None:
+        startup_dir = (
             tmp_path
             / "AppData"
             / "Microsoft"
@@ -90,24 +123,96 @@ class TestWindowsStartupController:
             / "Programs"
             / "Startup"
         )
-        legacy_dir.mkdir(parents=True)
-        legacy_bat = legacy_dir / "ClipWatcher.bat"
+        startup_dir.mkdir(parents=True)
+        legacy_bat = startup_dir / "ClipWatcher.bat"
         legacy_bat.touch()
+        old_dir = tmp_path / "AppData" / "Microsoft" / "Windows" / "Startup"
+        old_dir.mkdir(parents=True)
+        old_bat = old_dir / "ClipWatcher.bat"
+        old_bat.touch()
+
+        controller = WindowsStartupController(
+            python_executable="C:\\Python\\pythonw.exe",
+            main_script=tmp_path / "clip_watcher.py",
+            shortcut_path=startup_dir / "ClipWatcher.lnk",
+        )
+        client = self._fake_win32com(MagicMock())
+        mock_winreg = MagicMock()
+        mock_key = MagicMock()
+        mock_winreg.OpenKey.return_value.__enter__.return_value = mock_key
 
         with (
             patch("sys.platform", "win32"),
-            patch.dict(sys.modules, {"winreg": mock_winreg}),
+            patch.dict(
+                sys.modules,
+                {
+                    "win32com": MagicMock(client=client),
+                    "win32com.client": client,
+                    "winreg": mock_winreg,
+                },
+            ),
             patch.dict("os.environ", {"APPDATA": str(tmp_path / "AppData")}),
         ):
             assert controller.enable() is True
-            mock_winreg.SetValueEx.assert_called_once()
-            args = mock_winreg.SetValueEx.call_args[0]
-            assert args[1] == "ClipWatcher"
-            assert "pythonw.exe" in args[4]
-            assert not legacy_bat.exists()
 
-    def test_disable_deletes_registry_value(self) -> None:
-        controller = WindowsStartupController()
+        assert not legacy_bat.exists()
+        assert not old_bat.exists()
+        mock_winreg.DeleteValue.assert_called_once_with(mock_key, "ClipWatcher")
+
+    def test_enable_rejects_paths_containing_quotes(self, tmp_path: Path) -> None:
+        controller = WindowsStartupController(
+            python_executable="C:\\Python\\pythonw.exe",
+            main_script=tmp_path / 'evil".py',
+            shortcut_path=tmp_path / "ClipWatcher.lnk",
+        )
+        client = self._fake_win32com(MagicMock())
+
+        with (
+            patch("sys.platform", "win32"),
+            patch.dict(
+                sys.modules,
+                {"win32com": MagicMock(client=client), "win32com.client": client},
+            ),
+        ):
+            assert controller.enable() is False
+
+        client.Dispatch.assert_not_called()
+
+    def test_enable_returns_false_when_shortcut_creation_fails(
+        self, tmp_path: Path
+    ) -> None:
+        controller = WindowsStartupController(
+            python_executable="C:\\Python\\pythonw.exe",
+            main_script=tmp_path / "clip_watcher.py",
+            shortcut_path=tmp_path / "ClipWatcher.lnk",
+        )
+        client = MagicMock()
+        client.Dispatch.side_effect = OSError("COM unavailable")
+
+        with (
+            patch("sys.platform", "win32"),
+            patch.dict(
+                sys.modules,
+                {"win32com": MagicMock(client=client), "win32com.client": client},
+            ),
+        ):
+            assert controller.enable() is False
+
+    def test_is_enabled_reflects_shortcut_existence(self, tmp_path: Path) -> None:
+        lnk = tmp_path / "ClipWatcher.lnk"
+        controller = WindowsStartupController(shortcut_path=lnk)
+
+        with patch("sys.platform", "win32"):
+            assert controller.is_enabled() is False
+            lnk.touch()
+            assert controller.is_enabled() is True
+
+    def test_disable_removes_shortcut_and_legacy_registry_value(
+        self, tmp_path: Path
+    ) -> None:
+        lnk = tmp_path / "ClipWatcher.lnk"
+        lnk.touch()
+        controller = WindowsStartupController(shortcut_path=lnk)
         mock_winreg = MagicMock()
         mock_key = MagicMock()
         mock_winreg.OpenKey.return_value.__enter__.return_value = mock_key
@@ -115,9 +220,32 @@ class TestWindowsStartupController:
         with (
             patch("sys.platform", "win32"),
             patch.dict(sys.modules, {"winreg": mock_winreg}),
+            patch.dict("os.environ", {"APPDATA": str(tmp_path / "AppData")}),
         ):
             assert controller.disable() is True
-            mock_winreg.DeleteValue.assert_called_once_with(mock_key, "ClipWatcher")
+
+        assert not lnk.exists()
+        mock_winreg.DeleteValue.assert_called_once_with(mock_key, "ClipWatcher")
+
+    def test_default_python_prefers_venv_pythonw(self, tmp_path: Path) -> None:
+        pythonw = tmp_path / ".venv" / "Scripts" / "pythonw.exe"
+        pythonw.parent.mkdir(parents=True)
+        pythonw.touch()
+
+        controller = WindowsStartupController(
+            main_script=tmp_path / "clip_watcher.py",
+            shortcut_path=tmp_path / "ClipWatcher.lnk",
+        )
+
+        assert controller.python_executable == str(pythonw)
+
+    def test_default_python_falls_back_to_current_python(self, tmp_path: Path) -> None:
+        controller = WindowsStartupController(
+            main_script=tmp_path / "clip_watcher.py",
+            shortcut_path=tmp_path / "ClipWatcher.lnk",
+        )
+
+        assert Path(controller.python_executable).exists()
 
 
 class TestLinuxStartupController:
