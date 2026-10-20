@@ -357,10 +357,16 @@ class MainApplication(BaseApplication):
         """StartupController を介してログイン時自動起動を管理する。"""
         try:
             controller = self.platform_services.startup_controller()
-            if startup_enabled:
-                controller.enable()
-            else:
-                controller.disable()
+            succeeded = controller.enable() if startup_enabled else controller.disable()
+            if not succeeded:
+                # enable()/disable() は失敗時に False を返すだけなので、
+                # 呼び出し側でユーザーへ通知する（Issue #205）。
+                action = "enable" if startup_enabled else "disable"
+                logger.error("自動起動の設定に失敗しました: %s", action)
+                self.show_error_message(
+                    "Startup Error",
+                    f"Failed to {action} startup. See the log for details.",
+                )
         except UnsupportedFeatureError:
             logger.info("自動起動は現在のプラットフォームでは非対応です。")
         except Exception as e:
