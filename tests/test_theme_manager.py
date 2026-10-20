@@ -22,6 +22,7 @@ class HeadlessStyle:
     def __init__(self, root: Tk) -> None:
         self.root = root
         self.configurations: list[tuple[str, dict[str, object]]] = []
+        self.maps: list[tuple[str, dict[str, object]]] = []
         self.used_themes: list[str] = []
         HeadlessStyle.last_instance = self
 
@@ -37,7 +38,7 @@ class HeadlessStyle:
         self.configurations.append((style_name, options))
 
     def map(self, style_name: str, **options: object) -> None:
-        pass
+        self.maps.append((style_name, options))
 
 
 def configure_headless_theme_application(
@@ -182,3 +183,59 @@ def test_apply_theme_on_macos_tk85_forces_light_theme(
     with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=True):
         theme_manager.apply_theme("dark")
         assert theme_manager.current_theme == "light"
+
+
+def test_apply_theme_configures_history_treeview_styles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #196: TreeviewだけでなくHistory.TreeviewおよびHeadingもconfigureされる。"""
+    monkeypatch.setattr(sys, "platform", "linux")
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    theme_manager.apply_theme("light")
+
+    assert HeadlessStyle.last_instance is not None
+    configured_styles = {
+        style_name for style_name, _ in HeadlessStyle.last_instance.configurations
+    }
+    assert "Treeview" in configured_styles
+    assert "History.Treeview" in configured_styles
+    assert "Treeview.Heading" in configured_styles
+    assert "History.Treeview.Heading" in configured_styles
+
+
+def test_apply_theme_on_macos_aqua_maps_system_highlight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #196: macOS Aqua環境ではsystemHighlight / systemHighlightTextがマップされる。"""
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(HeadlessStyle, "_available_themes", ("aqua", "clam", "default"))
+    monkeypatch.setattr(tk, "TkVersion", 8.6)
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    with patch("src.utils.platform_utils.is_macos_dark_mode", return_value=True):
+        theme_manager.apply_theme("dark")
+
+    assert HeadlessStyle.last_instance is not None
+    history_map = dict(HeadlessStyle.last_instance.maps).get("History.Treeview", {})
+    assert history_map.get("background") == [("selected", "systemHighlight")]
+    assert history_map.get("foreground") == [("selected", "systemHighlightText")]
+
+
+def test_apply_theme_on_non_aqua_dark_uses_empty_mapping_workaround(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #196: non-aqua（clam等）のdarkテーマでは既存の空マッピングワークアラウンドが維持される。"""
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(HeadlessStyle, "_available_themes", ("clam", "default"))
+    theme_manager = ThemeManager(cast(Tk, object()))
+    configure_headless_theme_application(monkeypatch, theme_manager)
+
+    theme_manager.apply_theme("dark")
+
+    assert HeadlessStyle.last_instance is not None
+    history_map = dict(HeadlessStyle.last_instance.maps).get("History.Treeview", {})
+    assert history_map.get("background") == []
+    assert history_map.get("foreground") == []

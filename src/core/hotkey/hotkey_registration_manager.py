@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 _PINNED_HOTKEY_ID_START = GLOBAL_HOTKEY_ID + 1
 
 
-def normalize_pinned_hotkey_bindings(value: object) -> dict[int, str]:
+def normalize_pinned_hotkey_bindings(
+    value: object, platform: str | None = None
+) -> dict[int, str]:
     """JSON由来の割当を検証し、履歴IDから正規化済みキー文字列への辞書へ変換する。"""
     if not isinstance(value, Mapping):
         return {}
@@ -30,18 +32,21 @@ def normalize_pinned_hotkey_bindings(value: object) -> dict[int, str]:
         if history_id <= 0 or not isinstance(raw_combo, str):
             continue
         try:
-            modifiers, vk_code = parse_hotkey_string(raw_combo)
+            modifiers, vk_code = parse_hotkey_string(raw_combo, platform=platform)
         except ValueError:
             continue
-        normalized[history_id] = format_hotkey(modifiers, vk_code)
+        normalized[history_id] = format_hotkey(modifiers, vk_code, platform=platform)
     return normalized
 
 
 class HotkeyRegistrationManager:
     """ホットキー登録集合の検証・置換・失敗時復元を一元管理する。"""
 
-    def __init__(self, hotkey_listener: HotkeyListener) -> None:
+    def __init__(
+        self, hotkey_listener: HotkeyListener, *, platform: str | None = None
+    ) -> None:
         self._listener = hotkey_listener
+        self._platform = platform
         self._global_enabled = False
         self._global_combo = ""
         self._pinned_bindings: dict[int, str] = {}
@@ -75,7 +80,9 @@ class HotkeyRegistrationManager:
         pinned_bindings: Mapping[int, str],
     ) -> bool:
         """候補の登録集合を原子的に適用し、失敗時は旧集合を復元する。"""
-        normalized = normalize_pinned_hotkey_bindings(pinned_bindings)
+        normalized = normalize_pinned_hotkey_bindings(
+            pinned_bindings, platform=self._platform
+        )
         try:
             registrations, hotkey_to_history, canonical_global_combo = (
                 self._build_registrations(global_enabled, global_combo, normalized)
@@ -144,16 +151,20 @@ class HotkeyRegistrationManager:
         canonical_global_combo = global_combo
 
         if global_enabled:
-            modifiers, vk_code = parse_hotkey_string(global_combo)
-            canonical_global_combo = format_hotkey(modifiers, vk_code)
+            modifiers, vk_code = parse_hotkey_string(
+                global_combo, platform=self._platform
+            )
+            canonical_global_combo = format_hotkey(
+                modifiers, vk_code, platform=self._platform
+            )
             used_combos.add(canonical_global_combo)
             registrations.append(
                 HotkeyRegistration(GLOBAL_HOTKEY_ID, modifiers, vk_code)
             )
 
         for offset, (history_id, combo) in enumerate(sorted(pinned_bindings.items())):
-            modifiers, vk_code = parse_hotkey_string(combo)
-            canonical_combo = format_hotkey(modifiers, vk_code)
+            modifiers, vk_code = parse_hotkey_string(combo, platform=self._platform)
+            canonical_combo = format_hotkey(modifiers, vk_code, platform=self._platform)
             if canonical_combo in used_combos:
                 raise ValueError(f"ホットキーが重複しています: {canonical_combo}")
             used_combos.add(canonical_combo)

@@ -45,19 +45,19 @@ def test_application_builder_component_injection() -> None:
         assert builder_win.hotkey_listener is mock_hkl
         assert builder_win.hotkey_registration_manager is mock_hrm
 
-        # 非 Windows (非対応) PlatformServices での検証
-        non_win_services = PlatformServices(platform_name="darwin")
-        builder_non_win = (
-            ApplicationBuilder(non_win_services)
+        # 非対応 (Linux) PlatformServices での検証
+        unsupported_services = PlatformServices(platform_name="linux")
+        builder_unsupported = (
+            ApplicationBuilder(unsupported_services)
             .with_event_dispatcher()
             .with_window_state_manager(mock_root)
             .with_global_hotkey_listener(mock_root)
             .with_hotkey_registration_manager()
         )
 
-        assert builder_non_win.window_state_manager is mock_wsm
-        assert builder_non_win.hotkey_listener is None
-        assert builder_non_win.hotkey_registration_manager is None
+        assert builder_unsupported.window_state_manager is mock_wsm
+        assert builder_unsupported.hotkey_listener is None
+        assert builder_unsupported.hotkey_registration_manager is None
 
 
 def test_main_application_hotkey_and_window_integration(

@@ -14,6 +14,7 @@ from src.gui.components import HistoryListComponent
 # from src.core.config.tool_config import TOOL_COMPONENTS
 from src.gui.custom_widgets import CustomEntry, CustomText
 from src.gui.windows.meta_management_window import MetaManagementFrame
+from src.utils.platform_utils import resolve_safe_font_family
 
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
@@ -356,11 +357,20 @@ class ClipWatcherGUI(BaseFrameGUI):
         )
 
         if not self.clipboard_text_widget.get("1.0", "end-1c"):
-            waiting_text = translator("waiting_for_clipboard_content")
-            self.clipboard_text_widget.insert(tk.END, waiting_text)
-            # 案内文は履歴由来ではないため、未編集のまま履歴へ保存されないよう基準に記録する
-            self._text_source_item_id = None
-            self._text_source_text = waiting_text
+            history_service = getattr(self.app, "history_service", None)
+            current_content = (
+                history_service.last_clipboard_data if history_service else ""
+            )
+            if current_content:
+                self.clipboard_text_widget.insert(tk.END, current_content)
+                self._text_source_item_id = None
+                self._text_source_text = current_content
+            else:
+                waiting_text = translator("waiting_for_clipboard_content")
+                self.clipboard_text_widget.insert(tk.END, waiting_text)
+                # 案内文は履歴由来ではないため、未編集のまま履歴へ保存されないよう基準に記録する
+                self._text_source_item_id = None
+                self._text_source_text = waiting_text
 
         self.search_label.config(text=translator("search_label"))
         self.history_container_frame.config(text=translator("clipboard_history_label"))
@@ -452,10 +462,14 @@ class ClipWatcherGUI(BaseFrameGUI):
         history_font_family: str,
         history_font_size: int,
     ) -> None:
+        # Issue #197: 存在しないフォント名が保存されている場合は安全な有効フォントに解決
+        safe_clipboard_family = resolve_safe_font_family(clipboard_content_font_family)
+        safe_history_family = resolve_safe_font_family(history_font_family)
+
         clipboard_font = font.Font(
-            family=clipboard_content_font_family, size=clipboard_content_font_size
+            family=safe_clipboard_family, size=clipboard_content_font_size
         )
-        history_font = font.Font(family=history_font_family, size=history_font_size)
+        history_font = font.Font(family=safe_history_family, size=history_font_size)
         self.clipboard_text_widget.config(font=clipboard_font)
         self.history_component.apply_font(history_font)
 
@@ -519,7 +533,19 @@ class ClipWatcherGUI(BaseFrameGUI):
 
         # ② テキストに差分がある、かつユーザーが選択操作中でない場合のみ上書きする
         if current_area_text != new_insert_content and not is_text_selected:
-            self._set_text_area(new_insert_content, new_source_item_id)
+            waiting_placeholder = (
+                self.app.translator("waiting_for_clipboard_content")
+                if hasattr(self.app, "translator")
+                else ""
+            )
+            if (
+                not new_insert_content
+                and not displayed_history
+                and current_area_text == waiting_placeholder
+            ):
+                pass
+            else:
+                self._set_text_area(new_insert_content, new_source_item_id)
 
     def select_tool_tab(self, plugin_name: str) -> None:
         """Selects a notebook tab corresponding to the given plugin name."""

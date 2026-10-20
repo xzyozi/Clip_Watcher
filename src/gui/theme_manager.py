@@ -174,40 +174,54 @@ class ThemeManager:
         )
 
         # Treeview specific styling
-        style.configure(
-            "Treeview",
-            background=theme["listbox_bg"],
-            foreground=theme["listbox_fg"],
-            fieldbackground=theme["listbox_bg"],
-        )
-        if theme_name == "dark":
-            # 既知の不具合ワークアラウンド（Requirements 7.4）:
-            # 'clam' テーマでは、Treeviewの選択状態スタイルマップ（'selected'）が
-            # tag_configure() で設定した行の背景色（例: ピン留め行の pinned タグ）を
-            # 無条件に上書きしてしまう。選択状態の背景/前景マッピングを空にすることで、
-            # 選択されていてもタグ側の背景色が視認可能な状態を維持する。
-            try:
-                style.map("Treeview", background=[], foreground=[])
-            except tk.TclError:
-                # Requirements 7.5: ワークアラウンドの適用自体が失敗した場合、
-                # 選択マッピングを完全に諦めるのではなく、通常の選択色マッピング
-                # にフォールバックし、視認性が完全に失われる事態を避ける。
+        # Issue #196: History.Treeview 専用スタイルおよび macOS Aqua 環境における
+        # 選択状態コントラスト（systemHighlight / systemHighlightText）の最適化
+        is_aqua = active_ttk == "aqua"
+        for tree_style in ("Treeview", "History.Treeview"):
+            style.configure(
+                tree_style,
+                background=theme["listbox_bg"],
+                foreground=theme["listbox_fg"],
+                fieldbackground=theme["listbox_bg"],
+            )
+            if is_aqua:
+                # macOS (Aqua) では OS ネイティブの選択ハイライト（systemHighlight）と
+                # 選択テキスト色（systemHighlightText）を設定し、OS アクセントカラー上で十分なコントラストを確保する。
                 style.map(
-                    "Treeview",
+                    tree_style,
+                    background=[("selected", "systemHighlight")],
+                    foreground=[("selected", "systemHighlightText")],
+                )
+            elif theme_name == "dark":
+                # 既知の不具合ワークアラウンド（Requirements 7.4）:
+                # 'clam' テーマでは、Treeviewの選択状態スタイルマップ（'selected'）が
+                # tag_configure() で設定した行の背景色（例: ピン留め行の pinned タグ）を
+                # 無条件に上書きしてしまう。選択状態の背景/前景マッピングを空にすることで、
+                # 選択されていてもタグ側の背景色が視認可能な状態を維持する。
+                try:
+                    style.map(tree_style, background=[], foreground=[])
+                except tk.TclError:
+                    # Requirements 7.5: ワークアラウンドの適用自体が失敗した場合、
+                    # 選択マッピングを完全に諦めるのではなく、通常の選択色マッピング
+                    # にフォールバックし、視認性が完全に失われる事態を避ける。
+                    style.map(
+                        tree_style,
+                        background=[("selected", theme["select_bg"])],
+                        foreground=[("selected", theme["select_fg"])],
+                    )
+            else:
+                style.map(
+                    tree_style,
                     background=[("selected", theme["select_bg"])],
                     foreground=[("selected", theme["select_fg"])],
                 )
-        else:
-            style.map(
-                "Treeview",
-                background=[("selected", theme["select_bg"])],
-                foreground=[("selected", theme["select_fg"])],
+
+        for heading_style in ("Treeview.Heading", "History.Treeview.Heading"):
+            style.configure(
+                heading_style,
+                background=theme["button_bg"],
+                foreground=theme["button_fg"],
             )
-        style.configure(
-            "Treeview.Heading",
-            background=theme["button_bg"],
-            foreground=theme["button_fg"],
-        )
 
         # 2. Recursively apply theme to non-ttk widgets
         logger.info(

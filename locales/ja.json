@@ -105,6 +105,7 @@
     "Start on System Boot": "システム起動時に自動起動",
     "Enable Global Hotkey": "グローバルホットキーを有効にする",
     "Enable Global Hotkey (Windows only)": "グローバルホットキーを有効にする (Windows限定)",
+    "Enable Global Hotkey (Windows/macOS only)": "グローバルホットキーを有効にする (Windows/macOS限定)",
     "Settings": "設定",
     "General": "一般",
     "Appearance": "外観",

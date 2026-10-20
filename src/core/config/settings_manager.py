@@ -21,8 +21,8 @@ def _get_startup_label() -> str:
 
 def _get_hotkey_label() -> str:
     """OS に適したグローバルホットキー設定ラベルを返す。"""
-    if sys.platform != "win32":
-        return "Enable Global Hotkey (Windows only)"
+    if sys.platform.startswith("linux"):
+        return "Enable Global Hotkey (Windows/macOS only)"
     return "Enable Global Hotkey"
 
 
@@ -159,7 +159,7 @@ class SettingsManager(BaseSettingsManager):
                 widget_type=WidgetType.HOTKEY_CAPTURE,
                 tab="General",
                 group="Global Hotkey",
-                default="Ctrl+Shift+F",
+                default="Cmd+Shift+F" if sys.platform == "darwin" else "Ctrl+Shift+F",
             ),
             # ── History ───────────────────────────────────────────────
             SettingField(

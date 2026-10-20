@@ -4,6 +4,7 @@ macOS 具象プラットフォームアダプター群。
 """
 
 from src.core.platform.macos.clipboard_reader import MacOSClipboardReader
+from src.core.platform.macos.hotkey import MacOSHotkeyListener
 from src.core.platform.macos.paste_sender import MacOSPasteSender
 from src.core.platform.macos.process_inspector import MacOSProcessInspector
 from src.core.platform.macos.sound_player import MacOSSoundPlayer
@@ -14,6 +15,7 @@ from src.core.platform.posix.single_instance import (
 
 __all__ = [
     "MacOSClipboardReader",
+    "MacOSHotkeyListener",
     "MacOSProcessInspector",
     "MacOSSingleInstanceController",
     "MacOSSoundPlayer",

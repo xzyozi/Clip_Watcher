@@ -28,11 +28,26 @@ ClipWatcher monitors clipboard changes and keeps reusable text history locally. 
 
 ## Quick Start
 
+### Windows (PowerShell)
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .
 python clip_watcher.py
+```
+
+### macOS / Linux (bash / zsh)
+
+The macOS system default `/usr/bin/python3` (Python 3.9) is not supported. Please create and activate a virtual environment using Python 3.10 or later (e.g. via Homebrew).
+
+```bash
+python3.10 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python clip_watcher.py
+# Or directly run with the venv python
+.venv/bin/python clip_watcher.py
 ```
 
 For development tools, install the `dev` extra:

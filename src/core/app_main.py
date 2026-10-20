@@ -85,6 +85,11 @@ class MainApplication(BaseApplication):
 
         event_handlers.register_class_based_handlers(self)  # type: ignore
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
+
+        # 起動直前に OS クリップボードを取得し、初期履歴・最新テキストを同期する
+        if hasattr(self.monitor, "sync_initial_clipboard"):
+            self.monitor.sync_initial_clipboard()
+
         self.gui = ClipWatcherGUI(master, self)
 
         self.event_dispatcher.subscribe(
@@ -333,7 +338,8 @@ class MainApplication(BaseApplication):
         if theme not in THEMES:
             theme = "light"
         self.theme_manager.apply_theme(theme)
-        self.gui.history_component.apply_theme(THEMES[theme])
+        actual_theme = self.theme_manager.get_current_theme()
+        self.gui.history_component.apply_theme(THEMES[actual_theme])
 
         always_on_top: bool = settings.get("always_on_top", False)
         self.master.attributes("-topmost", always_on_top)
@@ -352,10 +358,16 @@ class MainApplication(BaseApplication):
         """StartupController を介してログイン時自動起動を管理する。"""
         try:
             controller = self.platform_services.startup_controller()
-            if startup_enabled:
-                controller.enable()
-            else:
-                controller.disable()
+            succeeded = controller.enable() if startup_enabled else controller.disable()
+            if not succeeded:
+                # enable()/disable() は失敗時に False を返すだけなので、
+                # 呼び出し側でユーザーへ通知する（Issue #205）。
+                action = "enable" if startup_enabled else "disable"
+                logger.error("自動起動の設定に失敗しました: %s", action)
+                self.show_error_message(
+                    "Startup Error",
+                    f"Failed to {action} startup. See the log for details.",
+                )
         except UnsupportedFeatureError:
             logger.info("自動起動は現在のプラットフォームでは非対応です。")
         except Exception as e:

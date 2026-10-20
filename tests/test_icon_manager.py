@@ -253,3 +253,28 @@ def test_pinned_icon_asset_is_16px_rgba() -> None:
         assert header[:8] == b"\x89PNG\r\n\x1a\n"
         width, height = struct.unpack(">II", header[16:24])
         assert (width, height) == (16, 16)
+
+
+def test_default_icons_dir_is_absolute_and_independent_of_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Issue #204: 既定のアイコンディレクトリはcwdに依存せず実在する。"""
+    monkeypatch.chdir(tmp_path)
+
+    manager = IconManager()
+
+    assert Path(manager._icons_dir).is_absolute()
+    assert manager.has_icon_source("pin") is True
+
+
+def test_invalidate_theme_increments_cache_generation_only_when_cache_dropped() -> None:
+    """Issue #203: 表示画像を破棄したときだけキャッシュ世代を進める。"""
+    manager = IconManager()
+    manager._icon_cache["pin:dark"] = MagicMock()
+
+    manager.invalidate_theme("light")
+    assert manager.cache_generation == 0
+
+    manager.invalidate_theme("dark")
+    assert manager.cache_generation == 1
+    assert "pin:dark" not in manager._icon_cache
