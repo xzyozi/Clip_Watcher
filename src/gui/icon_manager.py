@@ -25,6 +25,9 @@ class IconManager:
         self._icons_dir = DEFAULT_ICONS_DIR if icons_dir is None else icons_dir
         self._source_images: dict[str, PhotoImage] = {}
         self._icon_cache: dict[str, PhotoImage] = {}
+        # 表示画像を破棄するたびに増える世代番号。Treeview 等は画像を名前で
+        # 参照するため、破棄後は利用側が画像を再設定する必要がある。
+        self.cache_generation: int = 0
 
     @staticmethod
     def _cache_key(icon_name: str, theme_name: str) -> str:
@@ -51,6 +54,8 @@ class IconManager:
         stale_keys = [key for key in self._icon_cache if key.endswith(suffix)]
         for key in stale_keys:
             del self._icon_cache[key]
+        if stale_keys:
+            self.cache_generation += 1
 
     def has_icon_source(self, icon_name: str) -> bool:
         """指定アイコンのPNG元画像が存在するかを読み込まずに確認する。"""

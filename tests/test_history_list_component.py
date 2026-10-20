@@ -61,6 +61,7 @@ class RecordingTree:
 class RecordingIconManager:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
+        self.cache_generation: int = 0
 
     def get_icon(self, icon_name: str, theme_name: str) -> str:
         self.calls.append((icon_name, theme_name))
@@ -80,6 +81,7 @@ def make_component(
     component.displayed_history = []
     component.displayed_hotkey_bindings = {}
     component.current_theme = {}
+    component._displayed_icon_generation = 0
     component._updating_history = False
     component.current_font = None
     return component
@@ -146,6 +148,28 @@ def test_apply_theme_reapplies_pinned_icon_using_new_theme_name() -> None:
     assert [(iid, options["image"]) for iid, options in tree.item_calls] == [
         ("item-1.0", "pin-dark-icon"),
         ("item-2.0", ""),
+    ]
+
+
+def test_update_history_reassigns_images_after_icon_cache_invalidation() -> None:
+    """Issue #203: 同一入力でもアイコンキャッシュ破棄後は行の image を再設定する。"""
+    tree = RecordingTree()
+    icon_manager = RecordingIconManager()
+    component = make_component(tree, icon_manager)
+    history = [("pinned", True, 1.0)]
+    theme = THEMES["dark"]
+
+    component.update_history(history, theme, {})
+    component.update_history(history, theme, {})  # 世代不変なら早期return
+    assert len(tree.item_calls) == 0
+    assert icon_manager.calls == [("pin", "dark")]
+
+    icon_manager.cache_generation += 1
+    component.update_history(history, theme, {})
+
+    assert icon_manager.calls == [("pin", "dark"), ("pin", "dark")]
+    assert [(iid, options["image"]) for iid, options in tree.item_calls] == [
+        ("item-1.0", "pin-dark-icon")
     ]
 
 

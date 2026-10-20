@@ -265,3 +265,16 @@ def test_default_icons_dir_is_absolute_and_independent_of_cwd(
 
     assert Path(manager._icons_dir).is_absolute()
     assert manager.has_icon_source("pin") is True
+
+
+def test_invalidate_theme_increments_cache_generation_only_when_cache_dropped() -> None:
+    """Issue #203: 表示画像を破棄したときだけキャッシュ世代を進める。"""
+    manager = IconManager()
+    manager._icon_cache["pin:dark"] = MagicMock()
+
+    manager.invalidate_theme("light")
+    assert manager.cache_generation == 0
+
+    manager.invalidate_theme("dark")
+    assert manager.cache_generation == 1
+    assert "pin:dark" not in manager._icon_cache
