@@ -28,11 +28,26 @@ ClipWatcherはクリップボードの変更を監視し、再利用できるテ
 
 ## セットアップと実行
 
+### Windows (PowerShell)
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .
 python clip_watcher.py
+```
+
+### macOS / Linux (bash / zsh)
+
+macOS システム標準の `/usr/bin/python3` は Python 3.9 のため動作しません。必ず Python 3.10 以上（Homebrew等）で仮想環境を作成して実行してください。
+
+```bash
+python3.10 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+python clip_watcher.py
+# または直接仮想環境の Python を指定
+.venv/bin/python clip_watcher.py
 ```
 
 開発用ツールも導入する場合は、`dev` extrasを指定します。

@@ -1,5 +1,7 @@
 """PNGアイコンの元画像と表示用画像を管理する基盤。"""
 
+from __future__ import annotations
+
 import os
 from tkinter import PhotoImage
 
