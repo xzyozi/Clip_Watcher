@@ -36,6 +36,8 @@ class HistoryListComponent(tk.Frame):
         ] = []  # Will store the full (content, is_pinned, timestamp) tuples
         self.displayed_hotkey_bindings: dict[int, str] = {}
         self.current_theme: dict[str, str] = {}
+        # 最後に行へ反映した IconManager のキャッシュ世代（Issue #203）
+        self._displayed_icon_generation: int = 0
         self._updating_history: bool = False
         self.current_font: tk.font.Font | None = None
 
@@ -160,11 +162,14 @@ class HistoryListComponent(tk.Frame):
         ピン留め済みかつ割当済みの行だけを「ホットキー」列に表示する。
         """
         displayed_hotkey_bindings = dict(hotkey_bindings)
+        # アイコンのキャッシュ破棄後は、行が破棄済み画像を指したままになるため再設定が必要（Issue #203）。
+        icon_generation: int = getattr(self.app.icon_manager, "cache_generation", 0)
         # 入力が全て同一の場合は何もしない（スクロールと選択状態を100%保護）。
         if (
             self.displayed_history == history
             and self.current_theme == theme
             and self.displayed_hotkey_bindings == displayed_hotkey_bindings
+            and self._displayed_icon_generation == icon_generation
         ):
             return
 
@@ -186,6 +191,7 @@ class HistoryListComponent(tk.Frame):
             self.displayed_history = history
             self.displayed_hotkey_bindings = displayed_hotkey_bindings
             self.current_theme = theme
+            self._displayed_icon_generation = icon_generation
             pinned_bg_color = theme["pinned_bg"]
             theme_name = self._theme_name(theme)
 
