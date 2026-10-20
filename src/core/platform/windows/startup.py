@@ -86,6 +86,8 @@ def _remove_legacy_batch_file() -> None:
 
 def _remove_legacy_registry_value() -> None:
     """旧バージョンが登録したレジストリの自動起動値を削除する（移行用）。"""
+    if sys.platform != "win32":
+        return
     try:
         import winreg
 
