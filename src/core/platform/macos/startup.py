@@ -10,6 +10,8 @@ import plistlib
 import sys
 from pathlib import Path
 
+from src.core.platform.startup_python import resolve_python_executable
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PLIST_DIR = Path.home() / "Library" / "LaunchAgents"
@@ -37,9 +39,12 @@ class MacOSStartupController:
         main_script: Path | str | None = None,
     ) -> None:
         self.plist_path = Path(plist_path) if plist_path else _DEFAULT_PLIST_PATH
-        self.python_executable = python_executable or sys.executable
         self.main_script = (
             Path(main_script) if main_script else _resolve_main_script_path()
+        )
+        # .venv があれば優先し、無ければ現在の Python で起動する（Issue #209）。
+        self.python_executable = python_executable or resolve_python_executable(
+            self.main_script.parent, ("bin/python",), sys.executable
         )
 
     def is_enabled(self) -> bool:
