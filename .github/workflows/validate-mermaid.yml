@@ -5,12 +5,14 @@ on:
     branches: [main, develop]
     paths:
       - "docs/**/*.md"
+      - "README.md"
       - ".github/workflows/validate-mermaid.yml"
       - ".github/scripts/validateMermaidMarkdown.mjs"
   pull_request:
     branches: [main, develop]
     paths:
       - "docs/**/*.md"
+      - "README.md"
       - ".github/workflows/validate-mermaid.yml"
       - ".github/scripts/validateMermaidMarkdown.mjs"
   workflow_dispatch:
