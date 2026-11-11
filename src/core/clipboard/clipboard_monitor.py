@@ -57,8 +57,6 @@ class ClipboardMonitor:
         self.excluded_apps: list[str] = (
             excluded_apps if excluded_apps is not None else []
         )
-        self._dirty: bool = False
-        self._auto_save_interval_ms: int = 5000
 
         self.event_dispatcher.subscribe("SETTINGS_CHANGED", self.on_settings_changed)
 
@@ -270,17 +268,6 @@ class ClipboardMonitor:
                 target=self._monitor_clipboard, daemon=True
             )  # type: ignore
             self.monitor_thread.start()  # type: ignore
-            self._schedule_auto_save_check()
-
-    def _schedule_auto_save_check(self) -> None:
-        if self._running:
-            self.tk_root.after(self._auto_save_interval_ms, self._auto_save_check)
-
-    def _auto_save_check(self) -> None:
-        if not self._running:
-            return
-        # DBに都度保存しているため、ここでは何もしません
-        self._schedule_auto_save_check()
 
     def stop(self) -> None:
         self._running = False

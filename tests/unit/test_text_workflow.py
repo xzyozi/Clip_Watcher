@@ -389,6 +389,82 @@ class TestTextWorkflowUnit(unittest.TestCase):
         self.assertEqual(result.status, ExecutionStatus.COMPLETED)  # type: ignore[attr-defined]
         service.shutdown()
 
+    def test_execution_history_file_permissions_and_threading(self) -> None:
+        """ExecutionHistory の 0o600 権限とマルチスレッド同時書き込みの安全性を検証する。"""
+        import os
+        import stat
+        import tempfile
+        from concurrent.futures import ThreadPoolExecutor
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = os.path.join(temp_dir, "test_history.db")
+            history = ExecutionHistory(db_path=db_path, max_records=200)
+
+            # パーミッション検証 (Windows以外)
+            if os.name != "nt":
+                mode = stat.S_IMODE(os.stat(db_path).st_mode)
+                self.assertEqual(mode, 0o600)
+
+            # マルチスレッド並行書き込み
+            def record_worker(worker_id: int) -> list[bool]:
+                results = []
+                for i in range(10):
+                    entry = HistoryEntry(
+                        record_id=f"worker-{worker_id}-rec-{i}",
+                        request_id=f"req-{worker_id}-{i}",
+                        category_id="general",
+                        rule_id=None,
+                        template_id=None,
+                        input_text=f"input-{worker_id}-{i}",
+                        output_text=f"output-{worker_id}-{i}",
+                        created_at="2026-11-04T08:00:00",
+                    )
+                    results.append(history.record(entry))
+                return results
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(record_worker, wid) for wid in range(4)]
+                all_results = [res for f in futures for res in f.result()]
+
+            self.assertEqual(len(all_results), 40)
+            self.assertTrue(all(all_results))
+
+            recent = history.get_recent(limit=100)
+            self.assertEqual(len(recent), 40)
+
+            history.close()
+            # クローズ後は安全に False / 空リストを返す
+            self.assertFalse(history.record(recent[0]))
+            self.assertEqual(history.get_recent(), [])
+
+    def test_text_workflow_history_enabled_config(self) -> None:
+        """設定で history.enabled=False の場合、save_history=True でも履歴保存されないこと。"""
+        builtin_config = {
+            "workflow": {"defaultCategory": "general"},
+            "history": {"enabled": False},
+        }
+        resolver = ConfigurationResolver(builtin_config=builtin_config)
+        history = ExecutionHistory(db_path=":memory:")
+        workflow = TextWorkflow(config_resolver=resolver, history=history)
+
+        request = WorkflowRequest(
+            request_id="req-history-disabled",
+            source_kind=SourceKind.EXPLICIT_TEXT,
+            input_text="履歴無効テスト",
+            save_history=True,
+        )
+        result = workflow.execute(request)
+        self.assertEqual(result.status, ExecutionStatus.COMPLETED)
+        self.assertEqual(len(history.get_recent()), 0)
+        workflow.close()
+
+    def test_text_workflow_service_shutdown_closes_workflow(self) -> None:
+        """TextWorkflowService.shutdown() が workflow.close() を呼び出すこと。"""
+        mock_workflow = unittest.mock.MagicMock()
+        service = TextWorkflowService(workflow=mock_workflow)
+        service.shutdown()
+        mock_workflow.close.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

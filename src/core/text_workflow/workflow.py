@@ -36,6 +36,19 @@ class TextWorkflow:
         self._config_resolver = config_resolver or ConfigurationResolver()
         self._history = history or ExecutionHistory(":memory:")
 
+    @property
+    def history(self) -> ExecutionHistoryRecorder:
+        """実行履歴レコーダーを取得する"""
+        return self._history
+
+    def close(self) -> None:
+        """ワークフローが保持するリソース（履歴DB等）を解放する"""
+        if hasattr(self._history, "close") and callable(self._history.close):
+            try:
+                self._history.close()
+            except Exception:
+                pass
+
     def execute(self, request: WorkflowRequest) -> WorkflowResult:
         """単一の WorkflowRequest を受領し、WorkflowResult を返す"""
         warnings: list[str] = []
@@ -125,7 +138,9 @@ class TextWorkflow:
         status = ExecutionStatus.COMPLETED
 
         # 6. 履歴保存
-        if request.save_history:
+        history_config = config.get("history", {})
+        history_enabled = history_config.get("enabled", True)
+        if request.save_history and history_enabled:
             history_entry = HistoryEntry(
                 record_id=str(uuid.uuid4()),
                 request_id=request.request_id,

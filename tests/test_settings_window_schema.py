@@ -90,10 +90,13 @@ def test_validate_pending_values_rejects_invalid_syntax(tk_root: tk.Tk) -> None:
     window.destroy()
 
 
-def test_validate_pending_values_does_not_call_reconfigure(tk_root: tk.Tk) -> None:
+def test_validate_pending_values_calls_reconfigure_and_succeeds(
+    tk_root: tk.Tk,
+) -> None:
     dispatcher = EventDispatcher()
     settings_manager = SettingsManager(dispatcher)
     mock_hrm = MagicMock()
+    mock_hrm.reconfigure.return_value = True
     app_mock = MagicMock()
     app_mock.hotkey_registration_manager = mock_hrm
 
@@ -102,8 +105,28 @@ def test_validate_pending_values_does_not_call_reconfigure(tk_root: tk.Tk) -> No
     window._vars["global_hotkey_combo"] = tk.StringVar(value="Ctrl+Shift+V")
 
     assert window._validate_pending_values() is True
-    # #141: バリデーションフェーズでは reconfigure の副作用を起こさないこと
-    mock_hrm.reconfigure.assert_not_called()
+    mock_hrm.reconfigure.assert_called_once_with(True, "Ctrl+Shift+V")
+    window.destroy()
+
+
+def test_validate_pending_values_rejects_when_reconfigure_fails(
+    tk_root: tk.Tk,
+) -> None:
+    dispatcher = EventDispatcher()
+    settings_manager = SettingsManager(dispatcher)
+    mock_hrm = MagicMock()
+    mock_hrm.reconfigure.return_value = False
+    app_mock = MagicMock()
+    app_mock.hotkey_registration_manager = mock_hrm
+
+    window = SettingsWindow(tk_root, app_mock, settings_manager)
+    window._vars["global_hotkey_enabled"] = tk.BooleanVar(value=True)
+    window._vars["global_hotkey_combo"] = tk.StringVar(value="Ctrl+Shift+V")
+
+    with patch("tkinter.messagebox.showerror") as mock_err:
+        assert window._validate_pending_values() is False
+        mock_err.assert_called_once()
+        mock_hrm.reconfigure.assert_called_once_with(True, "Ctrl+Shift+V")
     window.destroy()
 
 

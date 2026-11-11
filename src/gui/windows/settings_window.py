@@ -53,9 +53,9 @@ class SettingsWindow(ReusableSettingsWindow):
         if enabled_var is not None and combo_var is not None:
             enabled = bool(enabled_var.get())
             combo = str(combo_var.get()).strip()
+            hrm = getattr(self.app_instance, "hotkey_registration_manager", None)
 
             if enabled:
-                hrm = getattr(self.app_instance, "hotkey_registration_manager", None)
                 if hrm is None:
                     from tkinter import messagebox
 
@@ -78,6 +78,26 @@ class SettingsWindow(ReusableSettingsWindow):
                         msg_tmpl.format(combo=repr(combo), error=e)
                         if "{combo}" in msg_tmpl
                         else f"Invalid hotkey format: {combo!r}. ({e})"
+                    )
+                    messagebox.showerror(
+                        self._tr("Hotkey Error"),
+                        msg,
+                        parent=self,
+                    )
+                    return False
+
+            if hrm is not None:
+                success = hrm.reconfigure(enabled, combo)
+                if not success:
+                    from tkinter import messagebox
+
+                    msg_tmpl = self._tr(
+                        "Could not register global hotkey: {combo}. The key combination may be in use by another application."
+                    )
+                    msg = (
+                        msg_tmpl.format(combo=repr(combo))
+                        if "{combo}" in msg_tmpl
+                        else f"Could not register global hotkey: {combo!r}. The key combination may be in use by another application."
                     )
                     messagebox.showerror(
                         self._tr("Hotkey Error"),

@@ -2,9 +2,9 @@
 title: "コア層起動監視イベント制御詳細設計書"
 file_name: "CLW-DD-002_コア層起動監視イベント制御詳細設計書.md"
 document_type: "detailed_design"
-version: "1.5"
+version: "1.6"
 created_at: "2026-08-31"
-updated_at: "2026-10-18"
+updated_at: "2026-11-04"
 author: "Antigravity"
 purpose: "コア層の起動、クリップボード監視、イベント・コマンド制御の責務と連携契約を定義するため"
 related_documents:
@@ -20,8 +20,8 @@ related_documents:
 | 文書番号       | CLW-DD-002                                         |
 | ファイル名     | CLW-DD-002_コア層起動監視イベント制御詳細設計書.md |
 | ドキュメント名 | コア層起動監視イベント制御詳細設計書               |
-| 版数           | Rev.1.5                                            |
-| 改訂日         | 2026-10-18                                         |
+| 版数           | Rev.1.6                                            |
+| 改訂日         | 2026-11-04                                         |
 | 作成日         | 2026-08-31                                         |
 | 作成者         | Antigravity                                        |
 
@@ -38,12 +38,14 @@ related_documents:
 | サブパッケージ | 主な役割と構成クラス                                                                                                                                                                                                                                                                                                                                                                                                     |
 | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bootstrap/`   | **起動と依存関係の構築**<br>・`ApplicationBuilder`: 各サービス・UIを生成し依存性を注入（DI）する。<br>・`BaseApplication`: アプリケーションの基底インターフェース。<br>・`DependencyChecker`: 起動前の環境・依存ライブラリのチェック。                                                                                                                                                                                   |
-| `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時にイベントを発行する。                                                                                                                                                                                                                                                                                                   |
+| `clipboard/`   | **OSクリップボード監視**<br>・`ClipboardMonitor`: OSのクリップボード変更を常時監視し、変更検知時に履歴保存を呼び出す。                                                                                                                                                                                                                                                                                                   |
 | `events/`      | **イベント駆動と状態遷移**<br>・`EventDispatcher`: Pub/Subモデルによるコンポーネント間通信のハブ。<br>・`commands.py`: Undo/Redo機能のためのコマンドパターン実装（`UpdateHistoryCommand`等）。                                                                                                                                                                                                                           |
 | `config/`      | **設定管理と状態**<br>・`SettingsManager`: `settings.json` の読み書き。<br>・`AppStatus`: アプリ全体の状態保持。                                                                                                                                                                                                                                                                                                         |
 | `platform/`    | **OS抽象化・アダプター**（詳細は§6）<br>・`protocols.py`: OS抽象インターフェース群（`ProcessInspector`, `SoundPlayer`, `SingleInstanceController`, `PasteSender`, `ClipboardReader`, `StartupController`, `HotkeyListener`等）。<br>・`services.py`: OS実装の選択を一元化する `PlatformServices`。<br>・`errors.py`: `PlatformError` / `UnsupportedFeatureError` / `SingleInstanceError`。<br>・`windows/` / `macos/` / `linux/` / `posix/`: 各OS向け具象アダプター。<br>・`null/`: 廃止完了（成功偽装の排除 #150, #161）。 |
+| `hotkey/`      | **ホットキー管理**<br>・`HotkeyRegistrationManager`: 集合登録・検証・ロールバック。<br>・`global_hotkey_listener.py`: OSホットキーキー文字列解析。                                                                                                                                                                                                                                                                       |
+| `window/`      | **ウィンドウ状態管理**<br>・`WindowStateManager`: 表示/最小化のトグルとStrategy管理。                                                                                                                                                                                                                                                                                                                                     |
+| `text_workflow/`| **TextWorkflow パイプライン**<br>・`TextWorkflow`: 自動分類・テンプレート展開・正規化。                                                                                                                                                                                                                                                                                                                                   |
 | `app_main.py`  | `BaseApplication` を実装する具象クラス。ビルドされたシステムを統括する。                                                                                                                                                                                                                                                                                                                                                 |
-
 
 ---
 
@@ -57,30 +59,27 @@ sequenceDiagram
     participant Start as src/event_handlers/__init__.py<br>(start_app)
     participant Builder as ApplicationBuilder
     participant Core as 各種コア/サービス層
-    participant GUI as ClipWatcherGUI
     participant App as MainApplication
+    participant GUI as ClipWatcherGUI
 
     Main->>Start: start_app() 呼び出し
+    Start->>Start: レガシー環境ガード (Python 3.10+ / Tk 8.6+ 検査)
+    Start->>Start: SingleInstanceController.acquire()
     Start->>Builder: ApplicationBuilder() インスタンス化
-
-    Builder->>Builder: 1. 依存ライブラリチェック (DependencyChecker)
-    Builder->>Core: 2. 基本サービス初期化 (EventDispatcher, SettingsManager)
-    Builder->>Core: 3. DB & サービス層初期化 (DatabaseManager, HistoryService...)
-    Builder->>Core: 4. モニター初期化 (ClipboardMonitor)
-    Builder->>Builder: 5. イベントハンドラ登録 (History/File/Settings...)
-
-    Builder->>GUI: 6. GUI構築 (ClipWatcherGUI)
-    Builder->>Builder: 7. プラグイン読み込み (PluginManager)
-
-    Builder->>App: build() 完了 (MainApplication 返却)
-    Start->>App: run() 呼び出し
+    Builder->>Core: 基本サービス・DB・プラットフォーム層初期化
+    Builder->>App: MainApplication インスタンス化
+    App->>GUI: ClipWatcherGUI 構築
+    Builder->>Core: settings_manager.load_and_notify()
+    Builder->>App: app.on_ready() 呼び出し
     App->>Core: ClipboardMonitor.start() (監視スレッド開始)
-    App->>GUI: mainloop() (Tkinterイベントループ開始)
+    Builder-->>Start: build() 完了 (MainApplication 返却)
+    Start->>Start: root.mainloop() (Tkinterイベントループ開始)
 ```
 
 ### 起動時のポイント
 
 - **DI (依存性注入)**: サービスやハンドラは互いに直接インスタンス化せず、`ApplicationBuilder` が必要なオブジェクト（`EventDispatcher` など）をコンストラクタ経由で渡します。これにより循環参照を防いでいます。
+- **ライフサイクル契約**: `build()` の最終工程で `app.on_ready()` が呼ばれ、初期表示更新とホットキー登録、および `ClipboardMonitor.start()` が行われます。
 
 ---
 
@@ -90,31 +89,33 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
+    participant Thread as ClipboardMonitor (監視スレッド)
+    participant TkRoot as Tkinter Main Thread
+    participant Monitor as ClipboardMonitor (_check_clipboard)
     participant OS as OS Clipboard
-    participant Monitor as ClipboardMonitor (別スレッド)
-    participant DB as HistoryService / DAO
+    participant DB as HistoryService
     participant Dispatcher as EventDispatcher
     participant App as MainApplication
-    participant GUI as HistoryListComponent
+    participant GUI as HistoryListComponent<br>(ttk.Treeview)
 
-    loop 0.5秒間隔
-        Monitor->>OS: _check_clipboard()
-        alt 変更あり
-            Monitor->>Monitor: 除外アプリ判定
+    loop 0.5秒間隔 (別スレッド)
+        Thread->>TkRoot: tk_root.after(0, _check_clipboard)
+        TkRoot->>Monitor: _check_clipboard() 実行 (GUIメインスレッド)
+        Monitor->>OS: clipboard_get() / ClipboardReader
+        alt クリップボード内容に変更あり
+            Monitor->>Monitor: 除外アプリ判定 (ProcessInspector)
             Monitor->>DB: add_history_item(テキスト)
-            DB-->>Monitor: 完了
-            Monitor->>Dispatcher: dispatch("CLIPBOARD_CHANGED", テキスト)
+            DB->>Dispatcher: dispatch("HISTORY_UPDATED", payload)
+            Dispatcher->>App: _on_history_updated_event()
+            App->>GUI: update_gui()
+            GUI->>GUI: Treeview の描画更新
         end
     end
-
-    Dispatcher->>App: イベント通知
-    App->>GUI: update_clipboard_display() 呼び出し
-    GUI->>DB: 最新の履歴リストを取得
-    GUI->>GUI: リストボックスの描画更新
 ```
 
 **【監視フローのポイント】**
-- `ClipboardMonitor` は別スレッドで稼働しますが、直接 GUI を操作しません。`EventDispatcher` を介してイベントを発行することで、Tkinterのメインスレッド（`MainApplication` 側）で安全に描画更新が行われます。
+- **スレッド境界と安全契約**: Tkinter の `clipboard_get()` および GUI 描画のスレッド制約を満たすため、監視スレッドは 0.5 秒ごとに `self.tk_root.after(0, self._check_clipboard)` をスケジュールするのみとし、実際のクリップボード読み取り・除外プロセス判定・DB 保存はすべて Tkinter のメインスレッド上で安全に同期実行されます。
+- **イベント契機**: 履歴追加は `HistoryService` から `HISTORY_UPDATED` イベントとして発火され、`MainApplication` が GUI（`HistoryListComponent`）を更新します。
 
 ---
 
@@ -161,7 +162,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `PasteSender`              | `WindowsPasteSender` (`keybd_event`)   | `MacOSPasteSender` (`osascript` Cmd+V)                         | `LinuxPasteSender` (`xdotool` Ctrl+V)                          | 履歴選択時の自動貼り付けキーストローク送信。                                                                      |
 | `ClipboardReader`          | `WindowsClipboardReader` (`pywin32`)   | `MacOSClipboardReader` (`/usr/bin/pbpaste` #170)               | 非対応（Tkinter標準フォールバック）                            | `clipboard_get()` 失敗時の代替テキスト読み取り。                                                                 |
 | `StartupController`        | `WindowsStartupController` (HKCU Run)  | `MacOSStartupController` (LaunchAgents plist)                  | `LinuxStartupController` (XDG autostart desktop)               | システム起動/ログイン時の自動起動制御。バッチファイル脆弱性を根本解消 (#110, #155)。                              |
-| `HotkeyListener`           | `WindowsHotkeyListener` (RegisterHotKey)| 非対応 (`UnsupportedFeatureError`)                             | 非対応 (`UnsupportedFeatureError`)                             | グローバルホットキー。`NullHotkeyListener` を全廃し、未対応環境では明示的に無効化・UI案内する (#150, #161)。      |
+| `HotkeyListener`           | `WindowsHotkeyListener` (Win32 RegisterHotKey)| `MacOSHotkeyListener` (Carbon RegisterEventHotKey)              | 非対応 (`UnsupportedFeatureError`)                             | グローバルホットキー。未対応環境（Linux等）では明示的に無効化・UI案内する (#150, #161)。                          |
 
 ### 6.2 `PlatformServices` の契約
 
@@ -169,7 +170,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | :------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 生成     | コンストラクタで各アダプター（未対応は `None`）を受け取る。本番用は `PlatformServices.for_current_platform()` で生成する。生成は `start_app()` の1箇所のみ。 |
 | 取得     | `process_inspector()` / `sound_player()` / `single_instance()` / `paste_sender()` / `clipboard_reader()` / `startup_controller()` のメソッドで取得する。    |
-| ホットキー | `create_hotkey_listener(master, on_triggered)` ファクトリメソッドで生成する。Windows 以外では `UnsupportedFeatureError` を送出する。                         |
+| ホットキー | `create_hotkey_listener(master, on_triggered)` ファクトリメソッドで生成する。Windows / macOS 以外（Linux等）では `UnsupportedFeatureError` を送出する。       |
 | 非対応時 | 対応するアダプターが無い場合、取得メソッドは `UnsupportedFeatureError` を送出する。`None` や成功を装うNull実装は返さない。                                   |
 | 不変性   | 生成後にアダプターを差し替えない。テストではコンストラクタにモックを渡す（`sys.platform` の差し替えは使わない）。                                            |
 
@@ -201,7 +202,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `ClipboardReader`          | `ClipboardMonitor`    | tkinter の `clipboard_get()` が失敗した場合の代替経路。Windows・macOS 以外の非対応環境は `WARNING` を1回だけ出し、そのポーリングは `None` を返して次回を待つ。                       |
 | `SingleInstanceController` | `start_app()`         | 多重起動を防止できない旨の `WARNING` を出して起動する。                                                                                                                              |
 | `StartupController`        | `MainApplication`     | 起動時の同期処理で `WARNING` を出し、自動起動設定の変更処理をスキップする。                                                                                                          |
-| `HotkeyListener`           | `SettingsWindow` / UI | 設定UIで「Windows限定」である旨を表示し、設定保存時のバリデーションで「このプラットフォームではサポートされていません」エラーを表示して不正登録を防止する。                           |
+| `HotkeyListener`           | `SettingsWindow` / UI | 設定UIで非対応環境（Linux等）である旨を表示し、設定保存時のバリデーションで「このプラットフォームではサポートされていません」エラーを表示して不正登録を防止する。                    |
 
 ### 6.6 `SingleInstanceController.acquire()` の契約
 
@@ -230,8 +231,8 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 ### 6.7 依存方向と副作用分離 (#141)
 
 - プラットフォーム具象アダプターは `platform/protocols.py` のみに依存し、サービス層やGUI層に依存しません。
-- **設定ウィンドウにおける副作用の分離 (#141)**:
-  `SettingsWindow._validate_pending_values()` では `parse_hotkey_string()` によるホットキーの構文解析のみを実施し、OSへのホットキー再登録（`reconfigure()`）は行いません。実際の再登録処理は、設定値が確定・保存された後に発行される `SETTINGS_CHANGED` イベントを契機として `MainApplication.on_settings_changed()` で実施します。これにより、キャンセル時や他の設定値検証エラー時にホットキーのみ先行して書き換わる不整合を完全に防止しています。
+- **設定ウィンドウにおける副作用の分離と検証契約 (#141)**:
+  `SettingsWindow._validate_pending_values()` では `parse_hotkey_string()` による構文解析に加え、`HotkeyRegistrationManager.reconfigure()` によるOSホットキー登録試行を行います。競合等でOS登録に失敗した場合はエラーダイアログを表示して保存・適用を中止（`False` を返却）し、`settings.json` への不正値永続化および画面終了を防ぎます。失敗時は `HotkeyRegistrationManager` が直ちに従来の有効な登録集合を自動復元するため、副作用は残りません。また、外部変更等による `SETTINGS_CHANGED` イベント契機での再構成時も `MainApplication.on_settings_changed()` で戻り値を監視し、失敗時に警告ログおよびエラーダイアログを表示します。
 
 ## 7. テスト・検証要件
 
@@ -260,4 +261,5 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | Rev.1.3 | 2026-10-15 | 未記載      | `ClipboardReader` の追加と `win32_available` の診断用途への限定、`ClipboardMonitor` の責務を監視に限定（履歴・通知の委譲を除去）、`QuickTaskDialog` の書き込み経路を §6.6a に追加 (#169)。 |
 | Rev.1.4 | 2026-10-18 | Antigravity | macOS 向け `ClipboardReader` 実装（`MacOSClipboardReader` / `pbpaste`）の追加と実機検証要件の反映 (#170)。                                                    |
 | Rev.1.5 | 2026-10-18 | Antigravity | macOS/Linux 向け各具象アダプター拡充、`PosixSingleInstanceController`、`StartupController`新設とWindowsレジストリ移行（#110, #155）、`NullHotkeyListener`全廃（#150）、ホットキー検証の副作用分離（#141）を反映 (#161)。 |
+| Rev.1.6 | 2026-11-04 | Antigravity | 起動シーケンス・監視スレッドモデル・`HISTORY_UPDATED` へのフロー是正、macOS `MacOSHotkeyListener` 表記追加、設定検証契約是正（F-01）。 |
 
