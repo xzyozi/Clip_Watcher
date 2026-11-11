@@ -63,12 +63,12 @@ ClipWatcherは、クリップボードの履歴をローカルで管理・再利
 
 ```mermaid
 flowchart LR
-    OS[OSクリップボード] -->|ポーリング検知| Monitor[ClipboardMonitor]
-    Monitor -->|add_history_item| HistoryService[HistoryService]
-    HistoryService -->|HISTORY_UPDATED| Dispatcher[EventDispatcher]
-    Dispatcher --> Application[MainApplication]
-    Application --> GUI[ClipWatcherGUI]
-    GUI --> Treeview[HistoryListComponent<br/>ttk.Treeview]
+    OS["OSクリップボード"] -->|"ポーリング検知"| Monitor["ClipboardMonitor"]
+    Monitor -->|"add_history_item"| HistoryService["HistoryService"]
+    HistoryService -->|"HISTORY_UPDATED"| Dispatcher["EventDispatcher"]
+    Dispatcher --> Application["MainApplication"]
+    Application --> GUI["ClipWatcherGUI"]
+    GUI --> Treeview["HistoryListComponent<br/>ttk.Treeview"]
 ```
 
 1.  `ClipboardMonitor` がOSのクリップボード変更を検知します（GUIメインスレッド上で同期チェック）。

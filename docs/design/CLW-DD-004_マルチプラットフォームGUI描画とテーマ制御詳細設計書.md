@@ -69,27 +69,27 @@ related_documents:
 
 ```mermaid
 flowchart TD
-    Start([アプリ起動 / start_app]) --> CheckLegacy{レガシー環境判定\nTk < 8.6 or Py < 3.10}
-    CheckLegacy -->|該当 (macOS)| ShowAlert[ネイティブアラート表示\nTk 8.6+ への誘導案内]
-    ShowAlert --> Abort([root.destroy / 安全終了])
+    Start(["アプリ起動 / start_app"]) --> CheckLegacy{"レガシー環境判定\nTk < 8.6 or Py < 3.10"}
+    CheckLegacy -->|"該当 (macOS)"| ShowAlert["ネイティブアラート表示\nTk 8.6+ への誘導案内"]
+    ShowAlert --> Abort(["root.destroy / 安全終了"])
     
-    CheckLegacy -->|適合| CheckOS{OS 判定}
-    CheckOS -->|darwin| CheckDarkMode{OS 外観判定\nAppleInterfaceStyle}
-    CheckOS -->|その他| ApplyCustom[設定テーマを適用]
+    CheckLegacy -->|"適合"| CheckOS{"OS 判定"}
+    CheckOS -->|"darwin"| CheckDarkMode{"OS 外観判定\nAppleInterfaceStyle"}
+    CheckOS -->|"その他"| ApplyCustom["設定テーマを適用"]
     
-    CheckDarkMode -->|Dark| SetDark[自動選択: Dark テーマ]
-    CheckDarkMode -->|Light| SetLight[自動選択: Light テーマ]
+    CheckDarkMode -->|"Dark"| SetDark["自動選択: Dark テーマ"]
+    CheckDarkMode -->|"Light"| SetLight["自動選択: Light テーマ"]
     
-    SetDark --> MaintainAqua[ttk テーマ: aqua 維持]
+    SetDark --> MaintainAqua["ttk テーマ: aqua 維持"]
     SetLight --> MaintainAqua
-    ApplyCustom --> ApplyTtkStyle[ttk テーマ: clam / default]
+    ApplyCustom --> ApplyTtkStyle["ttk テーマ: clam / default"]
     
-    MaintainAqua --> ApplyStyles[Treeview / ttk スタイル設定]
+    MaintainAqua --> ApplyStyles["Treeview / ttk スタイル設定"]
     ApplyTtkStyle --> ApplyStyles
     
-    ApplyStyles --> ApplyWidgetTree[ウィジェットツリー色適用\nText / Entry / PanedWindow]
-    ApplyWidgetTree --> ForceRefresh[初回アイドル更新\nroot.update_idletasks]
-    ForceRefresh --> End([描画完了 / mainloop])
+    ApplyStyles --> ApplyWidgetTree["ウィジェットツリー色適用\nText / Entry / PanedWindow"]
+    ApplyWidgetTree --> ForceRefresh["初回アイドル更新\nroot.update_idletasks"]
+    ForceRefresh --> End(["描画完了 / mainloop"])
 ```
 
 ---
