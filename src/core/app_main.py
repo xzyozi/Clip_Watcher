@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from src import event_handlers
 from src.core.bootstrap.base_application import ApplicationState, BaseApplication
-from src.core.config.defaults import THEMES
+from src.core.config.defaults import DEFAULT_USER_SETTINGS, THEMES
 from src.core.hotkey.global_hotkey_listener import GLOBAL_HOTKEY_ID
 from src.core.hotkey.hotkey_registration_manager import normalize_pinned_hotkey_bindings
 from src.core.platform.errors import UnsupportedFeatureError
@@ -350,9 +350,21 @@ class MainApplication(BaseApplication):
         self._manage_startup(startup_enabled)
 
         if self.hotkey_registration_manager is not None:
-            hotkey_enabled = settings.get("global_hotkey_enabled", False)
-            hotkey_combo = settings.get("global_hotkey_combo", "Ctrl+Shift+V")
-            self.hotkey_registration_manager.reconfigure(hotkey_enabled, hotkey_combo)
+            default_enabled = DEFAULT_USER_SETTINGS.get("global_hotkey_enabled", True)
+            default_combo = DEFAULT_USER_SETTINGS.get(
+                "global_hotkey_combo", "Ctrl+Shift+F"
+            )
+            hotkey_enabled = settings.get("global_hotkey_enabled", default_enabled)
+            hotkey_combo = settings.get("global_hotkey_combo", default_combo)
+            succeeded = self.hotkey_registration_manager.reconfigure(
+                hotkey_enabled, hotkey_combo
+            )
+            if not succeeded:
+                logger.warning("ホットキー登録に失敗しました: %s", hotkey_combo)
+                self.show_error_message(
+                    "Hotkey Registration Warning",
+                    f"Could not register global hotkey: {hotkey_combo!r}. The key combination may be in use by another application.",
+                )
 
     def _manage_startup(self, startup_enabled: bool) -> None:
         """StartupController を介してログイン時自動起動を管理する。"""

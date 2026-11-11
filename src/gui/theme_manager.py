@@ -276,7 +276,15 @@ class ThemeManager:
                     selectforeground=theme["select_fg"],
                     insertbackground=theme["fg"],
                 )
-            elif isinstance(widget, (tk.Text, tk.Listbox)):
+            elif isinstance(widget, tk.Text):
+                widget.config(
+                    bg=theme["listbox_bg"],
+                    fg=theme["listbox_fg"],
+                    selectbackground=theme["select_bg"],
+                    selectforeground=theme["select_fg"],
+                    insertbackground=theme["fg"],
+                )
+            elif isinstance(widget, tk.Listbox):
                 widget.config(
                     bg=theme["listbox_bg"],
                     fg=theme["listbox_fg"],

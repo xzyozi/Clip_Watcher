@@ -2,10 +2,10 @@
 title: "TextWorkflow詳細設計書"
 file_name: "CLW-DD-003_TextWorkflow詳細設計書.md"
 document_type: "detailed_design"
-version: "1.0"
+version: "1.6"
 created_at: "2026-08-31"
-updated_at: "2026-08-31"
-author: "未記載"
+updated_at: "2026-11-04"
+author: "Antigravity"
 purpose: "TextWorkflowの入力・出力DTO、処理パイプライン、設定境界、失敗契約を定義するため"
 related_documents:
   - "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
@@ -20,10 +20,10 @@ related_documents:
 | 文書番号       | CLW-DD-003                           |
 | ファイル名     | CLW-DD-003_TextWorkflow詳細設計書.md |
 | ドキュメント名 | TextWorkflow詳細設計書               |
-| 版数           | Rev.1.0                              |
-| 改訂日         | 2026-08-31                           |
+| 版数           | Rev.1.6                              |
+| 改訂日         | 2026-11-04                           |
 | 作成日         | 2026-08-31                           |
-| 作成者         | 未記載                               |
+| 作成者         | Antigravity                          |
 
 ---
 
@@ -160,7 +160,11 @@ TextWorkflowは、分類・展開・正規化・履歴記録の順序制御と�
 
 ### 4.5 ExecutionHistory (`src/core/text_workflow/history.py`)
 - 既存のクリップボード履歴 DB とは独立した専用テーブル (`t_workflow_history`) または SQLite ファイルに結果を記録。
-- 保持上限数 (例: 直近 500 件) や有効期限による自動パージ機能をサポート。
+- **スレッド安全性**: `threading.Lock` によりコネクション操作（`_init_db`, `record`, `get_recent`, `close`）を排他的に保護し、複数ワーカースレッドからのトランザクション衝突を防止する。
+- **ファイル権限管理**: 機密テキストを保護するため、POSIX環境では親ディレクトリ `0o700`、DBファイル `0o600` の厳格なアクセス権限を強制する（CLW-BD-001 §8 準拠）。
+- **履歴設定との連動**: `TextWorkflow.execute()` は `request.save_history` かつ設定ファイルの `history.enabled`（既定 `True`）が有効な場合のみ履歴を記録する。
+- **保持上限パージ**: 保持上限数 (既定 500 件) による自動パージ機能をサポート。
+- **リソース解放**: `close()` により DB 接続を安全に解放し、クローズ後の操作は安全に失敗（`False` / 空リスト返却）する。
 
 ---
 
@@ -204,7 +208,7 @@ src/
 完了通知と停止時の挙動 (#175):
 - 実行中に例外が発生した場合も、`FAILED`（`error_message` に例外メッセージ。空なら例外型名）の `WorkflowResult` を生成して同じ経路で通知する。通知を喪失しない。
 - 完了コールバックの例外、および `ui_thread_marshal` の失敗（ウィンドウ破棄後など）はログに記録し、ワーカースレッドへ伝播させない。
-- `shutdown(timeout)` は冪等で、停止後の `execute_async()` は実行せずに `REJECTED` の完了済み `Future` を返し、同じ経路で通知する。実行中・待機中のタスクは最大 `timeout` 秒（既定2秒）だけ完了を待ち、終わらなかった未実行タスクは取り消して `REJECTED` で通知する。実行中のタスクは強制中断せず、完了後にワーカースレッドが終了する。
+- `shutdown(timeout)` は冪等で、停止後の `execute_async()` は実行せずに `REJECTED` の完了済み `Future` を返し、同じ経路で通知する。実行中・待機中のタスクは最大 `timeout` 秒（既定2秒）だけ完了を待ち、終わらなかった未実行タスクは取り消して `REJECTED` で通知する。実行中のタスクは強制中断せず、完了後にワーカースレッドが終了する。未実行タスク取り消し後、`TextWorkflow.close()`（`ExecutionHistory.close()`）を呼び出して保持しているDB接続などのリソースを確実に解放する。
 
 ---
 
@@ -288,4 +292,5 @@ TextWorkflow は **Result パターン**を採用し、`TextWorkflow.execute()` 
 | Rev.1.2 | 2026-09-01 | 未記載 | §6として公開Interface・拡張点・例外方針・互換性ポリシーを新設（旧§6・7は§7・8へ繰り下げ）。`TextWorkflowError` を実装に追加。                                                                                                     |
 | Rev.1.3 | 2026-09-01 | 未記載 | §5.2/5.3を実装に合わせて更新。`ConfigurationResolver.from_app_data_dir()` による実ファイル読み込み、`ApplicationBuilder.with_text_workflow_service()` によるDI登録、`ui_thread_marshal` 経由の `EventDispatcher` 通知経路を反映。 |
 | Rev.1.4 | 2026-09-01 | 未記載 | §7のReDoS対策を実装に合わせて詳細化。パターン長制限と、Windows互換の子プロセス隔離・強制終了による正規表現実行時間制限を定義。                                                                                                    |
-| Rev.1.5 | 2026-10-15 | 未記載 | ワークスペース設定の安全性（`workspace_root` の検証、制限値を緩める上書きの禁止）、非同期実行の例外通知・停止時の挙動、異常入力への防御を追加 (#175)。                                                                            |
+| Rev.1.5 | 2026-10-15 | 未記載      | ワークスペース設定の安全性（`workspace_root` の検証、制限値を緩める上書きの禁止）、非同期実行の例外通知・停止時の挙動、異常入力への防御を追加 (#175)。                                                                            |
+| Rev.1.6 | 2026-11-04 | Antigravity | `ExecutionHistory` のスレッドセーフ化（`threading.Lock`）・`0o600` 権限管理・`shutdown()` クローズ契約・`history.enabled` 設定連携（F-03, F-07）を追記。 |

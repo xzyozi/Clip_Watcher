@@ -2,10 +2,10 @@
 title: "ClipWatcher全体アーキテクチャ基本設計書"
 file_name: "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
 document_type: "basic_design"
-version: "1.0"
+version: "1.3"
 created_at: "2026-08-31"
-updated_at: "2026-08-31"
-author: "未記載"
+updated_at: "2026-11-04"
+author: "Antigravity"
 purpose: "ClipWatcherの全体構造、責務境界、イベント駆動の連携方針を定義するため"
 related_documents:
   - "CLW-BD-002_ClipWatcher機能基本設計書.md"
@@ -22,10 +22,10 @@ related_documents:
 | 文書番号       | CLW-BD-001                                            |
 | ファイル名     | CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md |
 | ドキュメント名 | ClipWatcher全体アーキテクチャ基本設計書              |
-| 版数           | Rev.1.2                                              |
-| 改訂日         | 2026-08-31                                           |
+| 版数           | Rev.1.3                                              |
+| 改訂日         | 2026-11-04                                           |
 | 作成日         | 2026-08-31                                           |
-| 作成者         | 未記載                                               |
+| 作成者         | Antigravity                                          |
 
 ---
 
@@ -44,8 +44,12 @@ ClipWatcherは、クリップボードの履歴をローカルで管理・再利
     -   `clipboard/`: クリップボード監視ロジック（`ClipboardMonitor`）。
     -   `events/`: イベントディスパッチャおよびコマンドオブジェクト。
     -   `config/`: 設定管理および状態管理（`SettingsManager`, `AppStatus`）。
+    -   `platform/`: OS抽象化レイヤー・アダプター群（`PlatformServices`, `protocols`）。
+    -   `hotkey/`: グローバルホットキーのキー構文解析および登録集合管理（`HotkeyRegistrationManager`）。
+    -   `window/`: ウィンドウ表示制御・状態管理（`WindowStateManager`）。
+    -   `text_workflow/`: テキスト変換・自動分類・正規化パイプライン（`TextWorkflow`）。
 -   `src/db/`: データベースへのアクセス層（SQLite）。DAO（Data Access Object）とDTOパターンによるデータ操作を担当。
--   `src/services/`: データベース層とGUI層を仲介するビジネスロジック層（`HistoryService`, `FixedPhrasesManager` など）。
+-   `src/services/`: データベース層とGUI層を仲介するビジネスロジック層（`HistoryService`, `NotificationManager`, `TextWorkflowService` など）。
 -   `src/gui/`: ユーザーインターフェース（UI）に関連するすべてのクラス。
 -   `src/event_handlers/`: UIからのアクションをロジック層に結びつけるためのイベントハンドラ群。
 -   `src/plugins/`: クリップボード内容の変換や、GUIツールを提供するための拡張プラグイン。
@@ -59,39 +63,47 @@ ClipWatcherは、クリップボードの履歴をローカルで管理・再利
 
 ```mermaid
 flowchart LR
-    OS[OSクリップボード] -->|変更検知| Monitor[ClipboardMonitor]
-    Monitor -->|CLIPBOARD_CHANGED| Dispatcher[EventDispatcher]
-    Dispatcher --> Application[MainApplication]
-    Application --> GUI[ClipWatcherGUI]
-    GUI --> History[HistoryListComponent]
+    OS["OSクリップボード"] -->|"ポーリング検知"| Monitor["ClipboardMonitor"]
+    Monitor -->|"add_history_item"| HistoryService["HistoryService"]
+    HistoryService -->|"HISTORY_UPDATED"| Dispatcher["EventDispatcher"]
+    Dispatcher --> Application["MainApplication"]
+    Application --> GUI["ClipWatcherGUI"]
+    GUI --> Treeview["HistoryListComponent<br/>ttk.Treeview"]
 ```
 
-1.  `ClipboardMonitor` がOSのクリップボードの変更を検知します。
-2.  `EventDispatcher` を通じて `CLIPBOARD_CHANGED` イベントを発行します。
-3.  `MainApplication` クラスがイベントを受け取り、GUIの表示更新メソッドを呼び出します。
-4.  GUIが `HistoryListComponent` などの関連コンポーネントの表示を更新します。
+1.  `ClipboardMonitor` がOSのクリップボード変更を検知します（GUIメインスレッド上で同期チェック）。
+2.  `HistoryService.add_history_item()` を呼び出してデータベースに保存します。
+3.  `HistoryService` が `EventDispatcher` を通じて `HISTORY_UPDATED` イベントを発行します。
+4.  `MainApplication` クラスがイベントを受け取り、GUIの表示更新メソッド（`update_gui()`）を呼び出します。
+5.  GUIが `HistoryListComponent`（`ttk.Treeview`）などの関連コンポーネントの表示を更新します。
 
 ## 3. 主要コンポーネントとサービス
 
-| クラス / サービス    | 説明                                                                              |
-| :------------------- | :-------------------------------------------------------------------------------- |
-| `MainApplication`    | すべてのコンポーネントを保持し、全体を統括するメインクラス。                      |
-| `ApplicationBuilder` | 依存関係を解決しながら `MainApplication` のインスタンスを生成するビルダークラス。 |
-| `EventDispatcher`    | Pub/Sub パターンを実装し、コンポーネント間の疎結合な通信を実現するイベントバス。  |
-| `DatabaseManager`    | SQLite データベースへの接続とトランザクション管理を行う。                         |
-| `HistoryService`     | 履歴データのCRUD操作をカプセル化するビジネスロジック層。                          |
-| `UndoManager`        | コマンドパターンを利用して、元に戻す（Undo）/やり直し（Redo）の操作を管理する。   |
-| `PluginManager`      | プラグイン（テキスト変換、GUIツール）を動的に読み込み管理する。                   |
+| クラス / サービス             | 説明                                                                              |
+| :---------------------------- | :-------------------------------------------------------------------------------- |
+| `MainApplication`             | すべてのコンポーネントを保持し、全体を統括するメインクラス。                      |
+| `ApplicationBuilder`          | 依存関係を解決しながら `MainApplication` のインスタンスを生成するビルダークラス。 |
+| `EventDispatcher`             | Pub/Sub パターンを実装し、コンポーネント間の疎結合な通信を実現するイベントバス。  |
+| `PlatformServices`            | OSごとの差異（プロセス判定、ホットキー、起動登録等）を抽象化する単一集約窓口。     |
+| `DatabaseManager`             | SQLite データベースへの接続とトランザクション管理を行う。                         |
+| `HistoryService`              | 履歴データのCRUD操作をカプセル化するビジネスロジック層。                          |
+| `HotkeyRegistrationManager`   | グローバルホットキーの集合検証、原子的再構成、競合時ロールバックを担う。          |
+| `WindowStateManager`          | メインウィンドウの表示/最小化状態遷移およびStrategy制御を管理する。              |
+| `UndoManager`                 | コマンドパターンを利用して、元に戻す（Undo）/やり直し（Redo）の操作を管理する。   |
+| `PluginManager`               | プラグイン（テキスト変換、GUIツール）を動的に読み込み管理する。                   |
+| `IconManager`                 | アプリアイコン・アクション画像のキャッシュとテーマ切替世代管理を担当する。        |
+| `TextWorkflowService`         | テキスト分類・テンプレート展開パイプラインを非同期スレッドプールで提供する。      |
 
 ## 4. GUI レイヤー
 
 `src/gui` ディレクトリは、ユーザーインターフェース要素を含みます。
 
 -   **`ClipWatcherGUI`**: メインウィンドウ。クリップボードタブ、メタ管理タブ（定型文など）、プラグインから動的に読み込まれるツールタブを持つ。
--   **`components/`**: `HistoryListComponent` や `PhraseListComponent` など、再利用可能なUI部品。
+-   **`components/`**: `HistoryListComponent`（`ttk.Treeview` ベース）や `PhraseListComponent` など、再利用可能なUI部品。
 -   **`dialogs/`** および **`windows/`**: 各種設定やメタ管理、ポップアップダイアログ。
 -   **`base/context_menu.py`**: 右クリックメニューのロジック。状態管理（StateProvider）をUIから分離。
--   **`ThemeManager`**: `ttk` スタイルと標準の `tk` ウィジェットにテーマ（ライト/ダーク）を一元的に適用する。
+-   **`ThemeManager`**: `ttk` スタイル（Aqua / clam）と標準の `tk` ウィジェットにテーマ（ライト/ダーク）を一元的に適用する。
+-   **`IconManager`**: テーマ変更時の動的画像再バインドとメモリリーク防止を世代番号（cache generation）で制御。
 
 ## 5. イベント駆動アーキテクチャ
 
@@ -102,7 +114,7 @@ flowchart LR
 | イベント名                 | ペイロード    | 発行元 (例)          | 購読者 (例)            | 説明                                               |
 | :------------------------- | :------------ | :------------------- | :--------------------- | :------------------------------------------------- |
 | `SETTINGS_CHANGED`         | `dict`        | `SettingsManager`    | `MainApplication`      | 設定が変更されたことを通知する。                   |
-| `CLIPBOARD_CHANGED`        | `str`         | `ClipboardMonitor`   | `MainApplication`      | クリップボードの内容が変更されたことを通知する。   |
+| `HISTORY_UPDATED`          | `dict`        | `HistoryService`     | `MainApplication`      | 履歴データが追加・変更されたことを通知する。       |
 | `HISTORY_COPY_SELECTED`    | `list[float]` | コンテキストメニュー | `HistoryEventHandlers` | 選択項目のコピーを要求する。                       |
 | `REQUEST_UNDO_LAST_ACTION` | `None`        | コンテキストメニュー | `HistoryEventHandlers` | `UndoManager` を介して元に戻す操作をトリガーする。 |
 
@@ -143,3 +155,4 @@ flowchart LR
 | Rev.1.0 | 2026-08-31 | 未記載      | アーキテクチャ概要を基本設計書として命名・分類し、メタデータ、Mermaid図、改訂履歴を整備。 |
 | Rev.1.1 | 2026-10-17 | 未記載      | `UndoManager` のスタックサイズ上限仕様（deque maxlen=100）を §6 に追記 (#176, #139)。       |
 | Rev.1.2 | 2026-10-17 | 未記載      | DB層の堅牢化（権限制限、親ディレクトリ自動生成、DAO分離、移行安全性、入力検証）を §8 に追記 (#173, #118〜#126)。 |
+| Rev.1.3 | 2026-11-04 | Antigravity | コア層サブパッケージ構成、`HISTORY_UPDATED` へのデータフロー是正、Treeview/IconManager/TextWorkflowService 追記。 |

@@ -2,9 +2,9 @@
 title: "ClipWatcher機能基本設計書"
 file_name: "CLW-BD-002_ClipWatcher機能基本設計書.md"
 document_type: "basic_design"
-version: "1.5"
+version: "1.6"
 created_at: "2026-08-31"
-updated_at: "2026-10-18"
+updated_at: "2026-11-04"
 author: "Antigravity"
 purpose: "ClipWatcherが提供する機能範囲、利用技術、将来拡張の境界を定義するため"
 related_documents:
@@ -21,8 +21,8 @@ related_documents:
 | 文書番号       | CLW-BD-002                              |
 | ファイル名     | CLW-BD-002_ClipWatcher機能基本設計書.md |
 | ドキュメント名 | ClipWatcher機能基本設計書               |
-| 版数           | Rev.1.5                                 |
-| 改訂日         | 2026-10-18                              |
+| 版数           | Rev.1.6                                 |
+| 改訂日         | 2026-11-04                              |
 | 作成日         | 2026-08-31                              |
 | 作成者         | Antigravity                             |
 
@@ -36,11 +36,11 @@ related_documents:
 
 ## 2. 動作前提とシステム境界
 
-- **対象ランタイム**: Python 3.10 以降（macOS レガシー環境 Python 3.9 / Tk 8.5 での起動もフォールバックにより許容）
+- **対象ランタイム**: Python 3.10 以降（Tk 8.6+）。macOS システム標準の Python 3.9 / Tk 8.5 環境で実行された場合は、黒画面化を防ぐためネイティブアラートで Python 3.10+ / Tk 8.6+ への誘導を表示して安全に終了する（#211, #213）。
 - **GUI方針（標準モジュール縛り）**: Python標準ライブラリ（`tkinter` / `ttk`）のみを用い、外部GUIパッケージに依存しないゼロインストール・高ポータビリティを保証。
 - **永続化**: SQLite（標準モジュール `sqlite3`）
 - **追加依存**: `pywin32` (Windows環境のみ)、`psutil`（フォールバック用）
-- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離し、OSごとの実装の選択は `PlatformServices` 1クラスに集約する（#158）。外部依存を追加しない「ゼロインストール原則」に基づき、macOS および Linux 向けの具象アダプター（プロセス判定、二重起動防止、効果音再生、自動貼り付け、スタートアップ登録）を標準ライブラリおよび OS 標準コマンドを活用して提供する（#161）。非対応の機能を要求した時点では `UnsupportedFeatureError` を返し、成功を装うNullアダプターは廃止した（#150）。呼び出し側は機能単位で明示的に縮退（警告ログを出して継続）し、非Windows環境でも安全にフル稼働する。クリップボード読み取りの代替経路（`ClipboardReader`）も `PlatformServices` から取得し、Windows では `pywin32` による `WindowsClipboardReader`、macOS では標準の `pbpaste` を用いた `MacOSClipboardReader` を提供する（#170）。ホットキーは現行Windows限定とし、非対応環境ではUI上で明示的に案内しバリデーションで弾く。スタートアップ制御はバッチファイル方式を廃止してWindowsレジストリ（HKCU Run）、macOS LaunchAgents、Linux XDG autostartへ刷新し、インジェクション脆弱性を解消している（#110, #155）。GUI描画・テーマ制御の詳細は [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とします。
+- **マルチプラットフォーム方針**: OS依存処理は抽象レイヤー（`src/core/platform`）へ隔離し、OSごとの実装の選択は `PlatformServices` 1クラスに集約する（#158）。外部依存を追加しない「ゼロインストール原則」に基づき、macOS および Linux 向けの具象アダプター（プロセス判定、二重起動防止、効果音再生、自動貼り付け、スタートアップ登録）を標準ライブラリおよび OS 標準コマンドを活用して提供する（#161）。非対応の機能を要求した時点では `UnsupportedFeatureError` を返し、成功を装うNullアダプターは廃止した（#150）。呼び出し側は機能単位で明示的に縮退（警告ログを出して継続）し、非Windows環境でも安全にフル稼働する。クリップボード読み取りの代替経路（`ClipboardReader`）も `PlatformServices` から取得し、Windows では `pywin32` による `WindowsClipboardReader`、macOS では標準の `pbpaste` を用いた `MacOSClipboardReader` を提供する（#170）。ホットキーは Windows（Win32 RegisterHotKey）および macOS（Carbon RegisterEventHotKey）をサポートし、Linux等の非対応環境ではUI上で明示的に案内しバリデーションで弾く。スタートアップ制御はバッチファイル方式を廃止してWindowsレジストリ（HKCU Run）、macOS LaunchAgents、Linux XDG autostartへ刷新し、インジェクション脆弱性を解消している（#110, #155）。GUI描画・テーマ制御の詳細は [CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md](CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md) を正本とします。
 
 インストール、仮想環境、検証コマンドは [../setup/toml_project_setup.md](../setup/toml_project_setup.md) を正本とします。
 
@@ -102,4 +102,5 @@ related_documents:
 | Rev.1.3 | 2026-10-15 | 未記載      | クリップボード読み取り（`ClipboardReader`）を `PlatformServices` の管理対象に追加 (#169)。                                |
 | Rev.1.4 | 2026-10-18 | Antigravity | macOS 向け `ClipboardReader` 実装（`MacOSClipboardReader` / `pbpaste`）の追加 (#170)。                                    |
 | Rev.1.5 | 2026-10-18 | Antigravity | macOS / Linux 向け具象アダプター拡充、Nullモジュール廃止、StartupController新設とWindowsレジストリ移行、設定UI多言語化 (#161)。 |
+| Rev.1.6 | 2026-11-04 | Antigravity | Tk 8.5 / Python 3.9 起動ガード（#213）および macOS ホットキー対応（Carbon API）を反映。 |
 

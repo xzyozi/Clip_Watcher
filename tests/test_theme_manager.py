@@ -148,6 +148,27 @@ def test_apply_theme_to_widget_tree_styles_entry_and_panedwindow() -> None:
 
     mock_paned.config.assert_called_once_with(bg=theme["frame_bg"])
 
+    mock_text = MagicMock(spec=tk.Text)
+    mock_text.winfo_children.return_value = []
+    theme_manager.apply_theme_to_widget_tree(mock_text, theme)
+    mock_text.config.assert_called_once_with(
+        bg=theme["listbox_bg"],
+        fg=theme["listbox_fg"],
+        selectbackground=theme["select_bg"],
+        selectforeground=theme["select_fg"],
+        insertbackground=theme["fg"],
+    )
+
+    mock_listbox = MagicMock(spec=tk.Listbox)
+    mock_listbox.winfo_children.return_value = []
+    theme_manager.apply_theme_to_widget_tree(mock_listbox, theme)
+    mock_listbox.config.assert_called_once_with(
+        bg=theme["listbox_bg"],
+        fg=theme["listbox_fg"],
+        selectbackground=theme["select_bg"],
+        selectforeground=theme["select_fg"],
+    )
+
 
 def test_apply_theme_on_macos_syncs_with_os_appearance(
     monkeypatch: pytest.MonkeyPatch,

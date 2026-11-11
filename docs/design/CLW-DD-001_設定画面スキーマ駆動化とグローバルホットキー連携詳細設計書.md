@@ -2,10 +2,10 @@
 title: "設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書"
 file_name: "CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md"
 document_type: "detailed_design"
-version: "1.0"
+version: "1.1"
 created_at: "2026-08-18"
-updated_at: "2026-08-31"
-author: "未記載"
+updated_at: "2026-11-04"
+author: "Antigravity"
 purpose: "設定画面のスキーマ駆動化、グローバルホットキーの集合登録、失敗時の復元契約を定義し、実装・変更時の不整合を防ぐため"
 related_documents:
   - "CLW-BD-001_ClipWatcher全体アーキテクチャ基本設計書.md"
@@ -21,10 +21,10 @@ related_documents:
 | 文書番号       | CLW-DD-001                                                               |
 | ファイル名     | CLW-DD-001_設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書.md |
 | ドキュメント名 | 設定画面スキーマ駆動化とグローバルホットキー連携詳細設計書              |
-| 版数           | Rev.1.0                                                                 |
-| 改訂日         | 2026-08-31                                                              |
+| 版数           | Rev.1.1                                                                 |
+| 改訂日         | 2026-11-04                                                              |
 | 作成日         | 2026-08-18                                                              |
-| 作成者         | 未記載                                                                  |
+| 作成者         | Antigravity                                                             |
 
 ---
 
@@ -33,7 +33,7 @@ related_documents:
 ### 1.1 目的
 1. 現在手書きで実装されている `src/gui/windows/settings_window.py` を、
    スキーマ駆動（`SettingField` + 汎用レンダラー）方式に置き換える。
-2. その基盤の上に、グローバルホットキー（デフォルト: `Ctrl+Shift+F`）による
+2. その基盤の上に、グローバルホットキー（デフォルト: Windowsは `Ctrl+Shift+F`、macOSは `Cmd+Shift+F`）による
    ウィンドウの「表示 ⇔ 最小化」トグル機能を追加する。
 3. 将来のタスクバー最小化・トレイ格納などの追加状態を、既存コードへの
    変更を最小限にして組み込めるクラス設計にする。
@@ -194,7 +194,7 @@ classDiagram
 ## 4. グローバルホットキー機能 詳細仕様
 
 ### 4.1 要件
-- デフォルトキー: `Ctrl+Shift+F`
+- デフォルトキー: Windowsは `Ctrl+Shift+F`、macOSは `Cmd+Shift+F`
 - 動作: トリガー時にウィンドウの「表示 ⇔ 最小化」をトグルする。
 - タスクバーの最小化ボタンなど、OS操作による状態変化にも追従する。
 - 将来、トレイ格納などの追加状態を既存コード変更なしで組み込める設計とする。
@@ -288,15 +288,22 @@ classDiagram
 src/core/
 ├── hotkey/
 │   ├── __init__.py
-│   ├── global_hotkey_listener.py    # Listener, HotkeyRegistration, キー文字列変換
-│   ├── hotkey_registration_manager.py # 集合検証・ID採番・失敗時復元
-│   └── paste_sender.py              # WindowsPasteSender
+│   ├── global_hotkey_listener.py    # Windows用Listener, HotkeyRegistration, キー文字列変換
+│   └── hotkey_registration_manager.py # 集合検証・ID採番・失敗時復元
+├── platform/
+│   ├── protocols.py                 # HotkeyListener, PasteSender 等のProtocol定義
+│   ├── services.py                  # PlatformServices (OSごとのアダプター生成集約)
+│   ├── windows/
+│   │   └── paste_sender.py          # WindowsPasteSender
+│   └── macos/
+│       ├── hotkey.py                # MacOSHotkeyListener (Carbon API)
+│       └── paste_sender.py          # MacOSPasteSender (osascript)
 └── window/
     ├── __init__.py
     └── window_state_manager.py      # WindowState, WindowStateStrategy, WindowStateManager
 ```
 
-- `hotkey/` は `clipboard/` と同じOS監視インフラの層に置き、キー入力の検知、集合登録、入力送信をUI状態管理から分離する。
+- `hotkey/` はキー文字列解析・集合登録・失敗時復元というOS非依存の管理ロジックを担当する。OSネイティブの検知・入力送信処理は `platform/` 配下のアダプター（Windows: `GlobalHotkeyListener`, `WindowsPasteSender`、macOS: `MacOSHotkeyListener`, `MacOSPasteSender`）が担う。
 - `window/` はアプリのUI状態管理として独立させ、将来トレイ格納の
   `TrayHiddenStrategy` 等を追加する際もこのパッケージ内に収める。
 
@@ -325,9 +332,9 @@ src/core/
 | `start_many(registrations)` | `HotkeyRegistration` の集合 | 重複IDを拒否する。登録途中で失敗した場合は、同一スレッドで登録済みの全IDを逆順に解除する |
 | `stop()`                    | なし                        | メッセージループを停止し、登録済みの全IDを解除する                                       |
 
-`WM_HOTKEY` の通知には登録IDを付与し、`tk_root.after()` を介してメインスレッドへ渡す。キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化し、`Ctrl`、`Alt`、`Shift`、`Win` と英数字の主キーを受け付ける。
+`WM_HOTKEY`（Windows）または Carbon Event `kEventHotKeyPressed`（macOS）の通知には登録IDを付与し、`tk_root.after()` を介してメインスレッドへ渡す。キー文字列は `parse_hotkey_string()` と `format_hotkey()` で正規化し、Windows では `Ctrl`, `Alt`, `Shift`, `Win`、macOS では `Cmd`, `Opt`, `Shift`, `Ctrl` と英数字の主キーを受け付ける。
 
-`HotkeyRegistrationManager.reconfigure_all(global_enabled, global_combo, pinned_bindings)` は候補集合を検証・登録する。表示/最小化キーとピン留めキーの重複を拒否し、失敗時は旧集合を復元する。`history_id_for_hotkey()` により、アプリケーション層はWin32の登録詳細を持たずにピン留め履歴を特定できる。
+`HotkeyRegistrationManager.reconfigure_all(global_enabled, global_combo, pinned_bindings)` は候補集合を検証・登録する。表示/最小化キーとピン留めキーの重複を拒否し、失敗時は旧集合を復元する。`history_id_for_hotkey()` により、アプリケーション層は各OSの低水準登録詳細を持たずにピン留め履歴を特定できる。
 
 ### 4.6 設定への統合
 
@@ -336,12 +343,12 @@ src/core/
 | 設定キー                 | 型               | 既定値         | 用途                                       |
 | :----------------------- | :--------------- | :------------- | :----------------------------------------- |
 | `global_hotkey_enabled`  | `bool`           | `True`         | 表示/最小化キーの有効状態                  |
-| `global_hotkey_combo`    | `str`            | `Ctrl+Shift+F` | 表示/最小化キーの正規化済み文字列          |
+| `global_hotkey_combo`    | `str`            | Windows: `Ctrl+Shift+F`<br>macOS: `Cmd+Shift+F` | 表示/最小化キーの正規化済み文字列          |
 | `pinned_hotkey_bindings` | `dict[str, str]` | `{}`           | 履歴ID文字列からピン留めキー文字列への対応 |
 
 #### 4.6.2 設定画面スキーマ
 
-`global_hotkey_enabled` はチェックボックス、`global_hotkey_combo` は `HOTKEY_CAPTURE` により入力する。いずれもGeneralタブのGlobal Hotkeyグループに配置する。`HOTKEY_CAPTURE` は修飾キー単独では値を確定せず、`Ctrl`、`Alt`、`Shift`、`Win` と英数字から正規化済みの文字列を生成する。競合検証・登録・エラー表示は、UI部品ではなく保存時のアプリケーション層が担当する。
+`global_hotkey_enabled` はチェックボックス、`global_hotkey_combo` は `HOTKEY_CAPTURE` により入力する。いずれもGeneralタブのGlobal Hotkeyグループに配置する。`HOTKEY_CAPTURE` は修飾キー単独では値を確定せず、`Ctrl`、`Alt`、`Shift`、`Win`（macOS では `Cmd`、`Opt`）と英数字から正規化済みの文字列を生成する。競合検証・登録・エラー表示は、設定画面の保存・適用前検証（`_validate_pending_values`）において `HotkeyRegistrationManager` を介して実施する。
 
 #### 4.6.3 `WidgetType.HOTKEY_CAPTURE`
 
@@ -402,7 +409,7 @@ sequenceDiagram
 #### 4.7.2 `MainApplication` への追加
 
 - `on_ready()` は、設定値を正規化したピン留め割当とともに `_reconfigure_hotkeys_from_settings()` で登録する。登録に失敗しても、エラーを表示してアプリケーションの起動は継続する。
-- `GLOBAL_HOTKEY_TRIGGERED` は登録IDを伴う。予約ID `1` は `WindowStateManager.toggle()` を呼び、ピン留めIDは `history_id_for_hotkey()` で履歴IDへ変換して、クリップボード更新・通知音・75ms後の `WindowsPasteSender` による貼り付けを行う。
+- `GLOBAL_HOTKEY_TRIGGERED` は登録IDを伴う。予約ID `1` は `WindowStateManager.toggle()` を呼び、ピン留めIDは `history_id_for_hotkey()` で履歴IDへ変換して、クリップボード更新・通知音・75ms後の `PasteSender`（OS固有の貼り付けアダプター）による貼り付けを行う。
 - ピン留め割当の設定・変更・解除・一括解除は、再構成成功後だけ `pinned_hotkey_bindings` を保存し、履歴一覧を更新する。ピン解除、履歴削除、全履歴削除時も対応する割当を解除する。
 - `shutdown()` は `HotkeyRegistrationManager.stop()` を呼び、登録済みの全IDを解除する。
 
@@ -411,7 +418,7 @@ sequenceDiagram
 | ケース                         | 挙動                                                                                                                                 |
 | :----------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
 | 起動時に登録集合が競合         | `reconfigure_all()` が `False` を返す。ログwarning出力とエラーダイアログ表示後、アプリは起動を継続し、ホットキー機能のみ無効にする。 |
-| Apply/Save時に新しいキーが競合 | エラーを表示してApply/Saveを中止する。候補設定は `settings.json` に保存せず、可能な限り従来の有効なホットキー登録を維持・復元する。  |
+| Apply/Save時に新しいキーが競合 | `SettingsWindow._validate_pending_values()` が `reconfigure()` の失敗を検知し、エラーダイアログを表示してApply/Saveを中止する。候補設定は `settings.json` に保存されず、画面も開いたままとなる。旧登録は `HotkeyRegistrationManager` により自動復元される。 |
 | 不正なキー形式                 | エラーを表示してApply/Saveを中止する。既存設定・登録状態を変更しない。                                                               |
 | アプリ終了時                   | `shutdown()` で必ず `UnregisterHotKey` を実行し、他アプリが同キーを登録できる状態に戻す。                                            |
 
@@ -430,7 +437,7 @@ sequenceDiagram
 | `src/core/hotkey/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/hotkey/global_hotkey_listener.py`（新規）      | OSホットキーの検知、キー文字列変換                                                            |
 | `src/core/hotkey/hotkey_registration_manager.py`（新規） | 集合検証、ID採番、登録切替、失敗時の復元                                                      |
-| `src/core/hotkey/paste_sender.py`（新規）                | アクティブウィンドウへの `Ctrl+V` 送信                                                        |
+| `src/core/platform/windows/paste_sender.py`              | Windowsアクティブウィンドウへの `Ctrl+V` 送信（`platform/` 層へ集約）                        |
 | `src/core/window/__init__.py`（新規）                    | 追加                                                                                          |
 | `src/core/window/window_state_manager.py`（新規）        | ウィンドウ状態遷移とStrategy管理                                                              |
 | `src/core/bootstrap/application_builder.py`              | Hotkey・Window関連コンポーネントのビルドステップ追加                                          |
@@ -473,7 +480,7 @@ sequenceDiagram
 
 ## 7. 確定事項
 
-- デフォルトのグローバルホットキーは `Ctrl+Shift+F` とする。
+- デフォルトのグローバルホットキーは Windows では `Ctrl+Shift+F`、macOS では `Cmd+Shift+F` とする。
 - 表示/最小化キーには予約ID `1` を使用し、ピン留め履歴キーはID `2` 以降を使用する。
 - ピン留め履歴の割当は `pinned_hotkey_bindings` に保存し、重複キーを拒否する。登録失敗時は旧集合を復元し、終了時は全IDを解除する。
 - ホットキーの動作は、予約IDではメインウィンドウの表示/最小化トグル、ピン留めIDでは対象履歴の自動貼り付けとする。
@@ -500,6 +507,7 @@ sequenceDiagram
 
 ## 9. 改訂履歴
 
-| 版数    | 改訂日     | 変更者 | 変更内容・変更理由 (Why)                                                                   |
-| :------ | :--------- | :----- | :----------------------------------------------------------------------------------------- |
-| Rev.1.0 | 2026-08-31 | 未記載 | 文書を詳細設計書として命名・分類し、テンプレート準拠のメタデータ、設計契約、改訂履歴へ整形 |
+| 版数    | 改訂日     | 変更者      | 変更内容・変更理由 (Why)                                                                   |
+| :------ | :--------- | :---------- | :----------------------------------------------------------------------------------------- |
+| Rev.1.0 | 2026-08-31 | 未記載      | 文書を詳細設計書として命名・分類し、テンプレート準拠のメタデータ、設計契約、改訂履歴へ整形 |
+| Rev.1.1 | 2026-11-04 | Antigravity | macOS デフォルトキー（`Cmd+Shift+F`）、`PasteSender` パス是正、Apply/Save 競合失敗契約（F-01）の明確化 |

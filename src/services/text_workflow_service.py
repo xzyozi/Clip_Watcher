@@ -208,3 +208,9 @@ class TextWorkflowService:
 
         # 未実行のタスクを取り消す。実行中のタスクは完了までワーカーに任せる
         self._executor.shutdown(wait=False, cancel_futures=True)
+
+        if hasattr(self._workflow, "close") and callable(self._workflow.close):
+            try:
+                self._workflow.close()
+            except Exception as e:
+                logger.warning("TextWorkflow のリソース解放に失敗しました: %s", e)
