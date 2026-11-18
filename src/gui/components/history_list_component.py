@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from collections.abc import Mapping, Sequence
 from tkinter import ttk
@@ -8,6 +9,11 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from src.core.bootstrap.base_application import BaseApplication
     from src.gui.base.context_menu import HistoryContextMenu
+
+_DRAG_SCROLL_INTERVAL_MS = 60
+_SHIFT_MASK = 0x0001
+_CTRL_MASK = 0x0004
+_DARWIN_CMD_MASK = 0x0008
 
 
 class HistoryListComponent(tk.Frame):
@@ -41,6 +47,12 @@ class HistoryListComponent(tk.Frame):
         self._updating_history: bool = False
         self.current_font: tk.font.Font | None = None
         self._current_pin_image: Any = None
+        self._drag_anchor_iid: str | None = None
+        self._drag_additive: bool = False
+        self._drag_base_selection: tuple[str, ...] = ()
+        self._drag_last_x: int = 0
+        self._drag_last_y: int = 0
+        self._drag_scroll_after_id: str | None = None
 
         self._create_widgets()
         self._bind_events()
@@ -74,6 +86,9 @@ class HistoryListComponent(tk.Frame):
         )  # type: ignore
         self.tree.bind("<<TreeviewSelect>>", self._on_history_select)
         self.tree.bind("<Double-Button-1>", self._on_double_click)
+        self.tree.bind("<Button-1>", self._on_mouse_press)
+        self.tree.bind("<B1-Motion>", self._on_mouse_drag)
+        self.tree.bind("<ButtonRelease-1>", self._on_mouse_release)
         from src.gui.base import context_menu
         from src.gui.custom_widgets import bind_context_menu
 
@@ -81,6 +96,186 @@ class HistoryListComponent(tk.Frame):
             self.master, self.app
         )  # type: ignore
         bind_context_menu(self.tree, history_context_menu.show)
+
+    def _is_additive_modifier(self, state: int) -> bool:
+        """OS標準の追加選択修飾キー（macOSはCommand、Windows/LinuxはCtrl）を判定する。"""
+        mask = _DARWIN_CMD_MASK if sys.platform == "darwin" else _CTRL_MASK
+        return bool(state & mask)
+
+    def _cancel_drag_scroll(self) -> None:
+        """予約されているドラッグ自動スクロールのタイマーを解除する。"""
+        after_id = getattr(self, "_drag_scroll_after_id", None)
+        if after_id is not None:
+            try:
+                self.after_cancel(after_id)
+            except tk.TclError:
+                pass
+            self._drag_scroll_after_id = None
+
+    def _reset_drag_state(self) -> None:
+        """ドラッグ範囲選択に関する一時状態を初期化する。"""
+        self._cancel_drag_scroll()
+        self._drag_anchor_iid = None
+        self._drag_additive = False
+        self._drag_base_selection = ()
+
+    def _on_mouse_press(self, event: tk.Event) -> None:
+        """左ボタン押下時にデータ行のドラッグ範囲選択を開始する。
+
+        見出しや列区切り線上のクリックは Treeview 標準の列幅変更処理に委ねるため、
+        ドラッグアンカーを記録しない。
+        """
+        self._reset_drag_state()
+        if self._updating_history:
+            return
+
+        state = int(getattr(event, "state", 0))
+        if sys.platform == "darwin" and (state & _CTRL_MASK):
+            # macOS では Control+クリックが右クリック（コンテキストメニュー）に割り当てられているため
+            # 左ボタンドラッグ選択は開始しない。
+            return
+
+        region = self.tree.identify_region(event.x, event.y)
+        if region in ("heading", "separator"):
+            return
+
+        row_iid = self.tree.identify_row(event.y)
+        if not row_iid:
+            return
+
+        anchor_iid = row_iid
+        if state & _SHIFT_MASK:
+            focus_iid = self.tree.focus()
+            if focus_iid and self.tree.exists(focus_iid):
+                anchor_iid = focus_iid
+
+        self._drag_anchor_iid = anchor_iid
+        self._drag_additive = self._is_additive_modifier(state)
+        self._drag_base_selection = (
+            tuple(self.tree.selection()) if self._drag_additive else ()
+        )
+
+    def _on_mouse_drag(self, event: tk.Event) -> None:
+        """ドラッグ中のポインタ位置に応じて開始行〜現在行を範囲選択する。"""
+        if self._updating_history or not self._drag_anchor_iid:
+            return
+        if not self.tree.exists(self._drag_anchor_iid):
+            self._reset_drag_state()
+            return
+
+        self._drag_last_x = event.x
+        self._drag_last_y = event.y
+        target_iid, scroll_dir = self._resolve_drag_target_and_scroll(event.x, event.y)
+
+        if scroll_dir != 0:
+            if self._scroll_and_select(scroll_dir):
+                self._schedule_drag_scroll()
+            else:
+                self._cancel_drag_scroll()
+            return
+
+        self._cancel_drag_scroll()
+        if target_iid is not None:
+            self._apply_drag_range_selection(target_iid)
+
+    def _on_mouse_release(self, event: tk.Event) -> None:
+        """左ボタン解放時にドラッグ選択状態を終了する。"""
+        self._reset_drag_state()
+
+    def _visible_edge_iid(self, children: tuple[str, ...], *, last: bool) -> str:
+        """現在ビューポート内に表示されている先頭または末尾の行 iid を返す。"""
+        ordered = reversed(children) if last else children
+        for iid in ordered:
+            if self.tree.bbox(iid):
+                return iid
+        return children[-1] if last else children[0]
+
+    def _resolve_drag_target_and_scroll(self, x: int, y: int) -> tuple[str | None, int]:
+        """ポインタ座標から選択対象行と自動スクロール方向 (-1/0/1) を決定する。"""
+        children = self.tree.get_children("")
+        if not children:
+            return None, 0
+
+        height = self.tree.winfo_height()
+        region = self.tree.identify_region(x, y)
+
+        # データ領域から見出し・区切り線・上端外へドラッグした場合は上方向へ拡張する
+        if y < 0 or region in ("heading", "separator"):
+            return self._visible_edge_iid(children, last=False), -1
+
+        if height > 1 and y >= height:
+            return self._visible_edge_iid(children, last=True), 1
+
+        row_iid = self.tree.identify_row(y)
+        if row_iid:
+            return row_iid, 0
+
+        # データ領域内の最下部余白へドラッグした場合は末尾行を選択対象とする
+        return children[-1], 0
+
+    def _scroll_and_select(self, scroll_dir: int) -> bool:
+        """境界外ドラッグ時に1行スクロールし、可視端の行まで選択を拡張する。"""
+        yview_top, yview_bottom = self.tree.yview()
+        can_scroll = (scroll_dir < 0 and yview_top > 0.0) or (
+            scroll_dir > 0 and yview_bottom < 1.0
+        )
+        if can_scroll:
+            self.tree.yview_scroll(scroll_dir, "units")
+
+        children = self.tree.get_children("")
+        if children:
+            target_iid = self._visible_edge_iid(children, last=(scroll_dir > 0))
+            self._apply_drag_range_selection(target_iid)
+        return can_scroll
+
+    def _schedule_drag_scroll(self) -> None:
+        """ポインタが上下端外にある間、継続的な自動スクロールを予約する。"""
+        if self._drag_scroll_after_id is None:
+            self._drag_scroll_after_id = self.after(
+                _DRAG_SCROLL_INTERVAL_MS, self._perform_drag_scroll_step
+            )
+
+    def _perform_drag_scroll_step(self) -> None:
+        """予約された自動スクロールの1ステップを実行する。"""
+        self._drag_scroll_after_id = None
+        if self._updating_history or not self._drag_anchor_iid:
+            return
+        if not self.tree.exists(self._drag_anchor_iid):
+            self._reset_drag_state()
+            return
+
+        _, scroll_dir = self._resolve_drag_target_and_scroll(
+            self._drag_last_x, self._drag_last_y
+        )
+        if scroll_dir == 0:
+            return
+        if self._scroll_and_select(scroll_dir):
+            self._schedule_drag_scroll()
+
+    def _apply_drag_range_selection(self, target_iid: str) -> None:
+        """ドラッグアンカー行から対象行までの連続範囲を選択状態に反映する。"""
+        if not self._drag_anchor_iid:
+            return
+        children = self.tree.get_children("")
+        try:
+            anchor_idx = children.index(self._drag_anchor_iid)
+            target_idx = children.index(target_iid)
+        except ValueError:
+            return
+
+        lo, hi = min(anchor_idx, target_idx), max(anchor_idx, target_idx)
+        range_iids = children[lo : hi + 1]
+
+        if self._drag_additive:
+            selected_set = set(self._drag_base_selection) | set(range_iids)
+            new_selection = tuple(iid for iid in children if iid in selected_set)
+        else:
+            new_selection = range_iids
+
+        if tuple(self.tree.selection()) != new_selection:
+            self.tree.selection_set(new_selection)
+        if self.tree.focus() != target_iid:
+            self.tree.focus(target_iid)
 
     def _on_double_click(self, event: tk.Event) -> None:
         """Handler for double-click events to copy an item."""
@@ -270,6 +465,9 @@ class HistoryListComponent(tk.Frame):
                 self.tree.selection_set(restored_selection)
             # Requirements 3.4: 更新前のスクロール位置に復元する
             self.tree.yview_moveto(scroll_pos[0])
+            drag_anchor = getattr(self, "_drag_anchor_iid", None)
+            if drag_anchor is not None and not self.tree.exists(drag_anchor):
+                self._reset_drag_state()
         finally:
             # Requirements 10.2: 更新処理が正常終了した場合・try節内で例外が発生した場合の
             # いずれでも、finally ブロックにより更新中フラグの解除が確実に実行される。

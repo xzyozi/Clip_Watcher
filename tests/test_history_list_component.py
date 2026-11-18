@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import sys
+import tkinter as tk
+from collections.abc import Generator
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
+
+import pytest
 
 from src.core.config.defaults import THEMES
 from src.gui.components.history_list_component import HistoryListComponent
@@ -317,3 +323,297 @@ def test_update_history_falls_back_to_pin_symbol_when_icon_missing() -> None:
     assert tree.rows["item-1.0"]["image"] == ""
     assert tree.rows["item-2.0"]["text"] == "2. normal item..."
     assert tree.rows["item-2.0"]["image"] == ""
+
+
+@pytest.fixture
+def real_history_component(
+    tk_root: tk.Tk,
+) -> Generator[
+    tuple[HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]], None, None
+]:
+    """実 Tk 上に配置した HistoryListComponent とディスパッチ記録を返す。"""
+    top = tk.Toplevel(tk_root)
+    top.geometry("420x160+0+0")
+    dispatched: list[tuple[str, Any]] = []
+
+    dispatcher = MagicMock()
+    dispatcher.dispatch.side_effect = lambda name, payload=None: dispatched.append(
+        (name, payload)
+    )
+    app = MagicMock()
+    app.translator = lambda key: key
+    app.icon_manager = None
+    app.event_dispatcher = dispatcher
+    app.undo_manager.can_undo.return_value = False
+
+    component = HistoryListComponent(top, app)
+    component.pack(fill=tk.BOTH, expand=True)
+    app.gui = SimpleNamespace(history_component=component)
+
+    yield component, top, dispatched
+
+    component._cancel_drag_scroll()
+    top.destroy()
+
+
+def _row_center(component: HistoryListComponent, iid: str) -> tuple[int, int]:
+    bbox = component.tree.bbox(iid)
+    assert bbox, f"{iid} is not visible"
+    x, y, _, height = bbox
+    return int(x) + 10, int(y) + max(1, int(height) // 2)
+
+
+def test_drag_selection_selects_contiguous_range_down_up_and_shrink(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: 実 Tk 上で下方向・上方向・縮小ドラッグにより連続範囲が選択される。"""
+    component, top, dispatched = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(6)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+
+    # 下方向ドラッグ: 0 -> 3
+    x0, y0 = _row_center(component, "item-0.0")
+    x3, y3 = _row_center(component, "item-3.0")
+    component.tree.event_generate("<Button-1>", x=x0, y=y0, state=0)
+    component.tree.event_generate("<B1-Motion>", x=x3, y=y3, state=0x0100)
+    component.tree.event_generate("<ButtonRelease-1>", x=x3, y=y3, state=0x0100)
+    top.update()
+
+    assert component.tree.selection() == (
+        "item-0.0",
+        "item-1.0",
+        "item-2.0",
+        "item-3.0",
+    )
+    assert component.get_selected_indices() == (0, 1, 2, 3)
+    assert any(
+        name == "HISTORY_SELECTION_CHANGED"
+        and payload == {"selected_indices": (0, 1, 2, 3)}
+        for name, payload in dispatched
+    )
+
+    # 上方向ドラッグ: 4 -> 2
+    x4, y4 = _row_center(component, "item-4.0")
+    x2, y2 = _row_center(component, "item-2.0")
+    component.tree.event_generate("<Button-1>", x=x4, y=y4, state=0)
+    component.tree.event_generate("<B1-Motion>", x=x2, y=y2, state=0x0100)
+    component.tree.event_generate("<ButtonRelease-1>", x=x2, y=y2, state=0x0100)
+    top.update()
+
+    assert component.tree.selection() == ("item-2.0", "item-3.0", "item-4.0")
+
+    # 縮小方向ドラッグ: 0 -> 4 -> 1
+    x1, y1 = _row_center(component, "item-1.0")
+    component.tree.event_generate("<Button-1>", x=x0, y=y0, state=0)
+    component.tree.event_generate("<B1-Motion>", x=x4, y=y4, state=0x0100)
+    component.tree.event_generate("<B1-Motion>", x=x1, y=y1, state=0x0100)
+    component.tree.event_generate("<ButtonRelease-1>", x=x1, y=y1, state=0x0100)
+    top.update()
+
+    assert component.tree.selection() == ("item-0.0", "item-1.0")
+
+
+def test_drag_on_separator_resizes_column_without_row_selection(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: 列区切り線上のドラッグでは列幅変更が動作し、行選択が発動しない。"""
+    component, top, _ = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(5)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+
+    orig_w = int(component.tree.column("#0", "width"))
+    sep_x = next(
+        (
+            x
+            for x in range(max(0, orig_w - 10), orig_w + 10)
+            if component.tree.identify_region(x, 10) == "separator"
+        ),
+        None,
+    )
+    assert sep_x is not None
+
+    component.tree.event_generate("<Button-1>", x=sep_x, y=10, state=0)
+    assert component._drag_anchor_iid is None
+
+    component.tree.event_generate("<B1-Motion>", x=sep_x - 40, y=10, state=0x0100)
+    during_w = int(component.tree.column("#0", "width"))
+    component.tree.event_generate("<ButtonRelease-1>", x=sep_x - 40, y=10, state=0x0100)
+    top.update()
+
+    assert during_w < orig_w
+    assert component.tree.selection() == ()
+
+
+def test_additive_drag_preserves_existing_selection(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: Ctrl(macOSはCmd)押下中のドラッグは既存選択を維持して範囲を追加する。"""
+    component, top, _ = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(6)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+
+    # まず行0を選択
+    x0, y0 = _row_center(component, "item-0.0")
+    component.tree.event_generate("<Button-1>", x=x0, y=y0, state=0)
+    component.tree.event_generate("<ButtonRelease-1>", x=x0, y=y0, state=0x0100)
+    top.update()
+    assert component.tree.selection() == ("item-0.0",)
+
+    # OS標準の追加修飾キー付きで行2 -> 行4をドラッグ
+    mod_mask = 0x0008 if sys.platform == "darwin" else 0x0004
+    x2, y2 = _row_center(component, "item-2.0")
+    x4, y4 = _row_center(component, "item-4.0")
+    component.tree.event_generate("<Button-1>", x=x2, y=y2, state=mod_mask)
+    component.tree.event_generate("<B1-Motion>", x=x4, y=y4, state=0x0100 | mod_mask)
+    component.tree.event_generate(
+        "<ButtonRelease-1>", x=x4, y=y4, state=0x0100 | mod_mask
+    )
+    top.update()
+
+    assert component.tree.selection() == (
+        "item-0.0",
+        "item-2.0",
+        "item-3.0",
+        "item-4.0",
+    )
+
+
+def test_drag_past_edges_scrolls_and_extends_selection(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: ツリー上端・下端を越えたドラッグで自動スクロールし選択範囲を拡張する。"""
+    component, top, _ = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(20)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+
+    # 下端外ドラッグで下へスクロール＆選択拡張
+    x0, y0 = _row_center(component, "item-0.0")
+    yview_before = component.tree.yview()
+    assert yview_before[1] < 1.0
+
+    component.tree.event_generate("<Button-1>", x=x0, y=y0, state=0)
+    component.tree.event_generate(
+        "<B1-Motion>", x=x0, y=component.tree.winfo_height() + 20, state=0x0100
+    )
+    component.tree.event_generate(
+        "<ButtonRelease-1>", x=x0, y=component.tree.winfo_height() + 20, state=0x0100
+    )
+    top.update()
+
+    yview_after_down = component.tree.yview()
+    assert yview_after_down[0] > yview_before[0]
+    assert len(component.tree.selection()) > 1
+
+    # スクロール途中位置から上端外ドラッグで上へスクロール＆選択拡張
+    component.tree.yview_moveto(0.4)
+    top.update()
+    yview_mid = component.tree.yview()
+    # 可視範囲内の下側の行を特定してドラッグ開始
+    visible_iids = [
+        iid for iid in component.tree.get_children("") if component.tree.bbox(iid)
+    ]
+    assert len(visible_iids) >= 2
+    start_iid = visible_iids[-1]
+    xs, ys = _row_center(component, start_iid)
+
+    component.tree.event_generate("<Button-1>", x=xs, y=ys, state=0)
+    component.tree.event_generate("<B1-Motion>", x=xs, y=-10, state=0x0100)
+    component.tree.event_generate("<ButtonRelease-1>", x=xs, y=-10, state=0x0100)
+    top.update()
+
+    yview_after_up = component.tree.yview()
+    assert yview_after_up[0] < yview_mid[0]
+    assert start_iid in component.tree.selection()
+    assert len(component.tree.selection()) > 1
+
+
+def test_drag_selection_suppressed_during_update_history(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: _updating_history 中はドラッグ選択や通知が抑制される。"""
+    component, top, dispatched = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(4)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+    dispatched.clear()
+
+    x0, y0 = _row_center(component, "item-0.0")
+    x3, y3 = _row_center(component, "item-3.0")
+
+    component._updating_history = True
+    try:
+        component.tree.event_generate("<Button-1>", x=x0, y=y0, state=0)
+        component.tree.event_generate("<B1-Motion>", x=x3, y=y3, state=0x0100)
+        component.tree.event_generate("<ButtonRelease-1>", x=x3, y=y3, state=0x0100)
+        top.update()
+    finally:
+        component._updating_history = False
+
+    assert component._drag_anchor_iid is None
+    assert not any(name == "HISTORY_SELECTION_CHANGED" for name, _ in dispatched)
+
+
+def test_is_additive_modifier_respects_platform(monkeypatch: Any) -> None:
+    """プラットフォームに応じた追加選択修飾キー判定を検証する。"""
+    component = HistoryListComponent.__new__(HistoryListComponent)
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert component._is_additive_modifier(0x0008) is True
+    assert component._is_additive_modifier(0x0004) is False
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert component._is_additive_modifier(0x0004) is True
+    assert component._is_additive_modifier(0x0008) is False
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert component._is_additive_modifier(0x0004) is True
+    assert component._is_additive_modifier(0x0010) is False  # NumLock を誤判定しない
+
+
+def test_right_click_inside_drag_selection_keeps_multiple_selection(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """ドラッグで複数選択後に選択内行を右クリックしても複数選択が維持される。"""
+    from src.gui.base.context_menu import HistoryContextMenu
+
+    component, top, _ = real_history_component
+    history = [(f"item {i}", False, float(i)) for i in range(5)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+
+    x1, y1 = _row_center(component, "item-1.0")
+    x3, y3 = _row_center(component, "item-3.0")
+    component.tree.event_generate("<Button-1>", x=x1, y=y1, state=0)
+    component.tree.event_generate("<B1-Motion>", x=x3, y=y3, state=0x0100)
+    component.tree.event_generate("<ButtonRelease-1>", x=x3, y=y3, state=0x0100)
+    top.update()
+
+    assert component.get_selected_indices() == (1, 2, 3)
+
+    # 選択範囲内の行2上で右クリックメニュー状態を取得
+    ctx = HistoryContextMenu(top, component.app)
+    x2, y2 = _row_center(component, "item-2.0")
+    event = SimpleNamespace(y=y2, x_root=x2, y_root=y2)
+    row_iid = component.tree.identify_row(event.y)
+    assert row_iid == "item-2.0"
+    assert row_iid in component.tree.selection()
+
+    state = ctx.state_provider.get_menu_state(component.tree)
+    assert state.selected_indices == (1, 2, 3)
+    assert state.selected_ids == [1.0, 2.0, 3.0]
