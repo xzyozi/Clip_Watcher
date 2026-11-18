@@ -519,22 +519,26 @@ def test_drag_past_edges_scrolls_and_extends_selection(
     # スクロール途中位置から上端外ドラッグで上へスクロール＆選択拡張
     component.tree.yview_moveto(0.4)
     top.update()
-    yview_mid = component.tree.yview()
-    # 可視範囲内の下側の行を特定してドラッグ開始
+    # 可視範囲内で見切れていない2番目の行を特定してドラッグ開始
+    # （最下行は部分表示だと <Button-1> の BrowseTo -> see で下に自動スクロールするため）
     visible_iids = [
         iid for iid in component.tree.get_children("") if component.tree.bbox(iid)
     ]
     assert len(visible_iids) >= 2
-    start_iid = visible_iids[-1]
+    start_iid = visible_iids[1]
     xs, ys = _row_center(component, start_iid)
 
     component.tree.event_generate("<Button-1>", x=xs, y=ys, state=0)
+    top.update()
+    yview_after_press = component.tree.yview()
+    assert yview_after_press[0] > 0.0
+
     component.tree.event_generate("<B1-Motion>", x=xs, y=-10, state=0x0100)
     component.tree.event_generate("<ButtonRelease-1>", x=xs, y=-10, state=0x0100)
     top.update()
 
     yview_after_up = component.tree.yview()
-    assert yview_after_up[0] < yview_mid[0]
+    assert yview_after_up[0] < yview_after_press[0]
     assert start_iid in component.tree.selection()
     assert len(component.tree.selection()) > 1
 
