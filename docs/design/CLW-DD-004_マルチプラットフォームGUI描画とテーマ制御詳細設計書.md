@@ -2,9 +2,9 @@
 title: "マルチプラットフォームGUI描画とテーマ制御詳細設計書"
 file_name: "CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md"
 document_type: "detailed_design"
-version: "1.1"
+version: "1.2"
 created_at: "2026-10-12"
-updated_at: "2026-11-04"
+updated_at: "2026-11-19"
 author: "ClipWatcher Development Team"
 purpose: "Python標準モジュール縛りの方針のもと、Windows/macOS/Linuxにおける一貫したTkinter/ttk描画、Aquaテーマ制御、OSダークモード同期、Treeview/IconManager連携、およびレガシー環境起動ガード仕様を定義するため"
 related_documents:
@@ -21,8 +21,8 @@ related_documents:
 | 文書番号       | CLW-DD-004                                                               |
 | ファイル名     | CLW-DD-004_マルチプラットフォームGUI描画とテーマ制御詳細設計書.md         |
 | ドキュメント名 | マルチプラットフォームGUI描画とテーマ制御詳細設計書                      |
-| 版数           | Rev.1.1                                                                  |
-| 改訂日         | 2026-11-04                                                               |
+| 版数           | Rev.1.2                                                                  |
+| 改訂日         | 2026-11-19                                                               |
 | 作成日         | 2026-10-12                                                               |
 | 作成者         | ClipWatcher Development Team                                             |
 
@@ -126,6 +126,7 @@ flowchart TD
 - **Aqua テーマ (macOS)**: 選択状態の背景・前景色には macOS システムカラー（`systemHighlight`, `systemHighlightText`）をマッピングし、ネイティブ Cocoa と完全連動する。
 - **clam / default テーマ (Windows/Linux)**: ダークテーマ時に `pinned` タグ付き行の選択背景色が崩れる Tkinter/ttk の描画問題を防止するため、`theme["select_bg"]` / `theme["select_fg"]` を明示的にスタイルマップへバインドする。
 - **フォントと行高動的制御**: ユーザー設定フォントを全行に適用するため `"history_item"` タグを用い、フォントの文字高とアイコンサイズ（16px）に基づき `rowheight` を動的に再計算して設定する。
+- **ドラッグ複数選択制御 (#219)**: `ttk.Treeview` 標準の `<B1-Motion>` は列幅変更（`ttk::treeview::Drag`）のみであり行範囲選択を持たないため、`HistoryListComponent` に `<Button-1>` / `<B1-Motion>` / `<ButtonRelease-1>` をバインドして押下行（`Shift` 押下時は既存の `focus` 行）からポインタ位置までの連続範囲を `selection_set()` で選択する。`identify_region()` が `"heading"` / `"separator"` の操作および macOS の `Control+クリック`（コンテキストメニュー）はドラッグ選択を開始せず既存動作を保護する。追加選択修飾キー（Windows/Linux: `Ctrl`、macOS: `Command`）押下中ドラッグは既存選択を維持して範囲を追加し、上下端越え時は自動スクロールで範囲を拡張する。`update_history()` 実行中（`_updating_history`）のイベント抑制およびアンカー行削除時の状態リセットにより整合性を維持する。
 
 ### 4.3 `IconManager` とピン留め表示制御 (#203, #212)
 
@@ -157,7 +158,12 @@ macOS Tkinter では、ウィンドウ生成直後にイベントループへ入
    - `TkVersion < 8.6` 模擬環境における `light` テーマ強制フォールバックの検証。
    - `sys.platform == "darwin"` における `aqua` テーマ維持の検証。
    - `tk.Entry`, `tk.Text`, `tk.PanedWindow` への色伝播の検証。
-2. **実機検証マトリックス**:
+2. **履歴一覧ドラッグ選択テスト (`tests/test_history_list_component.py`)**:
+   - 実 Tk 上での下方向・上方向・縮小ドラッグによる連続範囲選択の検証。
+   - 列区切り線（`separator`）上での列幅変更ドラッグ非阻害、および `_updating_history` 中の抑制の検証。
+   - OS別追加修飾キー（`Ctrl` / `Command`）押下中ドラッグの既存選択維持と、右クリックメニュー連携時の複数選択維持の検証。
+   - ツリー上下端越えドラッグ時の自動スクロールおよび選択範囲拡張の検証。
+3. **実機検証マトリックス**:
    - macOS システム標準 Python 3.9 (Tk 8.5) 環境でのネイティブアラートによる起動ガード終了案内。
    - Python 3.10+ (Tk 8.6.13+) 環境での Dark Mode / Light Mode 連動描画。
    - Windows 10/11 環境での既存テーマ動作の完全互換性。
@@ -170,3 +176,4 @@ macOS Tkinter では、ウィンドウ生成直後にイベントループへ入
 | :------ | :--------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------------------- |
 | Rev.1.0 | 2026-10-12 | ClipWatcher Development Team| 初版作成。標準Tkinterによるクロスプラットフォーム描画、Aqua制御、Tk 8.5フォールバック仕様を定義。                             |
 | Rev.1.1 | 2026-11-04 | Antigravity                 | Tk 8.5起動ガード仕様（#213）、Treeview/IconManager/フォント解決仕様の追記、`apply_theme_to_widget_tree` 表の実装整合（F-02, F-06）。 |
+| Rev.1.2 | 2026-11-19 | Antigravity                 | `HistoryListComponent`（`ttk.Treeview`）のドラッグ複数行範囲選択仕様・テスト観点を §4.2 / §6 に追記（#219）。 |
