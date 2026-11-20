@@ -216,25 +216,18 @@ def test_clam_unavailable_falls_back_to_default(
     style.theme_use.assert_any_call("default")
 
 
-def test_dark_selection_workaround_falls_back_when_empty_map_fails(
-    stop_patchers: list[ThemeManager], linux: None
+@pytest.mark.usefixtures("linux")
+@pytest.mark.parametrize("theme_name", ["light", "dark"])
+def test_selected_rows_are_visually_distinct_in_every_theme(
+    tk_root: tk.Tk, real_manager: ThemeManager, theme_name: str
 ) -> None:
-    style = _fake_style()
-
-    def fake_map(name: str, **options: Any) -> None:
-        if options.get("background") == []:
-            raise tk.TclError("cannot clear map")
-
-    style.map.side_effect = fake_map
-    manager = _manager_with_fake_style(style)
-    stop_patchers.append(manager)
-    manager.apply_theme("dark")
-    selected_maps = [
-        c for c in style.map.call_args_list if c.args[0] == "History.Treeview"
-    ]
-    assert selected_maps[-1].kwargs["background"] == [
-        ("selected", THEMES["dark"]["select_bg"])
-    ]
+    """Issue #219: 選択行の背景色が通常行と異なり、複数選択を目で確認できる。"""
+    real_manager.apply_theme(theme_name)
+    style = ttk.Style(tk_root)
+    normal = style.lookup("History.Treeview", "background", [])
+    selected = style.lookup("History.Treeview", "background", ["selected"])
+    assert selected == THEMES[theme_name]["select_bg"]
+    assert selected != normal
 
 
 def test_macos_forces_light_on_legacy_tk(
