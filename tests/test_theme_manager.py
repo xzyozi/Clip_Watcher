@@ -245,10 +245,14 @@ def test_apply_theme_on_macos_aqua_maps_system_highlight(
     assert history_map.get("foreground") == [("selected", "systemHighlightText")]
 
 
-def test_apply_theme_on_non_aqua_dark_uses_empty_mapping_workaround(
+def test_apply_theme_on_non_aqua_dark_maps_selection_colors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Issue #196: non-aqua（clam等）のdarkテーマでは既存の空マッピングワークアラウンドが維持される。"""
+    """Issue #219: non-aqua（clam等）のdarkテーマでも選択色がマップされ、選択行が視認できる。
+
+    以前は選択マッピングを空にしており、通常行の選択が見えず、複数選択が
+    1件に見える原因となっていた。
+    """
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(HeadlessStyle, "_available_themes", ("clam", "default"))
     theme_manager = ThemeManager(cast(Tk, object()))
@@ -258,5 +262,5 @@ def test_apply_theme_on_non_aqua_dark_uses_empty_mapping_workaround(
 
     assert HeadlessStyle.last_instance is not None
     history_map = dict(HeadlessStyle.last_instance.maps).get("History.Treeview", {})
-    assert history_map.get("background") == []
-    assert history_map.get("foreground") == []
+    assert history_map.get("background") == [("selected", THEMES["dark"]["select_bg"])]
+    assert history_map.get("foreground") == [("selected", THEMES["dark"]["select_fg"])]

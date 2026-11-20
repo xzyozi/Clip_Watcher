@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from collections.abc import Generator
 from pathlib import Path
@@ -434,3 +435,87 @@ def test_global_click_outside_text_area_finishes_editing(gui: ClipWatcherGUI) ->
     ):
         gui.handle_global_click(event)  # type: ignore[arg-type]
     finish.assert_not_called()
+
+
+# --- 実アプリ構成での複数選択（Issue #219 の再発確認） ---
+
+_MANY = [(f"item {i}", False, float(i)) for i in range(1, 8)]
+# 追加選択の修飾キーは OS 標準（macOS は Command、Windows/Linux は Ctrl）。
+# macOS の Control+クリックは右クリック扱いでポップアップが開き、テストが
+# ブロックするため使わない。
+_CTRL = 0x0008 if sys.platform == "darwin" else 0x0004
+_SHIFT = 0x0001
+_BUTTON1 = 0x0100
+
+
+def _row_xy(gui: ClipWatcherGUI, index: int) -> tuple[int, int]:
+    tree = gui.history_component.tree
+    bbox = tree.bbox(tree.get_children()[index])
+    if not bbox:
+        pytest.skip("行が表示されていないため、マウス操作を再現できません")
+    x, y, _, height = bbox
+    return int(x) + 20, int(y) + int(height) // 2
+
+
+def _mouse_click(
+    gui: ClipWatcherGUI, index: int, state: int = 0, *, jitter: bool = True
+) -> None:
+    """押下→（実機で起きやすい1pxの微小移動）→解放を、実アプリのツリーへ送る。"""
+    tree = gui.history_component.tree
+    x, y = _row_xy(gui, index)
+    tree.event_generate("<Button-1>", x=x, y=y, state=state)
+    if jitter:
+        tree.event_generate("<B1-Motion>", x=x + 1, y=y, state=state | _BUTTON1)
+    tree.event_generate("<ButtonRelease-1>", x=x, y=y, state=state | _BUTTON1)
+    gui.update()
+
+
+@pytest.fixture
+def populated_gui(gui: ClipWatcherGUI) -> ClipWatcherGUI:
+    gui.master.geometry("700x600+0+0")
+    gui.update_clipboard_display("", _MANY)
+    gui.update()
+    return gui
+
+
+def _selected(gui: ClipWatcherGUI) -> tuple[int, ...]:
+    return gui.history_component.get_selected_indices()
+
+
+@pytest.mark.parametrize("jitter", [False, True])
+def test_real_app_ctrl_click_adds_rows(
+    populated_gui: ClipWatcherGUI, jitter: bool
+) -> None:
+    _mouse_click(populated_gui, 0, jitter=jitter)
+    _mouse_click(populated_gui, 2, _CTRL, jitter=jitter)
+    _mouse_click(populated_gui, 4, _CTRL, jitter=jitter)
+    assert _selected(populated_gui) == (0, 2, 4)
+
+
+@pytest.mark.parametrize("jitter", [False, True])
+def test_real_app_ctrl_click_deselects_a_selected_row(
+    populated_gui: ClipWatcherGUI, jitter: bool
+) -> None:
+    _mouse_click(populated_gui, 0, jitter=jitter)
+    _mouse_click(populated_gui, 2, _CTRL, jitter=jitter)
+    _mouse_click(populated_gui, 2, _CTRL, jitter=jitter)
+    assert _selected(populated_gui) == (0,)
+
+
+@pytest.mark.parametrize("jitter", [False, True])
+def test_real_app_shift_click_selects_range(
+    populated_gui: ClipWatcherGUI, jitter: bool
+) -> None:
+    _mouse_click(populated_gui, 1, jitter=jitter)
+    _mouse_click(populated_gui, 4, _SHIFT, jitter=jitter)
+    assert _selected(populated_gui) == (1, 2, 3, 4)
+
+
+def test_real_app_selection_survives_history_refresh_cycle(
+    populated_gui: ClipWatcherGUI,
+) -> None:
+    _mouse_click(populated_gui, 0)
+    _mouse_click(populated_gui, 3, _CTRL)
+    populated_gui.update_clipboard_display("", _MANY)
+    populated_gui.update()
+    assert _selected(populated_gui) == (0, 3)

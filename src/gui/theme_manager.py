@@ -192,24 +192,11 @@ class ThemeManager:
                     background=[("selected", "systemHighlight")],
                     foreground=[("selected", "systemHighlightText")],
                 )
-            elif theme_name == "dark":
-                # 既知の不具合ワークアラウンド（Requirements 7.4）:
-                # 'clam' テーマでは、Treeviewの選択状態スタイルマップ（'selected'）が
-                # tag_configure() で設定した行の背景色（例: ピン留め行の pinned タグ）を
-                # 無条件に上書きしてしまう。選択状態の背景/前景マッピングを空にすることで、
-                # 選択されていてもタグ側の背景色が視認可能な状態を維持する。
-                try:
-                    style.map(tree_style, background=[], foreground=[])
-                except tk.TclError:
-                    # Requirements 7.5: ワークアラウンドの適用自体が失敗した場合、
-                    # 選択マッピングを完全に諦めるのではなく、通常の選択色マッピング
-                    # にフォールバックし、視認性が完全に失われる事態を避ける。
-                    style.map(
-                        tree_style,
-                        background=[("selected", theme["select_bg"])],
-                        foreground=[("selected", theme["select_fg"])],
-                    )
             else:
+                # light / dark（非 Aqua）共通: テーマの選択色を 'selected' 状態へ割り当てる。
+                # 以前は dark（clam）でマッピングを空にしてピン留め行の背景色を残していたが、
+                # 通常行の選択まで見えなくなり、複数選択が1件に見える不具合（#219）の
+                # 原因となったため廃止した。ピン留めは背景色ではなくアイコン/記号で判別する。
                 style.map(
                     tree_style,
                     background=[("selected", theme["select_bg"])],
