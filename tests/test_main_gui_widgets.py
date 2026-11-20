@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from collections.abc import Generator
 from pathlib import Path
@@ -439,7 +440,10 @@ def test_global_click_outside_text_area_finishes_editing(gui: ClipWatcherGUI) ->
 # --- 実アプリ構成での複数選択（Issue #219 の再発確認） ---
 
 _MANY = [(f"item {i}", False, float(i)) for i in range(1, 8)]
-_CTRL = 0x0004
+# 追加選択の修飾キーは OS 標準（macOS は Command、Windows/Linux は Ctrl）。
+# macOS の Control+クリックは右クリック扱いでポップアップが開き、テストが
+# ブロックするため使わない。
+_CTRL = 0x0008 if sys.platform == "darwin" else 0x0004
 _SHIFT = 0x0001
 _BUTTON1 = 0x0100
 
