@@ -144,12 +144,25 @@ def test_update_clipboard_sets_clipboard_and_adds_history() -> None:
     monitor.history_service.add_history_item.assert_called_once_with("hello")
 
 
-def test_update_clipboard_ignores_empty_and_latest_duplicate() -> None:
+def test_update_clipboard_ignores_empty_text() -> None:
+    monitor = _make()
+    monitor.update_clipboard("")
+    monitor.tk_root.clipboard_clear.assert_not_called()
+    monitor.history_service.add_history_item.assert_not_called()
+
+
+def test_update_clipboard_always_writes_even_when_text_matches_latest_history() -> None:
+    """Issue #229: 履歴の直近項目と同じ内容でも、システムクリップボードへ書き込む。
+
+    実際のクリップボードが別の内容（履歴に残らないコピーなど）へ変わっていても、
+    ユーザーが選んだ内容を確実に反映する。履歴の重複抑止は add_history_item() に委ねる。
+    """
     monitor = _make()
     monitor.history_service.history = [("old", False, 1.0), ("latest", True, 9.0)]
-    monitor.update_clipboard("")
     monitor.update_clipboard("latest")
-    monitor.history_service.add_history_item.assert_not_called()
+    monitor.tk_root.clipboard_clear.assert_called_once()
+    monitor.tk_root.clipboard_append.assert_called_once_with("latest")
+    monitor.history_service.add_history_item.assert_called_once_with("latest")
 
 
 def test_update_clipboard_keeps_history_when_clipboard_update_fails() -> None:
