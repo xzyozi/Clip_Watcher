@@ -6,13 +6,14 @@ import sys
 import tkinter as tk
 import traceback
 from tkinter import messagebox
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from src.core.bootstrap.application_builder import ApplicationBuilder
 from src.core.platform.errors import SingleInstanceError, UnsupportedFeatureError
 from src.core.platform.protocols import SingleInstanceController
 from src.core.platform.services import PlatformServices
 from src.utils.logging_config import setup_logging
+from src.utils.tk_compat import apply_tk9_compat_patches
 
 # Import standalone handlers so they can be accessed via the package
 from . import main_handlers  # noqa: F401
@@ -121,19 +122,8 @@ def start_app() -> None:
             )
 
         # --- Application Setup ---
-        # Tk 9.0 + Python < 3.13 互換性パッチ（空メニュー index が空文字を返し TclError になる問題の安全回避）
-        try:
-
-            def _compat_menu_index(self: tk.Menu, index: Any) -> int | None:
-                w = getattr(self, "_w", "")
-                i = self.tk.call(w, "index", index)
-                if i in ("none", ""):
-                    return None
-                return self.tk.getint(i)
-
-            tk.Menu.index = _compat_menu_index  # type: ignore[assignment]
-        except Exception:
-            pass
+        # Tk 9.0 + Python < 3.13 互換性パッチ（空メニュー index / 未選択 Combobox.current() が空文字を返し TclError になる問題の安全回避）
+        apply_tk9_compat_patches()
 
         root = tk.Tk()
         tk_ver = getattr(tk, "TkVersion", 0.0)
