@@ -621,3 +621,128 @@ def test_right_click_inside_drag_selection_keeps_multiple_selection(
     state = ctx.state_provider.get_menu_state(component.tree)
     assert state.selected_indices == (1, 2, 3)
     assert state.selected_ids == [1.0, 2.0, 3.0]
+
+
+# --- Issue #219: 履歴一覧の複数選択の回帰防止（クリック選択・再描画・ハンドラ連携） ---
+
+_STATE_SHIFT = 0x0001
+_STATE_CONTROL = 0x0004
+
+
+def _click_row(
+    component: HistoryListComponent, top: tk.Toplevel, iid: str, state: int = 0
+) -> None:
+    """実 Tk 上で指定行をクリックする（state は Shift/Control 修飾）。"""
+    x, y = _row_center(component, iid)
+    component.tree.event_generate("<Button-1>", x=x, y=y, state=state)
+    component.tree.event_generate("<ButtonRelease-1>", x=x, y=y, state=state)
+    top.update()
+
+
+def _populate(
+    component: HistoryListComponent, top: tk.Toplevel, count: int = 6
+) -> list[tuple[str, bool, float]]:
+    history = [(f"item {i}", False, float(i)) for i in range(count)]
+    component.update_history(history, THEMES["light"], {})
+    top.update()
+    return history
+
+
+def test_ctrl_click_adds_and_toggles_selection(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: Ctrl+クリックで選択を追加・解除でき、通知にも全件が含まれる。"""
+    component, top, dispatched = real_history_component
+    _populate(component, top)
+
+    _click_row(component, top, "item-0.0")
+    _click_row(component, top, "item-2.0", _STATE_CONTROL)
+    _click_row(component, top, "item-4.0", _STATE_CONTROL)
+    assert component.get_selected_indices() == (0, 2, 4)
+    assert dispatched[-1] == (
+        "HISTORY_SELECTION_CHANGED",
+        {"selected_indices": (0, 2, 4)},
+    )
+
+    # 選択済みの行を Ctrl+クリックすると、その行だけが解除される
+    _click_row(component, top, "item-2.0", _STATE_CONTROL)
+    assert component.get_selected_indices() == (0, 4)
+
+
+def test_shift_click_selects_contiguous_range(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: Shift+クリックで起点行からクリック行までが連続選択される。"""
+    component, top, _ = real_history_component
+    _populate(component, top)
+
+    _click_row(component, top, "item-1.0")
+    _click_row(component, top, "item-4.0", _STATE_SHIFT)
+    assert component.get_selected_indices() == (1, 2, 3, 4)
+
+
+def test_multi_selection_is_kept_after_update_history_with_new_item(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: 履歴が更新されても、生存している複数選択行の選択は維持される。"""
+    component, top, dispatched = real_history_component
+    history = _populate(component, top)
+
+    _click_row(component, top, "item-1.0")
+    _click_row(component, top, "item-3.0", _STATE_CONTROL)
+    assert component.tree.selection() == ("item-1.0", "item-3.0")
+
+    # 先頭に新規項目が追加されても、既存2行の選択が残る
+    new_history = [("new item", False, 100.0), *history]
+    component.update_history(new_history, THEMES["light"], {})
+    top.update()
+
+    assert component.tree.selection() == ("item-1.0", "item-3.0")
+    assert component.get_selected_indices() == (2, 4)
+    # 通知される選択位置も、更新後の表示順に対応している
+    assert dispatched[-1] == (
+        "HISTORY_SELECTION_CHANGED",
+        {"selected_indices": (2, 4)},
+    )
+
+
+def test_multi_selected_ids_reach_delete_and_merged_copy_handlers(
+    real_history_component: tuple[
+        HistoryListComponent, tk.Toplevel, list[tuple[str, Any]]
+    ],
+) -> None:
+    """Issue #219: クリックで複数選択した全 ID が、削除と結合コピーに表示順で渡る。"""
+    from src.event_handlers.history_handlers import HistoryEventHandlers
+
+    component, top, _ = real_history_component
+    history = _populate(component, top)
+
+    _click_row(component, top, "item-0.0")
+    _click_row(component, top, "item-2.0", _STATE_CONTROL)
+    _click_row(component, top, "item-5.0", _STATE_CONTROL)
+    selected_ids = component.get_ids_for_indices(component.get_selected_indices())
+    assert selected_ids == [0.0, 2.0, 5.0]
+
+    handler = HistoryEventHandlers.__new__(HistoryEventHandlers)
+    handler.app = MagicMock()
+    handler.app.settings_manager.get_setting.return_value = False
+    handler.app.remove_pinned_hotkey_binding.return_value = True
+    handler.app.history_service.get_history.return_value = history
+
+    handler.handle_copy_selected_as_merged(selected_ids)
+    handler.app.master.clipboard_append.assert_called_once_with(
+        "item 0\nitem 2\nitem 5"
+    )
+
+    handler.handle_delete_selected_history(selected_ids)
+    deleted = [
+        call.args[0]
+        for call in handler.app.history_service.delete_history_item_by_id.call_args_list
+    ]
+    assert deleted == [0.0, 2.0, 5.0]
