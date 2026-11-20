@@ -2,9 +2,9 @@
 title: "コア層起動監視イベント制御詳細設計書"
 file_name: "CLW-DD-002_コア層起動監視イベント制御詳細設計書.md"
 document_type: "detailed_design"
-version: "1.6"
+version: "1.7"
 created_at: "2026-08-31"
-updated_at: "2026-11-04"
+updated_at: "2026-11-19"
 author: "Antigravity"
 purpose: "コア層の起動、クリップボード監視、イベント・コマンド制御の責務と連携契約を定義するため"
 related_documents:
@@ -20,8 +20,8 @@ related_documents:
 | 文書番号       | CLW-DD-002                                         |
 | ファイル名     | CLW-DD-002_コア層起動監視イベント制御詳細設計書.md |
 | ドキュメント名 | コア層起動監視イベント制御詳細設計書               |
-| 版数           | Rev.1.6                                            |
-| 改訂日         | 2026-11-04                                         |
+| 版数           | Rev.1.7                                            |
+| 改訂日         | 2026-11-19                                         |
 | 作成日         | 2026-08-31                                         |
 | 作成者         | Antigravity                                        |
 
@@ -161,7 +161,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | `SingleInstanceController` | `WindowsSingleInstanceController`      | `PosixSingleInstanceController` (`fcntl.flock`)                | `PosixSingleInstanceController` (`fcntl.flock`)                | 二重起動防止。POSIX共通でロックファイルによる非ブロッキング排他制御。                                              |
 | `PasteSender`              | `WindowsPasteSender` (`keybd_event`)   | `MacOSPasteSender` (`osascript` Cmd+V)                         | `LinuxPasteSender` (`xdotool` Ctrl+V)                          | 履歴選択時の自動貼り付けキーストローク送信。                                                                      |
 | `ClipboardReader`          | `WindowsClipboardReader` (`pywin32`)   | `MacOSClipboardReader` (`/usr/bin/pbpaste` #170)               | 非対応（Tkinter標準フォールバック）                            | `clipboard_get()` 失敗時の代替テキスト読み取り。                                                                 |
-| `StartupController`        | `WindowsStartupController` (HKCU Run)  | `MacOSStartupController` (LaunchAgents plist)                  | `LinuxStartupController` (XDG autostart desktop)               | システム起動/ログイン時の自動起動制御。バッチファイル脆弱性を根本解消 (#110, #155)。                              |
+| `StartupController`        | `WindowsStartupController` (Startup フォルダ .lnk) | `MacOSStartupController` (LaunchAgents plist)                  | `LinuxStartupController` (XDG autostart desktop)               | システム起動/ログイン時の自動起動制御。`.venv` 優先解決、旧バッチ・旧レジストリの移行削除 (#110, #155, #209)。 |
 | `HotkeyListener`           | `WindowsHotkeyListener` (Win32 RegisterHotKey)| `MacOSHotkeyListener` (Carbon RegisterEventHotKey)              | 非対応 (`UnsupportedFeatureError`)                             | グローバルホットキー。未対応環境（Linux等）では明示的に無効化・UI案内する (#150, #161)。                          |
 
 ### 6.2 `PlatformServices` の契約
@@ -221,10 +221,11 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
   - macOS実装 `MacOSClipboardReader`: 標準コマンド `/usr/bin/pbpaste` を使用してクリップボードのテキストを読み取る（外部依存なしのゼロインストール実装、タイムアウト1.0秒）。
 - `ClipboardMonitor` はクリップボードの監視・変更検知・書き込み（`update_clipboard`）に専念し、履歴操作は `HistoryService`、通知は `NotificationManager` を呼び出し側が直接参照する。
 
-### 6.6b `StartupController` と自動起動セキュリティ (#110, #155)
+### 6.6b `StartupController` と自動起動セキュリティ (#110, #155, #209)
 
-旧実装で存在した、スタートアップフォルダへのバッチファイル（`ClipWatcher.bat`）配置によるパス埋め込み・展開起因のインジェクション脆弱性を根本解消しました。
-- **Windows**: `winreg` を用い、ユーザーレジストリ（`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`）に引用符で囲んだ絶対実行パスを安全に登録・削除。旧 `ClipWatcher.bat` がスタートアップフォルダに残存している場合は自動検出して削除・クリーンアップ。
+旧実装で存在した、スタートアップフォルダへのバッチファイル（`ClipWatcher.bat`）配置によるパス埋め込み・展開起因のインジェクション脆弱性を根本解消し、3OSともに所定ディレクトリへの起動設定ファイル配置方式に統一しました（#209）。
+- **Python 実行パス解決 (`startup_python.py`)**: `resolve_python_executable()` によりプロジェクト直下の仮想環境（`.venv` / `venv`）を優先し、存在しない場合は現在の実行 Python へフォールバックする。
+- **Windows**: `WScript.Shell` を用いて `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ClipWatcher.lnk`（`TargetPath` と `Arguments` を分離しシェル解釈を伴わない安全なショートカット）を作成・削除。有効化・無効化時に旧 `ClipWatcher.bat` および旧レジストリ（`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`）の登録値を検出して自動削除・クリーンアップ。
 - **macOS**: `~/Library/LaunchAgents/com.clipwatcher.app.plist` を標準の `plistlib` で生成・削除。
 - **Linux**: XDG autostart 仕様に準拠し、`~/.config/autostart/clipwatcher.desktop` を生成・削除。
 
@@ -247,7 +248,7 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 - `WindowsClipboardReader` が、fakeモジュール注入で `pywin32` なしの環境でも検証でき、`pywin32` 未導入時に `ImportError` を送出することを確認する。
 - `PosixSingleInstanceController` が、`fcntl.flock` を使用して排他ロックを取得し、重複起動を正しく検出することを確認する。
 - `MacOSProcessInspector`, `LinuxProcessInspector`, `MacOSSoundPlayer`, `LinuxSoundPlayer`, `MacOSPasteSender`, `LinuxPasteSender` の単体テストを確認する。
-- `StartupController` の各OS向け実装（レジストリ、plist、desktop）の登録・解除および旧バッチ削除を確認する。
+- `StartupController` の各OS向け実装（`.lnk` ショートカット、plist、desktop）の登録・解除、旧バッチ・旧レジストリ削除、および `.venv` 優先 Python 解決（`tests/test_startup_python.py`）を確認する。
 - ホットキー非対応環境において `SettingsWindow` がエラーメッセージを出して不正入力を防止し、副作用が生じないこと（#141）を確認する。
 - 上記は windows / ubuntu の両CIで通ること。
 
@@ -262,4 +263,5 @@ OSごとに実装が異なる機能は `src/core/platform/` に隔離し、**ど
 | Rev.1.4 | 2026-10-18 | Antigravity | macOS 向け `ClipboardReader` 実装（`MacOSClipboardReader` / `pbpaste`）の追加と実機検証要件の反映 (#170)。                                                    |
 | Rev.1.5 | 2026-10-18 | Antigravity | macOS/Linux 向け各具象アダプター拡充、`PosixSingleInstanceController`、`StartupController`新設とWindowsレジストリ移行（#110, #155）、`NullHotkeyListener`全廃（#150）、ホットキー検証の副作用分離（#141）を反映 (#161)。 |
 | Rev.1.6 | 2026-11-04 | Antigravity | 起動シーケンス・監視スレッドモデル・`HISTORY_UPDATED` へのフロー是正、macOS `MacOSHotkeyListener` 表記追加、設定検証契約是正（F-01）。 |
+| Rev.1.7 | 2026-11-19 | Antigravity | `WindowsStartupController` の Startup フォルダ `.lnk` 方式移行・旧レジストリ削除・`.venv` 優先 Python 解決（#209）を §6.1 / §6.6b / §7 に反映。 |
 
