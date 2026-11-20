@@ -195,6 +195,26 @@ def test_phrase_dialog_requires_category_selection(
         dialog.destroy()
 
 
+def test_phrase_dialog_handles_tcl_error_from_combobox_current(
+    tk_root: tk.Tk, app: MagicMock
+) -> None:
+    """Tk 9.0 未パッチ環境等で Combobox.current() が TclError を送出しても未選択扱いでエラー表示する。"""
+    dialog = _open_phrase_dialog(tk_root, app)
+    try:
+        dialog.content_text.insert("1.0", "Hello")
+        with (
+            patch.object(
+                dialog.cat_combobox, "current", side_effect=tk.TclError("bad int")
+            ),
+            patch(f"{MODULE}.messagebox") as box,
+        ):
+            dialog.on_ok()
+        box.showerror.assert_called_once()
+        assert dialog.result is None
+    finally:
+        dialog.destroy()
+
+
 def test_phrase_dialog_reports_unexpected_errors(
     tk_root: tk.Tk, app: MagicMock, two_categories: tuple[int, int]
 ) -> None:

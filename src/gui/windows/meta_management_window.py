@@ -191,12 +191,16 @@ class MetaPhraseEditDialog(BaseToplevelGUI):
         try:
             title = self.title_entry.get().strip()
             content = self.content_text.get("1.0", "end-1c").strip()
-            cat_index = self.cat_combobox.current()
+            try:
+                cat_index = self.cat_combobox.current()
+            except tk.TclError:
+                # Tk 9.0 + Python < 3.13 環境で未選択時に空文字列が返るケースへの防御
+                cat_index = -1
 
             if not content:
                 messagebox.showerror("Error", "Content cannot be empty.", parent=self)
                 return
-            if cat_index == -1:
+            if cat_index < 0:
                 messagebox.showerror("Error", "Please select a category.", parent=self)
                 return
 
