@@ -19,12 +19,28 @@ dev = [
     "ruff==0.16.2",
     "pytest==9.1.1",
     "pytest-mock==3.15.1",
+    "pytest-cov==7.1.0",
     "hypothesis==6.151.5",
 ]
 
 # --- Pytest ---
 [tool.pytest.ini_options]
 pythonpath = "."
+
+# --- Coverage (pytest-cov) ---
+# 計測は CI で `pytest --cov` を付けたときだけ行う（手元の通常実行は遅くしない）。
+# 最初は fail_under を設定せず、数値の確認のみとする（Issue #223）。
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
 
 # --- Mypy ---
 [tool.mypy]

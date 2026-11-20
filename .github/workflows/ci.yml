@@ -9,13 +9,23 @@ on:
 permissions:
   contents: read
 
+# 同じブランチ・PR に新しい push があったら、古い実行を取り消す。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # macOS は初めて CI で実行するため、当面は失敗してもワークフロー全体を失敗にしない。
+    # 安定したことを確認できたら、この行を削除して必須チェックにする（Issue #223）。
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
+    # テストがハングしても、既定の6時間待たずに打ち切る（通常は1分程度で終わる）。
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,7 +66,17 @@ jobs:
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a uv run pytest
+            xvfb-run -a uv run pytest --cov --cov-report=term -o faulthandler_timeout=120
           else
-            uv run pytest
+            uv run pytest --cov --cov-report=term -o faulthandler_timeout=120
           fi
+
+      - name: Coverage summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Coverage (${RUNNER_OS})"
+            echo
+            uv run coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY" || true
