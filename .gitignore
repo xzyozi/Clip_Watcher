@@ -25,3 +25,6 @@ Clip_Wathcer.srctrlbm
 # Aider
 .aider*
 
+
+# 作業用の一時スクリプト置き場（コミットしない）
+tmp_script/
