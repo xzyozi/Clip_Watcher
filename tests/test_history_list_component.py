@@ -626,7 +626,10 @@ def test_right_click_inside_drag_selection_keeps_multiple_selection(
 # --- Issue #219: 履歴一覧の複数選択の回帰防止（クリック選択・再描画・ハンドラ連携） ---
 
 _STATE_SHIFT = 0x0001
-_STATE_CONTROL = 0x0004
+# 追加選択の修飾キーは OS 標準（macOS は Command、Windows/Linux は Ctrl）。
+# macOS の Control+クリックは右クリック扱いで、ポップアップが閉じられるまで
+# テストがブロックするため、テストでは使わない。
+_STATE_ADD = 0x0008 if sys.platform == "darwin" else 0x0004
 
 
 def _click_row(
@@ -658,8 +661,8 @@ def test_ctrl_click_adds_and_toggles_selection(
     _populate(component, top)
 
     _click_row(component, top, "item-0.0")
-    _click_row(component, top, "item-2.0", _STATE_CONTROL)
-    _click_row(component, top, "item-4.0", _STATE_CONTROL)
+    _click_row(component, top, "item-2.0", _STATE_ADD)
+    _click_row(component, top, "item-4.0", _STATE_ADD)
     assert component.get_selected_indices() == (0, 2, 4)
     assert dispatched[-1] == (
         "HISTORY_SELECTION_CHANGED",
@@ -667,7 +670,7 @@ def test_ctrl_click_adds_and_toggles_selection(
     )
 
     # 選択済みの行を Ctrl+クリックすると、その行だけが解除される
-    _click_row(component, top, "item-2.0", _STATE_CONTROL)
+    _click_row(component, top, "item-2.0", _STATE_ADD)
     assert component.get_selected_indices() == (0, 4)
 
 
@@ -695,7 +698,7 @@ def test_multi_selection_is_kept_after_update_history_with_new_item(
     history = _populate(component, top)
 
     _click_row(component, top, "item-1.0")
-    _click_row(component, top, "item-3.0", _STATE_CONTROL)
+    _click_row(component, top, "item-3.0", _STATE_ADD)
     assert component.tree.selection() == ("item-1.0", "item-3.0")
 
     # 先頭に新規項目が追加されても、既存2行の選択が残る
@@ -724,8 +727,8 @@ def test_multi_selected_ids_reach_delete_and_merged_copy_handlers(
     history = _populate(component, top)
 
     _click_row(component, top, "item-0.0")
-    _click_row(component, top, "item-2.0", _STATE_CONTROL)
-    _click_row(component, top, "item-5.0", _STATE_CONTROL)
+    _click_row(component, top, "item-2.0", _STATE_ADD)
+    _click_row(component, top, "item-5.0", _STATE_ADD)
     selected_ids = component.get_ids_for_indices(component.get_selected_indices())
     assert selected_ids == [0.0, 2.0, 5.0]
 
