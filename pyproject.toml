@@ -29,12 +29,14 @@ pythonpath = "."
 
 # --- Coverage (pytest-cov) ---
 # 計測は CI で `pytest --cov` を付けたときだけ行う（手元の通常実行は遅くしない）。
-# 最初は fail_under を設定せず、数値の確認のみとする（Issue #223）。
 [tool.coverage.run]
 source = ["src"]
 branch = true
 
 [tool.coverage.report]
+# 全 OS（Windows / Ubuntu / macOS）の CI で共通に満たす下限。目標は 85% 程度で、
+# 実測が安定して上回ったら段階的に引き上げる（Issue #223）。
+fail_under = 75
 show_missing = true
 skip_empty = true
 exclude_also = [

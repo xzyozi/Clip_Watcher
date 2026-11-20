@@ -21,9 +21,6 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    # macOS は初めて CI で実行するため、当面は失敗してもワークフロー全体を失敗にしない。
-    # 安定したことを確認できたら、この行を削除して必須チェックにする（Issue #223）。
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     # テストがハングしても、既定の6時間待たずに打ち切る（通常は1分程度で終わる）。
     timeout-minutes: 10
     steps:
