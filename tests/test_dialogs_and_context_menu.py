@@ -511,3 +511,27 @@ def test_phrase_list_menu_tolerates_empty_listbox(
     )
     menu.menu.tk_popup = MagicMock()  # type: ignore[method-assign]
     assert menu.show(SimpleNamespace(y=0, x_root=0, y_root=0)) == "break"  # type: ignore[arg-type]
+
+
+# --- Issue #229: クイックタスクで同じ内容を再度コピーできる ---
+
+
+def _copy_row(dialog: QuickTaskDialog, index: int) -> None:
+    dialog.task_list.selection_set(dialog.task_list.get_children()[index])
+    dialog._copy_selected()
+
+
+def test_quick_task_copy_can_be_repeated_for_same_and_different_tasks(
+    tk_root: tk.Tk, app: MagicMock
+) -> None:
+    """A → B → A の順にコピーしても、そのつど選んだ内容がクリップボードへ渡る。"""
+    settings = MagicMock()
+    settings.get_setting.return_value = False
+    dialog = QuickTaskDialog(tk_root, app, settings, ["task A", "task B"])
+    try:
+        for index in (0, 1, 0, 0):
+            _copy_row(dialog, index)
+        copied = [c.args[0] for c in app.monitor.update_clipboard.call_args_list]
+        assert copied == ["task A", "task B", "task A", "task A"]
+    finally:
+        dialog.destroy()

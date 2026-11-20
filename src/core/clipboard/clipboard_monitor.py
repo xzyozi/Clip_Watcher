@@ -108,15 +108,11 @@ class ClipboardMonitor:
         if not text:
             return
 
-        # テキストが直近のクリップボード内容と同一である場合、重複したエントリの
-        # 追加を避けます。ピン留め項目による表示順序（is_pinned優先ソート）に
-        # 影響されないよう、id（挿入順）が最大の項目と比較する。
-        history = self.history_service.history
-        if history:
-            last_touched = max(history, key=lambda item: item[2])
-            if text == last_touched[0]:
-                return
-
+        # システムクリップボードへの書き込みは、履歴の内容にかかわらず常に行う。
+        # 履歴の直近項目と同じ文字列であっても、実際のクリップボードは別の内容
+        # （履歴に残らない除外アプリや、直前の別タスクのコピーなど）に変わっている
+        # 可能性があり、書き込みを省くとユーザーの操作が無視される（Issue #229）。
+        # 履歴への重複登録の抑止は、add_history_item() 側（直近項目との比較）で行う。
         try:
             # 最初にシステムクリップボードを更新します
             self.tk_root.clipboard_clear()

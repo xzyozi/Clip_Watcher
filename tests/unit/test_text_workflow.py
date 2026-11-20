@@ -135,7 +135,13 @@ class TestTextWorkflowUnit(unittest.TestCase):
                 "when": {"kind": "regex", "pattern": r"^https?://"},
             }
         ]
-        classifier = Classifier(rules=rules, default_category="general")
+        # このテストの目的は「通常のパターンがマッチすること」であり、タイムアウトの
+        # 検証ではない。macOS の CI では spawn 子プロセスの起動に既定の0.5秒を超える
+        # ことがあり、ReDoS と誤判定されて不安定になるため、待ち時間を長めにする。
+        # （タイムアウト自体の検証は上の ReDoS テストで行う。）
+        classifier = Classifier(
+            rules=rules, default_category="general", regex_timeout_seconds=10.0
+        )
         result = classifier.classify("https://example.com")
         self.assertEqual(result.category_id, "url")
         self.assertEqual(result.matched_rule_id, "url-rule")
