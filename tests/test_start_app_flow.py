@@ -68,6 +68,14 @@ def env() -> Iterator[SimpleNamespace]:
         stack.enter_context(
             patch("src.event_handlers.tk.Tk", return_value=environment.root)
         )
+        # macOS 実機の CI では、本物の `defaults` コマンドを起動してハングし得るため、
+        # OS 判定のヘルパーは既定でモックする（各テストが必要に応じて上書きする）。
+        stack.enter_context(
+            patch("src.utils.platform_utils.is_macos_dark_mode", return_value=False)
+        )
+        stack.enter_context(
+            patch("src.utils.platform_utils.is_legacy_macos_tk", return_value=False)
+        )
         yield environment
 
 
